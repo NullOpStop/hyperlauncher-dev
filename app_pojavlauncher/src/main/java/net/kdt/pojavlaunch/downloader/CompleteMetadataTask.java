@@ -3,8 +3,8 @@ package net.kdt.pojavlaunch.downloader;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.mirrors.DownloadMirror;
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 
@@ -20,8 +20,8 @@ public class CompleteMetadataTask extends DownloaderTask {
             if(mMetadata.url == null) throw new IOException("Metadata acquisition did not supply the URL!");
         }
         if(mMetadata.url != null) {
-            getLibrarySha1Hash();
             getFileSize();
+            getLibrarySha1Hash();
         }
         if(mMetadata.size == -1) {
             mDownloader.disableSizeCounter();
@@ -29,20 +29,28 @@ public class CompleteMetadataTask extends DownloaderTask {
         mDownloader.fileComplete();
     }
 
-    private void getLibrarySha1Hash() throws IOException {
+    private void getLibrarySha1Hash() {
         if(mMetadata.sha1Hash != null) return;
         if(mMetadata.mirrorType != DownloadMirror.DOWNLOAD_CLASS_LIBRARIES) return;
+
+        if(!LauncherPreferences.PREF_VERIFY_FILES) return;
+        if(LauncherPreferences.PREF_RAPID_START && mMetadata.size != -1 && mMetadata.path.exists()) return;
+
         try {
             mMetadata.sha1Hash = mDownloader.downloadString(new URL(mMetadata.url + ".sha1"));
-        }catch (FileNotFoundException e) {
-            Log.i("CompleteMetadataTask", "No server hash for file "+mMetadata.path.getName());
+        }catch (IOException e) {
+            Log.i("CompleteMetadataTask", "Failed to get server hash for "+mMetadata.path.getName(), e);
         }
     }
 
-    private void getFileSize() throws IOException {
+    private void getFileSize() {
         if(mMetadata.size != -1) return;
-        mMetadata.size = mDownloader.getFileContentLength(mMetadata.url);
-        Log.i("CompleteMetadataTask", "Got size: "+mMetadata.size +" for "+mMetadata.path.getName());
+        try {
+            mMetadata.size = mDownloader.getFileContentLength(mMetadata.url);
+            Log.i("CompleteMetadataTask", "Got size: " + mMetadata.size +" for " + mMetadata.path.getName());
+        }catch (IOException e) {
+            Log.i("CompleteMetadataTask", "Failed to get size for " + mMetadata.path.getName(), e);
+        }
     }
 
     protected static boolean shouldCompleteMetadata(TaskMetadata metadata) {
