@@ -29,9 +29,9 @@ public class LauncherPreferenceMiscellaneousFragment extends LauncherPreferenceF
         Activity activity = getActivity();
         if(activity instanceof LauncherActivity) {
             LauncherActivity launcherActivity = (LauncherActivity)activity;
-            mRequestMicrophonePermissionPreference.setVisible(!launcherActivity.checkForPermission(Manifest.permission.RECORD_AUDIO));
+            mRequestMicrophonePermissionPreference.setVisible(!launcherActivity.checkForPermission(23, Manifest.permission.RECORD_AUDIO));
             mRequestMicrophonePermissionPreference.setOnPreferenceClickListener(preference -> {
-                launcherActivity.askForPermission(()->mRequestMicrophonePermissionPreference.setVisible(false), Manifest.permission.RECORD_AUDIO);
+                launcherActivity.askForPermission(23, ()->mRequestMicrophonePermissionPreference.setVisible(false), Manifest.permission.RECORD_AUDIO);
                 return true;
             });
         } else {

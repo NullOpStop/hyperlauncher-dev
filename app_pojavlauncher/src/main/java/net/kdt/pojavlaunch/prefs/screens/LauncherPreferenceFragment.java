@@ -39,9 +39,9 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         Activity activity = getActivity();
         if(activity instanceof LauncherActivity) {
             LauncherActivity launcherActivity = (LauncherActivity)activity;
-            mRequestNotificationPermissionPreference.setVisible(!launcherActivity.checkForPermission(Manifest.permission.POST_NOTIFICATIONS));
+            mRequestNotificationPermissionPreference.setVisible(!launcherActivity.checkForPermission(33, Manifest.permission.POST_NOTIFICATIONS));
             mRequestNotificationPermissionPreference.setOnPreferenceClickListener(preference -> {
-                launcherActivity.askForPermission(()->mRequestNotificationPermissionPreference.setVisible(false), Manifest.permission.POST_NOTIFICATIONS);
+                launcherActivity.askForPermission(33, ()->mRequestNotificationPermissionPreference.setVisible(false), Manifest.permission.POST_NOTIFICATIONS);
                 return true;
             });
         }else{

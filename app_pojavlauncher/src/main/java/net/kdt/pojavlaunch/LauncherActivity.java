@@ -269,7 +269,7 @@ public class LauncherActivity extends BaseActivity {
 
     private void checkNotificationPermission() {
         if(LauncherPreferences.PREF_SKIP_NOTIFICATION_PERMISSION_CHECK ||
-            checkForPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+            checkForPermission(33, Manifest.permission.POST_NOTIFICATIONS)) {
             return;
         }
 
@@ -279,14 +279,14 @@ public class LauncherActivity extends BaseActivity {
             showNotificationPermissionReasoning();
             return;
         }
-        askForPermission(null, Manifest.permission.POST_NOTIFICATIONS);
+        askForPermission(33, null, Manifest.permission.POST_NOTIFICATIONS);
     }
 
     private void showNotificationPermissionReasoning() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.notification_permission_dialog_title)
                 .setMessage(R.string.notification_permission_dialog_text)
-                .setPositiveButton(android.R.string.ok, (d, w) -> askForPermission(null, Manifest.permission.POST_NOTIFICATIONS))
+                .setPositiveButton(android.R.string.ok, (d, w) -> askForPermission(33, null, Manifest.permission.POST_NOTIFICATIONS))
                 .setNegativeButton(android.R.string.cancel, (d, w)-> handleNoNotificationPermission())
                 .show();
     }
@@ -299,13 +299,13 @@ public class LauncherActivity extends BaseActivity {
         Toast.makeText(this, R.string.notification_permission_toast, Toast.LENGTH_LONG).show();
     }
 
-    public boolean checkForPermission(final String permission) {
-        return Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
+    public boolean checkForPermission(int minApi, final String permission) {
+        return Build.VERSION.SDK_INT < minApi || ContextCompat.checkSelfPermission(
                 this,
                 permission) != PackageManager.PERMISSION_DENIED;
     }
 
-    public void askForPermission(Runnable onSuccessRunnable, final String permission) {
+    public void askForPermission(int minApi, Runnable onSuccessRunnable, final String permission) {
         if(Build.VERSION.SDK_INT < 33) return;
         if(onSuccessRunnable != null) {
             mRequestPermissionRunnable = new WeakReference<>(onSuccessRunnable);
