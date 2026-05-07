@@ -71,6 +71,12 @@ android {
             keyAlias "key0"
             keyPassword System.getenv("UPLOAD_KEYSTORE_PASSWORD")
         }
+        publicBuild {
+            storeFile file("mojo_pub.jks")
+            storePassword System.getenv("MOJOPUB_KEYSTORE_PASSWORD")
+            keyAlias "key0"
+            keyPassword System.getenv("MOJOPUB_KEYSTORE_PASSWORD")
+        }
     }
 
     defaultConfig {
