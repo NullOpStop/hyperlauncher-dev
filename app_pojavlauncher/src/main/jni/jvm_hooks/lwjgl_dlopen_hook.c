@@ -13,7 +13,7 @@
 #define TAG __FILE_NAME__
 #include <log.h>
 
-extern void* pojavexec_loadVulkanDriver();
+#include "../pojavexec.h"
 
 /**
  * Basically a verbatim implementation of ndlopen(), found at

@@ -142,12 +142,6 @@ public class JREUtils {
         }
         setupFfmpegEnv(context, envMap);
 
-        envMap.put("MOJO_RENDERER", renderer);
-
-        if(renderer.equals("opengles3_ltw")) {
-            envMap.put("POJAVEXEC_EGL","libltw.so");
-        }
-
         if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
 
         if(GLInfoUtils.getGlInfo().isAdreno() && !PREF_ZINK_PREFER_SYSTEM_DRIVER) {
@@ -236,20 +230,26 @@ public class JREUtils {
      */
     public static String loadGraphicsLibrary(String renderer){
         String renderLibrary;
+        boolean useGles;
+        int glesVersion;
         switch (renderer){
+            //case "vulkan_zink": renderLibrary = "libOSMesa.so"; break;
+            case "opengles3_ltw" :
+                renderLibrary = "libltw.so";
+                useGles = true;
+                glesVersion = 3;
+                break;
             case "opengles2":
             case "opengles2_5":
             case "opengles3":
-                renderLibrary = "libgl4es_114.so"; break;
-            case "vulkan_zink": renderLibrary = "libOSMesa.so"; break;
-            case "opengles3_ltw" : renderLibrary = "libltw.so"; break;
             default:
-                Log.w("RENDER_LIBRARY", "No renderer selected, defaulting to opengles2");
                 renderLibrary = "libgl4es_114.so";
+                useGles = true;
+                glesVersion = Integer.parseInt((String) ExtraCore.getValue(ExtraConstants.OPEN_GL_VERSION));
                 break;
         }
 
-        if (!dlopen(renderLibrary)) {
+        if (!configureRenderspec(renderLibrary, false, useGles, glesVersion)) {
             Log.e("RENDER_LIBRARY","Failed to load renderer " + renderLibrary );
             return null;
         }
@@ -260,8 +260,9 @@ public class JREUtils {
         return GLInfoUtils.getGlInfo().glesMajorVersion;
     }
     public static native int chdir(String path);
-    public static native boolean dlopen(String libPath);
+
     public static native void setLdLibraryPath(String ldLibraryPath);
+    public static native boolean configureRenderspec(String eglPath, boolean useLoaderBypass, boolean useGles, int glesVersion);
     //public static native void initializeHooks();
     // Obtain AWT screen pixels to render on Android SurfaceView
     public static native boolean renderAWTScreenFrame(ByteBuffer tempBuffer);
