@@ -41,7 +41,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     private void setupNotificationRequestPreference() {
-        Preference mRequestNotificationPermissionPreference = requirePreference("");
+        Preference mRequestNotificationPermissionPreference = requirePreference("notification_permission_request");
         Activity activity = getActivity();
         if(activity instanceof LauncherActivity) {
             mRequestNotificationPermissionPreference.setOnPreferenceClickListener(preference -> {
