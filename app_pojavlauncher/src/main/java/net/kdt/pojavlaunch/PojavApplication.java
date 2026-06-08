@@ -13,6 +13,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
+import net.ashmeet.hyperlauncher.BuildConfig;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
@@ -29,8 +30,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import git.artdeell.mojo.BuildConfig;
-
 public class PojavApplication extends Application {
 	public static final String CRASH_REPORT_TAG = "PojavCrashReport";
 	public static final ExecutorService sExecutorService = new ThreadPoolExecutor(4, 4, 500, TimeUnit.MILLISECONDS,  new LinkedBlockingQueue<>());
@@ -41,7 +40,7 @@ public class PojavApplication extends Application {
 					ActivityCompat.checkSelfPermission(PojavApplication.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && Tools.checkStorageRoot(PojavApplication.this);
 			File crashFile = new File(storagePermAllowed ? Tools.DIR_GAME_HOME : Tools.DIR_DATA, "latestcrash.txt");
 			try {
-				// Write to file, since some devices may not able to show error
+
 				FileUtils.ensureParentDirectory(crashFile);
 				PrintStream crashStream = new PrintStream(crashFile);
 				crashStream.append("PojavLauncher crash report\n");
@@ -65,24 +64,20 @@ public class PojavApplication extends Application {
 	@Override
 	public void onCreate() {
 		ContextExecutor.setApplication(this);
-		// Disable fatal errors on gplay. This is necessary so that google can collect crash report data and send it to me
-		// (where i can find the cause and fix it)
-        //noinspection ConstantValue
+
         if(!BuildConfig.BUILD_TYPE.equals("gplay")) installFatalErrorHandler();
-		
+
 		try {
 			super.onCreate();
 			if(Tools.checkStorageRoot(this)){
-				// Implicitly initializes early constants and storage constants.
-				// Required to run the main activity properly.
+
 				LauncherPreferences.loadPreferences(this);
 			} else {
-				// In other cases, only initialize enough for the basicmost basics to work
-				// and not explode.
+
 				Tools.initEarlyConstants(this);
 			}
 			Tools.DEVICE_ARCHITECTURE = Architecture.getDeviceArchitecture();
-			//Force x86 lib directory for Asus x86 based zenfones
+
 			if(Architecture.isx86Device() && Architecture.is32BitsDevice()){
 				String originalJNIDirectory = getApplicationInfo().nativeLibraryDir;
 				getApplicationInfo().nativeLibraryDir = originalJNIDirectory.substring(0,

@@ -49,11 +49,12 @@ public class Accounts {
 	}
 
 	private static MinecraftAccount loadAccount(File source) {
+		if (source == null || !source.exists() || !source.isFile()) return null;
 		MinecraftAccount acc;
 		try {
 			acc = JSONUtils.readFromFile(source, MinecraftAccount.class);
 		}catch (Exception e) {
-			Log.w("Accounts", "Failed to load account", e);
+			Log.w("Accounts", "Failed to load account: " + source.getAbsolutePath(), e);
 			return null;
 		}
         if(acc == null) return null;
@@ -83,8 +84,9 @@ public class Accounts {
 
     public static MinecraftAccount getCurrent() {
 		String selectedAccount = getSelectedAccount();
+		if (selectedAccount == null || selectedAccount.isEmpty()) return null;
 		return loadAccount(new File(Tools.DIR_ACCOUNT_NEW, selectedAccount));
-    }
+	}
 
 	private static File pickAccountPath() {
 		File profilePath;

@@ -1,21 +1,22 @@
 package net.kdt.pojavlaunch.mirrors;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.text.Html;
 
-import git.artdeell.mojo.R;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.ShowErrorActivity;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutorTask;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 public class MirrorTamperedException extends Exception implements ContextExecutorTask {
-    // Do not change. Android really hates when this value changes for some reason.
+
     private static final long serialVersionUID = -7482301619612640658L;
     @Override
     public void executeWithActivity(Activity activity) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity);
         builder.setTitle(R.string.dl_tampered_manifest_title);
         builder.setMessage(Html.fromHtml(activity.getString(R.string.dl_tampered_manifest)));
         addButtons(builder);
@@ -23,7 +24,7 @@ public class MirrorTamperedException extends Exception implements ContextExecuto
         builder.show();
     }
 
-    private void addButtons(AlertDialog.Builder builder) {
+    private void addButtons(MaterialAlertDialogBuilder builder) {
         builder.setPositiveButton(R.string.dl_switch_to_official_site,(d,w)->{
             LauncherPreferences.DEFAULT_PREF.edit().putString("downloadSource", "default").apply();
             LauncherPreferences.PREF_DOWNLOAD_SOURCE = "default";

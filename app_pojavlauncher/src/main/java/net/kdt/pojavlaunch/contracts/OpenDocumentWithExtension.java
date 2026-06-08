@@ -15,8 +15,6 @@ import net.kdt.pojavlaunch.PojavApplication;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-// Android's OpenDocument contract is the basicmost crap that doesn't allow
-// you to specify practically anything. So i made this instead.
 public class OpenDocumentWithExtension extends ActivityResultContract<Object, Uri> {
     private final Future<String> extensionMimeTypeFuture;
 
@@ -27,7 +25,7 @@ public class OpenDocumentWithExtension extends ActivityResultContract<Object, Ur
      * @param extension the extension to filter by
      */
     public OpenDocumentWithExtension(String extension) {
-        // Who would have thought that loading the MIME map takes a significant amount of time?
+
         extensionMimeTypeFuture = PojavApplication.sExecutorService.submit(()->{
             String extensionMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
             if(extensionMimeType == null) extensionMimeType = "*/*";

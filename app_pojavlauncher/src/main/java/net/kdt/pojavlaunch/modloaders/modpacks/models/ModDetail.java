@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.modloaders.modpacks.models;
 
-
 import androidx.annotation.NonNull;
 
 import java.util.Arrays;
@@ -19,7 +18,6 @@ public class ModDetail extends ModItem {
         this.versionUrls = versionUrls;
         this.versionHashes = hashes;
 
-        // Add the mc version to the version model
         for (int i=0; i<versionNames.length; i++){
             if (!versionNames[i].contains(mcVersionNames[i]))
                 versionNames[i] += " - " + mcVersionNames[i];

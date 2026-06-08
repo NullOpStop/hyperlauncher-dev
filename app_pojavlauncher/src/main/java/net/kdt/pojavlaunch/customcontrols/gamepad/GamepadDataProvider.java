@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.customcontrols.gamepad;
 
-
 import git.artdeell.dnbootstrap.glfw.GrabListener;
 
 public interface GamepadDataProvider {

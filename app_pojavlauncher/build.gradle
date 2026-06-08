@@ -1,7 +1,10 @@
 plugins {
-    id 'com.android.application' version '8.11.1'
+    id 'com.android.application'
     id 'de.undercouch.download' version '5.6.0'
     id 'org.ajoberstar.grgit' version '5.3.2'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 apply from: rootProject.file('gradle/prefab_bypass.gradle')
@@ -19,26 +22,16 @@ static def getDateSeconds() {
 }
 
 def getVersionName = {
-    def currentBranch = grgit.branch.current()
-    def latestCommit = grgit.log(maxCommits: 1)
-    def dateToday = getDate()
-    if(currentBranch == null || latestCommit == null) {
-        return "LOCAL-${dateToday}"
-    }else {
-        def branchName = currentBranch.getName()
-        def commitAbbreviation = latestCommit.abbreviatedId
-        return "iris-${dateToday}-${commitAbbreviation}-${branchName}"
-    }
+        return "2.8.0-${getDate()}+${getDateSeconds()}"
 }
 
 def getCFApiKey = {
-    String key = System.getenv("CURSEFORGE_API_KEY")
+    String key = System.getenv('$2a$10$gh97kqzcB/TKSYpqqacaE.N0SJGN121gGUF.6xsxiEu1ZmfaOYmcy')
     if(key != null) return key
     File curseforgeKeyFile = new File("./curseforge_key.txt")
     if(curseforgeKeyFile.canRead() && curseforgeKeyFile.isFile()) {
         return curseforgeKeyFile.text
     }
-    logger.warn('BUILD: You have no CurseForge key, the curseforge api will get disabled !')
     return "DUMMY"
 }
 
@@ -50,9 +43,9 @@ configurations {
 }
 
 android {
-    namespace 'git.artdeell.mojo'
+    namespace 'net.ashmeet.hyperlauncher'
 
-    compileSdk = 36
+    compileSdk = 35
 
     lintOptions {
         abortOnError false
@@ -80,9 +73,9 @@ android {
     }
 
     defaultConfig {
-        applicationId "git.artdeell.mojo"
-        minSdkVersion 21
-        targetSdkVersion 36
+        applicationId "net.ashmeet.hyperlauncher"
+        minSdkVersion 24
+        targetSdkVersion 35
         versionCode getDateSeconds()
         versionName getVersionName()
         multiDexEnabled false //important
@@ -90,12 +83,12 @@ android {
     }
 
     flavorDimensions  = ["runtime"]
-    
+
     productFlavors {
         full {
             dimension "runtime"
         }
-        
+
         noruntime {
             dimension "runtime"
             versionNameSuffix "-noruntime"
@@ -109,28 +102,15 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.customDebug
-            resValue 'string', 'application_package', 'git.artdeell.mojo.debug'
-            resValue 'string', 'storageProviderAuthorities', 'git.artdeell.mojo.scoped.gamefolder.debug'
-        }
-        proguard {
-            initWith debug
-            minifyEnabled true
-            shrinkResources true
-        }
-        proguardNoDebug {
-            initWith proguard
-            debuggable false
+            resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher.debug'
+            resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.scoped.gamefolder.debug'
         }
 
         release {
-            // Don't set to true or java.awt will be a.a or something similar.
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // defaultConfig already set
-            // multiDexEnabled = true
-            // debuggable = true
-            resValue 'string', 'storageProviderAuthorities', 'git.artdeell.mojo.scoped.gamefolder'
-            resValue 'string', 'application_package', 'git.artdeell.mojo'
+            resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.scoped.gamefolder'
+            resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher'
         }
         gplay {
             initWith release
@@ -140,8 +120,8 @@ android {
             initWith release
             signingConfig signingConfigs.customDebug // WIP, changeme
             applicationIdSuffix '.pub'
-            resValue 'string', 'storageProviderAuthorities', 'git.artdeell.mojo.pub.scoped.gamefolder'
-            resValue 'string', 'application_package', 'git.artdeell.mojo.pub'
+            resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.pub.scoped.gamefolder'
+            resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher.pub'
         }
     }
 
@@ -154,8 +134,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     bundle {
@@ -173,6 +153,18 @@ android {
 
     buildFeatures {
         buildConfig true
+        compose true
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main {
+            java {
+                exclude 'dalvik/annotation/optimization/CriticalNative.java'
+            }
+        }
     }
 }
 
@@ -311,6 +303,7 @@ afterEvaluate {
 }
 
 dependencies {
+    implementation project(':dnbglfw')
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
     implementation 'commons-codec:commons-codec:1.19.0'
     // implementation 'com.wu-man:android-bsf-api:3.1.3'
@@ -321,6 +314,7 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.9.1'
 
     implementation "androidx.constraintlayout:constraintlayout:2.2.1"
+    implementation 'com.google.android.material:material:1.12.0'
 
     implementation 'com.github.duanhong169:checkerboarddrawable:1.0.2'
     implementation 'com.github.PojavLauncherTeam:portrait-sdp:ed33e89cbc'
@@ -329,8 +323,9 @@ dependencies {
     implementation 'com.github.Mathias-Boulay:android_gamepad_remapper:2.0.3'
     implementation 'com.github.Mathias-Boulay:virtual-joystick-android:1.14'
 
-    // implementation 'com.intuit.sdp:sdp-android:1.0.5'
-    // implementation 'com.intuit.ssp:ssp-android:1.0.5'
+    // Force recent core libraries to match modern Compose requirements
+    implementation 'androidx.core:core:1.15.0'
+    implementation 'androidx.core:core-ktx:1.15.0'
 
     implementation 'org.tukaani:xz:1.10'
     // Our version of exp4j can be built from source at
@@ -339,10 +334,34 @@ dependencies {
     implementation 'com.bytedance:bytehook:1.1.1'
 
     implementation 'com.github.MojoLauncher:alsoft-android-aar:f369161d5f'
+    implementation 'androidx.palette:palette-ktx:1.0.0'
+    implementation 'androidx.compose.foundation:foundation'
 
-    implementation project(":dnbglfw")
-
-    // implementation 'net.sourceforge.streamsupport:streamsupport-cfuture:1.7.0'
-
+    // Jetpack Compose
+    def composeBom = platform('androidx.compose:compose-bom:2024.12.01')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
+    implementation 'androidx.compose.runtime:runtime-livedata'
+    implementation 'androidx.compose.ui:ui-tooling'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'net.sourceforge.streamsupport:streamsupport-cfuture:1.7.4'
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-database'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+
+    // SceneView for 3D model rendering
+    implementation 'io.github.sceneview:sceneview:0.10.0'
+
+    // Ktor embedded HTTP server
+    implementation "io.ktor:ktor-server-cio:2.3.12"
+    implementation "io.ktor:ktor-server-content-negotiation:2.3.12"
+    implementation "io.ktor:ktor-serialization-kotlinx-json:2.3.12"
 }

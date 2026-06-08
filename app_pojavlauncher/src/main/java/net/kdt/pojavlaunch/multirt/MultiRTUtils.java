@@ -9,7 +9,7 @@ import android.util.Log;
 
 import com.kdt.mcgui.ProgressLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.utils.MathUtils;
 
@@ -95,7 +95,6 @@ public class MultiRTUtils {
             if(!ftIn.renameTo(ftOut)) throw new IOException("Failed to rename freetype");
         }
 
-        // Refresh libraries
         copyDummyNativeLib("libawt_xawt.so", dest, libFolder);
     }
 
@@ -115,7 +114,6 @@ public class MultiRTUtils {
             ProgressLayout.clearProgress(ProgressLayout.UNPACK_RUNTIME);
         }
     }
-
 
     public static String readInternalRuntimeVersion(String name) {
         File versionFile = new File(RUNTIME_FOLDER,"/" + name + "/pojav_version");
@@ -242,7 +240,7 @@ public class MultiRTUtils {
         byte[] buffer = new byte[8192];
         try(TarArchiveInputStream tarIn = new TarArchiveInputStream(new XZCompressorInputStream(tarFileInputStream))) {
             TarArchiveEntry tarEntry;
-            // tarIn is a TarArchiveInputStream
+
             while ((tarEntry = tarIn.getNextTarEntry()) != null) {
 
                 final String tarEntryName = tarEntry.getName();
@@ -252,8 +250,7 @@ public class MultiRTUtils {
                 net.kdt.pojavlaunch.utils.FileUtils.ensureParentDirectory(destPath);
                 if (tarEntry.isSymbolicLink()) {
                     try {
-                        // android.system.Os
-                        // Libcore one support all Android versions
+
                         Os.symlink(tarEntry.getName(), tarEntry.getLinkName());
                     } catch (Throwable e) {
                         Log.e("MultiRT", e.toString());

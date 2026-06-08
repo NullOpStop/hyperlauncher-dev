@@ -20,8 +20,10 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import net.kdt.pojavlaunch.PojavApplication;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.imgcropper.BitmapCropBehaviour;
 import net.kdt.pojavlaunch.imgcropper.CropperBehaviour;
@@ -55,7 +57,7 @@ public class CropperUtils {
     private static void openCropperDialog(Context context, Uri selectedUri,
                                           final CropperReceiver cropperReceiver) {
         ContentResolver contentResolver = context.getContentResolver();
-        AlertDialog dialog = new AlertDialog.Builder(context)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.cropper_title)
                 .setView(R.layout.dialog_cropper)
                 .setPositiveButton(android.R.string.ok, null)
@@ -83,13 +85,12 @@ public class CropperUtils {
         });
     }
 
-    // Fixes the chin that the dialog has on my huawei fon
     private static void fixDialogHeight(AlertDialog dialog) {
         Window dialogWindow = dialog.getWindow();
         if(dialogWindow != null)
             dialogWindow.setLayout(
-                    WindowManager.LayoutParams.MATCH_PARENT, // width
-                    WindowManager.LayoutParams.WRAP_CONTENT  // height
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT
             );
     }
 
@@ -108,7 +109,6 @@ public class CropperUtils {
         });
     }
 
-
     private static CropperBehaviour createBehaviour(CropperView cropImageView,
                                       ContentResolver contentResolver,
                                       Uri selectedUri) throws Exception {
@@ -120,13 +120,11 @@ public class CropperUtils {
                 cropBehaviour.setRegionDecoder(regionDecoder);
                 return cropBehaviour;
             }catch (IOException e) {
-                // Catch IOE here to detect the case when BitmapRegionDecoder does not support this image format.
-                // If it does not, we will just have to load the bitmap in full resolution using BitmapFactory.
+
                 Log.w("CropperUtils", "Failed to load image into BitmapRegionDecoder", e);
             }
         }
-        // We can safely re-open the stream here as ACTION_OPEN_DOCUMENT grants us long-term access
-        // to the file that we have picked.
+
         try (InputStream inputStream = contentResolver.openInputStream(selectedUri)) {
             if(inputStream == null) return null;
             Bitmap originalBitmap = BitmapFactory.decodeStream(inputStream);

@@ -87,8 +87,6 @@ public class MatrixUtils {
         readOutputRect(inOutDecodeRect, outRect);
     }
 
-    // The group of functions below are used as building blocks of the transformRect() functions
-    // in order to not repeat the same exact code a lot of times.
     private static void writeInputRect(float[] inOutDecodeRect, RectF inRect) {
         inOutDecodeRect[0] = inRect.left;
         inOutDecodeRect[1] = inRect.top;
@@ -119,8 +117,7 @@ public class MatrixUtils {
 
     private static float[] createInOutDecodeRect(Matrix transformMatrix) {
         if(transformMatrix.isIdentity()) return null;
-        // We need an array of 8 floats because each point is two floats,
-        // we need to transform two points and we need to have a separated input and output
+
         return new float[8];
     }
 
@@ -144,7 +141,6 @@ public class MatrixUtils {
         destination.setValues(matrix);
     }
 
-    // This was made by ChatGPT and i have no clue what's happening here, but it works so eh
     private static void inverseMatrix(float[] matrix) {
         float determinant = matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7])
                 - matrix[1] * (matrix[3] * matrix[8] - matrix[5] * matrix[6])

@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.kdt.SimpleArrayAdapter;
 
 import net.kdt.pojavlaunch.PojavApplication;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.modloaders.modpacks.api.ModpackApi;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ImageReceiver;
@@ -62,7 +62,6 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private boolean mLastPage;
     private boolean mTasksRunning;
 
-
     public ModItemAdapter(Resources resources, ModpackApi api, SearchResultCallback callback) {
         mCornerDimensionCache = resources.getDimension(R.dimen._1sdp) / 250;
         mModpackApi = api;
@@ -81,6 +80,25 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 .startOnExecutor(PojavApplication.sExecutorService);
     }
 
+    public void performNextPageQuery() {
+        loadMoreResults();
+    }
+
+    public ModItem[] getCurrentSearchResults() {
+        return mModItems;
+    }
+
+    public boolean isLastPage() {
+        return mLastPage;
+    }
+
+    public void getModDetail(ModItem item, ModDetailCallback callback) {
+        PojavApplication.sExecutorService.execute(() -> {
+            ModDetail detail = mModpackApi.getModDetails(item);
+            Tools.runOnUiThread(() -> callback.onModDetailLoaded(detail));
+        });
+    }
+
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
@@ -88,11 +106,11 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         View view;
         switch (viewType) {
             case VIEW_TYPE_MOD_ITEM:
-                // Create a new view, which defines the UI of the list item
+
                 view = layoutInflater.inflate(R.layout.view_mod, viewGroup, false);
                 return new ViewHolder(view);
             case VIEW_TYPE_LOADING:
-                // Create a new view, which is actually just the progress bar
+
                 view = layoutInflater.inflate(R.layout.view_loading, viewGroup, false);
                 return new LoadingViewHolder(view);
             default:
@@ -143,7 +161,6 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         return false;
     }
 
-
     /**
      * Basic viewholder with expension capabilities
      */
@@ -170,7 +187,7 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             mViewHolderSet.add(this);
             view.setOnClickListener(v -> {
                 if(!hasExtended()){
-                    // Inflate the ViewStub
+
                     mExtendedLayout = ((ViewStub)v.findViewById(R.id.mod_limited_state_stub)).inflate();
                     mExtendedButton = mExtendedLayout.findViewById(R.id.mod_extended_select_version_button);
                     mExtendedSpinner = mExtendedLayout.findViewById(R.id.mod_extended_version_spinner);
@@ -186,7 +203,7 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     else openDetailedView();
                 }
 
-                if(isExtended() && mModDetail == null && mExtensionFuture == null) { // only reload if no reloads are in progress
+                if(isExtended() && mModDetail == null && mExtensionFuture == null) {
                     setDetailedStateDefault();
                     /*
                      * Why do we do this?
@@ -222,7 +239,6 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 }
             });
 
-            // Define click listener for the ViewHolder's View
             mTitle = view.findViewById(R.id.mod_title_textview);
             mDescription = view.findViewById(R.id.mod_body_textview);
             mIconView = view.findViewById(R.id.mod_thumbnail_imageview);
@@ -249,7 +265,7 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
 
             mModItem = item;
-            // here the previous reference to the image receiver will disappear
+
             mImageReceiver = bm->{
                 mImageReceiver = null;
                 mThumbnailBitmap = bm;
@@ -287,7 +303,6 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             mExtendedLayout.setVisibility(View.VISIBLE);
             mDescription.setMaxLines(99);
 
-            // We need to align to the longer section
             int futureBottom = mDescription.getBottom() + Tools.mesureTextviewHeight(mDescription) - mDescription.getHeight();
             ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) mExtendedLayout.getLayoutParams();
             params.topToBottom = futureBottom > mIconView.getBottom() ? R.id.mod_body_textview : R.id.mod_thumbnail_imageview;
@@ -406,5 +421,9 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         int ERROR_NO_RESULTS = 1;
         void onSearchFinished();
         void onSearchError(int error);
+    }
+
+    public interface ModDetailCallback {
+        void onModDetailLoaded(ModDetail detail);
     }
 }

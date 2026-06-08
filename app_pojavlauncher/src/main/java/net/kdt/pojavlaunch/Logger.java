@@ -10,7 +10,6 @@ public class Logger {
     /** Print the text to the log file if not censored */
     public static native void appendToLog(String text);
 
-
     /** Reset the log file, effectively erasing any previous logs */
     public static native void begin(String logFilePath);
 

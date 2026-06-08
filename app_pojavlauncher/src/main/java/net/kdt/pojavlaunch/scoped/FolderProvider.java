@@ -18,8 +18,8 @@ import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
 
-import git.artdeell.mojo.BuildConfig;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.BuildConfig;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 
 import org.apache.commons.io.FileUtils;
@@ -56,8 +56,6 @@ public class FolderProvider extends DocumentsProvider {
     private String mStorageProviderAuthortiy;
     private final Object mWaitObject = new Object();
 
-    // The default columns to return information about a root if no specific
-    // columns are requested in a query.
     private static final String[] DEFAULT_ROOT_PROJECTION = new String[]{
         Root.COLUMN_ROOT_ID,
         Root.COLUMN_MIME_TYPES,
@@ -69,8 +67,6 @@ public class FolderProvider extends DocumentsProvider {
         Root.COLUMN_AVAILABLE_BYTES
     };
 
-    // The default columns to return information about a document if no specific
-    // columns are requested in a query.
     private static final String[] DEFAULT_DOCUMENT_PROJECTION = new String[]{
         Document.COLUMN_DOCUMENT_ID,
         Document.COLUMN_MIME_TYPE,
@@ -110,7 +106,7 @@ public class FolderProvider extends DocumentsProvider {
         row.add(Root.COLUMN_TITLE, applicationName);
         row.add(Root.COLUMN_MIME_TYPES, ALL_MIME_TYPES);
         row.add(Root.COLUMN_AVAILABLE_BYTES, BASE_DIR.getFreeSpace());
-        row.add(Root.COLUMN_ICON, R.mipmap.ic_launcher);
+        row.add(Root.COLUMN_ICON, R.drawable.icon);
         return result;
     }
 
@@ -118,7 +114,7 @@ public class FolderProvider extends DocumentsProvider {
     public Cursor queryDocument(String documentId, String[] projection) throws FileNotFoundException {
         validateQuery();
         final MatrixCursor result = new MatrixCursor(projection != null ? projection : DEFAULT_DOCUMENT_PROJECTION);
-        // Future-proofing in case if we implement realtime file watching
+
         result.setNotificationUri(mContentResolver, createUriForDocId(documentId));
         includeFile(result, documentId, null);
         return result;
@@ -134,7 +130,7 @@ public class FolderProvider extends DocumentsProvider {
         for (File file : children) {
             includeFile(result, null, file);
         }
-        // Set the notification URI as that's what the "Files" app will be listening to in case of file deletion
+
         result.setNotificationUri(mContentResolver, createUriForDocId(parentDocumentId));
         return result;
     }
@@ -187,7 +183,7 @@ public class FolderProvider extends DocumentsProvider {
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to create document with id " + newFile.getPath());
         }
-        // Notify the file manager that the parent directory has changed
+
         notifyChange(createUriForDocId(parentDocumentId));
         return newFile.getPath();
     }
@@ -233,7 +229,7 @@ public class FolderProvider extends DocumentsProvider {
                 throw new FileNotFoundException("Failed to delete document with id " + documentId);
             }
         }
-        // Notify the file manager that the parent directory has changed
+
         notifyChange(createUriForFile(file.getParentFile()));
     }
 
@@ -249,18 +245,13 @@ public class FolderProvider extends DocumentsProvider {
         final MatrixCursor result = new MatrixCursor(projection != null ? projection : DEFAULT_DOCUMENT_PROJECTION);
         final File parent = getFileForDocId(rootId);
 
-        // This example implementation searches file names for the query and doesn't rank search
-        // results, so we can stop as soon as we find a sufficient number of matches.  Other
-        // implementations might rank results and use other data about files, rather than the file
-        // name, to produce a match.
         final LinkedList<File> pending = new LinkedList<>();
         pending.add(parent);
 
         final int MAX_SEARCH_RESULTS = 50;
         while (!pending.isEmpty() && result.getCount() < MAX_SEARCH_RESULTS) {
             final File file = pending.removeFirst();
-            // Avoid directories outside the $HOME directory linked with symlinks (to avoid e.g. search
-            // through the whole SD card).
+
             boolean isInsideHome;
             try {
                 isInsideHome = file.getCanonicalPath().startsWith(Tools.DIR_GAME_HOME);
@@ -343,7 +334,7 @@ public class FolderProvider extends DocumentsProvider {
             flags |= Document.FLAG_SUPPORTS_WRITE;
         }
         File parent = file.getParentFile();
-        if(parent != null) { // Only fails in one case: when the parent is /, which you can't delete.
+        if(parent != null) {
             if(parent.canWrite()) flags |= Document.FLAG_SUPPORTS_DELETE;
         }
 
@@ -358,7 +349,7 @@ public class FolderProvider extends DocumentsProvider {
         row.add(Document.COLUMN_MIME_TYPE, mimeType);
         row.add(Document.COLUMN_LAST_MODIFIED, file.lastModified());
         row.add(Document.COLUMN_FLAGS, flags);
-        row.add(Document.COLUMN_ICON, R.mipmap.ic_launcher);
+        row.add(Document.COLUMN_ICON, R.drawable.icon);
     }
 
     @Override

@@ -9,7 +9,7 @@ import android.widget.ExpandableListAdapter;
 import android.widget.TextView;
 
 import net.kdt.pojavlaunch.JMinecraftVersionList;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.utils.FilteredSubList;
 
@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class VersionListAdapter extends BaseExpandableListAdapter implements ExpandableListAdapter {
-    
+
     private final LayoutInflater mLayoutInflater;
 
     private final String[] mGroups;
@@ -36,7 +36,6 @@ public class VersionListAdapter extends BaseExpandableListAdapter implements Exp
         List<JMinecraftVersionList.Version> betaList = new FilteredSubList<>(versionList, item -> item.type.equals("old_beta"));
         List<JMinecraftVersionList.Version> alphaList = new FilteredSubList<>(versionList, item -> item.type.equals("old_alpha"));
 
-        // Query installed versions
         mInstalledVersions = new File(Tools.DIR_GAME_NEW + "/versions").list();
         if(mInstalledVersions != null)
             Arrays.sort(mInstalledVersions);

@@ -9,7 +9,7 @@ import androidx.annotation.NonNull;
 
 import com.kdt.mcgui.ProgressLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.AuthType;
 import net.kdt.pojavlaunch.authenticator.BackgroundLogin;
@@ -166,7 +166,7 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
             conn.disconnect();
             Log.i("MicrosoftLogin","Xbl Token = "+jo.getString("Token"));
             return jo.getString("Token");
-            //acquireXsts(jo.getString("Token"));
+
         }else{
             throw CommonLoginUtils.getResponseThrowable(conn);
         }
@@ -202,7 +202,7 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
             conn.disconnect();
             Log.i("MicrosoftLogin","Xbl Xsts = " + token + "; Uhs = " + uhs);
             return new String[]{uhs, token};
-            //acquireMinecraftToken(uhs,jo.getString("Token"));
+
         }else if(conn.getResponseCode() == 401) {
             String responseContents = Tools.read(conn.getErrorStream());
             JSONObject jo = new JSONObject(responseContents);
@@ -238,7 +238,7 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
             conn.disconnect();
             Log.i("MicrosoftLogin","MC token: "+jo.getString("access_token"));
             mcToken = jo.getString("access_token");
-            //checkMcProfile(jo.getString("access_token"));
+
             return jo.getString("access_token");
         }else{
             throw CommonLoginUtils.getResponseThrowable(conn);
@@ -255,9 +255,7 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
         if(conn.getResponseCode() < 200 || conn.getResponseCode() >= 300) {
             throw CommonLoginUtils.getResponseThrowable(conn);
         }
-        // We don't need any data from this request, it just needs to happen in order for
-        // the MS servers to work properly. The data from this is practically useless
-        // as it does not indicate whether the user owns the game through Game Pass.
+
     }
 
     private void checkMcProfile(String mcAccessToken) throws IOException, JSONException {
@@ -287,7 +285,7 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
             Log.i("MicrosoftLogin","It seems that this Microsoft Account does not own the game.");
             doesOwnGame = false;
             throw new PresentedException(new RuntimeException(conn.getResponseMessage()), R.string.minecraft_not_owned);
-            //throwResponseError(conn);
+
         }
     }
 
@@ -296,7 +294,6 @@ public class MicrosoftBackgroundLogin implements BackgroundLogin{
         Tools.runOnUiThread(() -> listener.onLoginProgress(step));
         ProgressLayout.setProgress(ProgressLayout.AUTHENTICATE, step*20);
     }
-
 
     /** Set common properties for the connection. Given that all requests are POST, interactivity is always enabled */
     private static void setCommonProperties(HttpURLConnection conn, String formData) {

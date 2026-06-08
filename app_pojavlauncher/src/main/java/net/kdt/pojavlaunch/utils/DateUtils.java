@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 
-// Utils for date-based activation for certain launcher workarounds.
 public class DateUtils {
     /**
      * Parse the release date of a game version from the JMinecraftVersionList.Version time or releaseTime fields
@@ -48,9 +47,7 @@ public class DateUtils {
         if(Tools.isValidString(gameVersion.inheritsFrom)) {
             gameVersion = Tools.getVersionInfo(gameVersion.inheritsFrom, true);
         }else {
-            // The launcher's inheritor mutilates the version object, causing it to have the original
-            // version's ID but modded version's dates. Work around it by re-reading the version without
-            // inheriting.
+
             gameVersion = Tools.getVersionInfo(gameVersion.id, true);
         }
         return parseReleaseDate(gameVersion.releaseTime);

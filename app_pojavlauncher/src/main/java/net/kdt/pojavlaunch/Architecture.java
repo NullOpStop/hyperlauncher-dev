@@ -64,8 +64,7 @@ public class Architecture {
 	 * @return Whether or not the device is x86 based.
 	 */
 	public static boolean isx86Device(){
-		//We check the whole range of supported ABIs,
-		//Since asus zenfones can place arm before their native instruction set.
+
 		String[] ABI = is64BitsDevice() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
 		int comparedArch = is64BitsDevice() ? ARCH_X86_64 : ARCH_X86;
 		for (String str : ABI) {
@@ -73,8 +72,6 @@ public class Architecture {
 		}
 		return false;
 	}
-
-
 
 	/**
 	 * Convert an architecture from a String to an int.
@@ -87,7 +84,7 @@ public class Architecture {
 		if(arch.contains("arm") || arch.equals("aarch32")) return ARCH_ARM;
 		if(arch.contains("x86_64") || arch.contains("amd64")) return ARCH_X86_64;
 		if(arch.contains("x86") || (arch.startsWith("i") && arch.endsWith("86"))) return ARCH_X86;
-		//Shouldn't happen
+
 		return UNSUPPORTED_ARCH;
 	}
 

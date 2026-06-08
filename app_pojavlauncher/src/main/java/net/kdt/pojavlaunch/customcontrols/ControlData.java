@@ -42,7 +42,6 @@ public class ControlData {
         buildConversionMap();
     }
 
-    // Internal usage only
     public transient boolean isHideable;
     /**
      * Both fields below are dynamic position data, auto updates
@@ -54,18 +53,18 @@ public class ControlData {
     public String dynamicX, dynamicY;
     public boolean isToggle, passThruEnabled;
     public String name;
-    public int[] keycodes;      //Should store up to 4 keys
-    public float opacity;       //Alpha value from 0 to 1;
+    public int[] keycodes;
+    public float opacity;
     public int bgColor;
     public int strokeColor;
-    public float strokeWidth;     // Dp instead of % now
-    public float cornerRadius;  //0-100%
+    public float strokeWidth;
+    public float cornerRadius;
     public boolean isSwipeable;
     public boolean displayInGame;
     public boolean displayInMenu;
     public String bitmapTag;
-    private float width;         //Dp instead of Px now
-    private float height;        //Dp instead of Px now
+    private float width;
+    private float height;
 
     public ControlData() {
         this("button");
@@ -131,7 +130,6 @@ public class ControlData {
         this.bitmapTag = bitmapTag;
     }
 
-    //Deep copy constructor
     public ControlData(ControlData controlData) {
         this(
                 controlData.name,
@@ -192,8 +190,8 @@ public class ControlData {
     }
 
     private static int[] inflateKeycodeArray(int[] keycodes) {
-        int[] inflatedArray = new int[]{GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN};
-        System.arraycopy(keycodes, 0, inflatedArray, 0, keycodes.length);
+        int[] inflatedArray = new int[]{GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN, GLFW_KEY_UNKNOWN};
+        System.arraycopy(keycodes, 0, inflatedArray, 0, Math.min(keycodes.length, inflatedArray.length));
         return inflatedArray;
     }
 
@@ -232,7 +230,7 @@ public class ControlData {
      * You need to set the view dependent values before using it.
      */
     private static void buildConversionMap() {
-        // Values in the map below may be always changed
+
         ArrayMap<String, String> keyValueMap = new ArrayMap<>(10);
         keyValueMap.put("top", "0");
         keyValueMap.put("left", "0");
@@ -249,10 +247,9 @@ public class ControlData {
     }
 
     public float insertDynamicPos(String dynamicPos, int w, int h) {
-        // Insert value to ${variable}
+
         String insertedPos = JSONUtils.insertSingleJSONValue(dynamicPos, fillConversionMap(w, h));
 
-        // Calculate, because the dynamic position contains some math equations
         return calculate(insertedPos);
     }
 
@@ -265,7 +262,6 @@ public class ControlData {
         return false;
     }
 
-    //Getters || setters (with conversion for ease of use)
     public float getWidth() {
         return Tools.dpToPx(width);
     }

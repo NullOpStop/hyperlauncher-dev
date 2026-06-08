@@ -57,18 +57,14 @@ public class RegionDecoderCropBehaviour extends BitmapCropBehaviour {
         Matrix inverse = new Matrix();
         MatrixUtils.inverse(matrix, inverse);
         MatrixUtils.transformRect(subsectionRect, inverse);
-        // If our current sub-section is bigger than the decoder rect, skip.
-        // We do this to avoid unnecessarily loading the image at full resolution.
+
         if(subsectionRect.width() > decoderRect.width()
                 || subsectionRect.height() > decoderRect.height()) return null;
-        // If our current sub-section doesn't even intersect the decoder rect, we won't even
-        // be able to create an overlay. So, skip.
+
         if(!subsectionRect.setIntersect(decoderRect, subsectionRect)) return null;
-        // In my testing, decoding a region smaller than that breaks the current region decoder instance.
-        // So, if it is smaller, skip.
+
         if(subsectionRect.width() < 16 || subsectionRect.height() < 16) return null;
-        // We can't really create a floating-point subsection from a bitmap, so convert the intersected
-        // rectangle that we want to get from the decoder into an integer Rect.
+
         Rect bitmapRegionRect = new Rect(
                 (int) subsectionRect.left,
                 (int) subsectionRect.top,
@@ -82,7 +78,7 @@ public class RegionDecoderCropBehaviour extends BitmapCropBehaviour {
 
     private void discardDecodeFuture() {
         if(mDecodeFuture != null) {
-            // Putting false here as I don't know how BitmapRegionDecoder will behave when interrupted
+
             mDecodeFuture.cancel(false);
         }
     }
@@ -194,11 +190,10 @@ public class RegionDecoderCropBehaviour extends BitmapCropBehaviour {
         RectF drawRect = new RectF();
         Bitmap regionBitmap = decodeRegionBitmap(drawRect, new RectF(hostSelection));
         if(regionBitmap == null) {
-            // If we can't decode a hi-res region, just crop out of the low-res preview. Yes, this will in fact
-            // cause the image to be low res, but we can't really avoid that in this case.
+
             return super.crop(targetMaxSide);
         }
-        // Offset the drawRect by the host selection's top-right corner, to properly position it within the resulting bitmap
+
         drawRect.offset(-hostSelection.left, -hostSelection.top);
         Rect selectionDims = new Rect(mHostView.mSelectionRect);
         selectionDims.offsetTo(0, 0);

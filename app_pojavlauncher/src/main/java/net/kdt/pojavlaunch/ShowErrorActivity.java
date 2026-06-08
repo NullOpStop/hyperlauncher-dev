@@ -1,20 +1,22 @@
 package net.kdt.pojavlaunch;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.kdt.pojavlaunch.lifecycle.ContextExecutorTask;
 import net.kdt.pojavlaunch.utils.NotificationUtils;
 
 import java.io.Serializable;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class ShowErrorActivity extends Activity {
 
@@ -35,7 +37,6 @@ public class ShowErrorActivity extends Activity {
         }
         remoteErrorTask.executeWithActivity(this);
     }
-
 
     public static class RemoteErrorTask implements ContextExecutorTask, Serializable {
         private final Throwable mThrowable;

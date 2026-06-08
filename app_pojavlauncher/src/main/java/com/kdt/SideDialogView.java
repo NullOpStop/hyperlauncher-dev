@@ -20,8 +20,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.core.content.res.ResourcesCompat;
 
-import git.artdeell.mojo.R;
-import net.kdt.pojavlaunch.Tools;
+import net.ashmeet.hyperlauncher.R;
 
 /**
  * The base class for side dialog views
@@ -31,7 +30,8 @@ public abstract class SideDialogView {
 
     private final ViewGroup mParent;
     private final @LayoutRes int mLayoutId;
-    private ViewGroup mDialogLayout;
+    private final View mCustomView;
+    protected ViewGroup mDialogLayout;
     private DefocusableScrollView mScrollView;
     protected View mDialogContent;
 
@@ -53,6 +53,14 @@ public abstract class SideDialogView {
         mMargin = context.getResources().getDimensionPixelOffset(R.dimen._20sdp);
         mParent = parent;
         mLayoutId = layoutId;
+        mCustomView = null;
+    }
+
+    public SideDialogView(Context context, ViewGroup parent, View customView) {
+        mMargin = context.getResources().getDimensionPixelOffset(R.dimen._20sdp);
+        mParent = parent;
+        mLayoutId = 0;
+        mCustomView = customView;
     }
 
     public void setTitle(@StringRes int textId) {
@@ -97,8 +105,16 @@ public abstract class SideDialogView {
         mTitleTextview = mDialogLayout.findViewById(R.id.side_dialog_title_textview);
         mTitleDivider = mDialogLayout.findViewById(R.id.side_dialog_title_divider);
 
-        LayoutInflater.from(mParent.getContext()).inflate(mLayoutId, mScrollView, true);
-        mDialogContent = mScrollView.getChildAt(0);
+        if (mCustomView != null) {
+            if (mCustomView.getParent() != null) {
+                ((ViewGroup) mCustomView.getParent()).removeView(mCustomView);
+            }
+            mScrollView.addView(mCustomView);
+            mDialogContent = mCustomView;
+        } else {
+            LayoutInflater.from(mParent.getContext()).inflate(mLayoutId, mScrollView, true);
+            mDialogContent = mScrollView.getChildAt(0);
+        }
 
         // Attach layouts
         mParent.addView(mDialogLayout);
@@ -110,7 +126,6 @@ public abstract class SideDialogView {
         mDialogLayout.setTranslationZ(10);
 
         mDialogLayout.setVisibility(View.VISIBLE);
-        mDialogLayout.setBackground(ResourcesCompat.getDrawable(mDialogLayout.getResources(), R.drawable.background_control_editor, null));
 
         //TODO offset better according to view width
         mDialogLayout.setX(-mDialogLayout.getResources().getDimensionPixelOffset(R.dimen._280sdp));
@@ -162,7 +177,7 @@ public abstract class SideDialogView {
             if(mSideDialogAnimator == null) throw new RuntimeException("Unexpected side animator state when dialog is inflated");
             if (fromRight) {
                 if (!mDisplaying || !isAtRight()) {
-                    mSideDialogAnimator.setFloatValues(parent.getWidth(), parent.getWidth() - mScrollView.getWidth() - mMargin);
+                    mSideDialogAnimator.setFloatValues(parent.getWidth(), parent.getWidth() - mDialogLayout.getWidth() - mMargin);
                     mSideDialogAnimator.start();
                     mDisplaying = true;
                 }

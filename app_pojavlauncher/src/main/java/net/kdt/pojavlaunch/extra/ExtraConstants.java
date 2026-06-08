@@ -23,4 +23,6 @@ public class ExtraConstants {
     public static final String LAUNCH_GAME = "launch_game";
     /* ExtraCore constant: Notify the account spinner that user has returned to the main menu. */
     public static final String REFRESH_ACCOUNT_SPINNER = "refresh_account_spinner";
+    /* ExtraCore constant: Notify the launcher background to refresh from preferences. */
+    public static final String REFRESH_BACKGROUND = "refresh_background";
 }

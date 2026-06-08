@@ -1,27 +1,32 @@
 package net.kdt.pojavlaunch;
 
-import static net.kdt.pojavlaunch.Tools.shareLog;
-
-import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.compose.ui.platform.ComposeView;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
+import net.kdt.pojavlaunch.ui.screens.ExitScreenHost;
+
+import java.io.File;
+import java.io.IOException;
 
 @Keep
 public class ExitActivity extends AppCompatActivity {
 
-    @SuppressLint("StringFormatInvalid") //invalid on some translations but valid on most, cant fix that atm
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
         int code = -1;
         boolean isSignal = false;
         Bundle extras = getIntent().getExtras();
@@ -30,16 +35,57 @@ public class ExitActivity extends AppCompatActivity {
             isSignal = extras.getBoolean("isSignal", false);
         }
 
-        String message = isSignal ? getString(R.string.mcn_abort_title) : getString(R.string.mcn_exit_title, code);
+        String title = isSignal ? getString(R.string.mcn_abort_title) : getString(R.string.mcn_exit_title, code);
+        String logs = readLogs();
 
-        new AlertDialog.Builder(this)
-                .setMessage(message)
-                .setPositiveButton(R.string.main_share_logs, (dialog, which) -> shareLog(this))
-                .setOnDismissListener(dialog -> ExitActivity.this.finish())
-                .show();
+        ComposeView composeView = new ComposeView(this);
+        setContentView(composeView);
+
+        ExitScreenHost.bind(
+                composeView,
+                this,
+                title,
+                logs,
+                () -> copyToClipboard(logs),
+                this::restartLauncher,
+                this::openCrashReport
+        );
     }
 
-    @SuppressWarnings("unused") //used by native jre_launcher_new
+    private String readLogs() {
+        try {
+            File logFile = new File(Tools.DIR_GAME_HOME, "latestlog.txt");
+            if (logFile.exists()) {
+                return Tools.read(logFile);
+            } else {
+                return "Log file not found.";
+            }
+        } catch (IOException e) {
+            return "Failed to read logs: " + e.getMessage();
+        }
+    }
+
+    public void copyToClipboard(String text) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("PojavLauncher Logs", text);
+        clipboard.setPrimaryClip(clip);
+    }
+
+    public void restartLauncher() {
+        Intent intent = new Intent(this, LauncherActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    public void openCrashReport(String path) {
+        File file = new File(path);
+        if (file.exists()) {
+            Tools.openPath(this, file, false);
+        }
+    }
+
+    @SuppressWarnings("unused")
     public static void showExitMessage(Context ctx, int code, boolean isSignal) {
         if((!isSignal && code == 0) || ctx == null) {
             System.exit(0);
@@ -48,8 +94,8 @@ public class ExitActivity extends AppCompatActivity {
 
         Object lock = new Object();
         Tools.runOnUiThread(()->{
-            Intent i = new Intent(ctx,ExitActivity.class);
-            i.putExtra("code",code);
+            Intent i = new Intent(ctx, ExitActivity.class);
+            i.putExtra("code", code);
             i.putExtra("isSignal", isSignal);
             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

@@ -28,7 +28,7 @@ import java.util.TimeZone;
 public class JavaRunner {
 
     private static boolean getCacioJavaArgs(List<String> javaArgList, boolean isJava8) {
-        // Caciocavallo config AWT-enabled version
+
         javaArgList.add("-Djava.awt.headless=false");
         javaArgList.add("-Dcacio.managed.screensize=" + AWTCanvasView.AWT_CANVAS_WIDTH + "x" + AWTCanvasView.AWT_CANVAS_HEIGHT);
         javaArgList.add("-Dcacio.font.fontmanager=sun.awt.X11FontManager");
@@ -112,18 +112,14 @@ public class JavaRunner {
                 "-Dorg.lwjgl.vulkan.libname=libvulkan.so",
                 "-Dorg.lwjgl.spvc.libname=spirv-cross-c-shared",
                 "-Dorg.lwjgl.system.allocator=system",
-                //LWJGL 3 DEBUG FLAGS
-                //"-Dorg.lwjgl.util.Debug=true",
-                //"-Dorg.lwjgl.util.DebugFunctions=true",
-                //"-Dorg.lwjgl.util.DebugLoader=true",
-                // GLFW Stub width height
+
                 "-Dglfwstub.initEgl=false",
                 "-Dext.net.resolvPath=" +resolvFile,
-                "-Dlog4j2.formatMsgNoLookups=true", //Log4j RCE mitigation
-                "-Dfml.earlyprogresswindow=false", //Forge 1.14+ workaround
+                "-Dlog4j2.formatMsgNoLookups=true",
+                "-Dfml.earlyprogresswindow=false",
                 "-Dloader.disable_forked_guis=true",
                 "-Dsodium.checks.issue2561=false",
-                "-Djdk.lang.Process.launchMechanism=FORK" // Default is POSIX_SPAWN which requires starting jspawnhelper, which doesn't work on Android
+                "-Djdk.lang.Process.launchMechanism=FORK"
         ));
         List<String> additionalArguments = new ArrayList<>();
         for(String arg : overridableArguments) {
@@ -141,7 +137,6 @@ public class JavaRunner {
                 Log.i("ArgProcessor","Arg skipped: "+arg);
         }
 
-        //Add all the arguments
         userArguments.addAll(additionalArguments);
         return userArguments;
     }
@@ -174,12 +169,10 @@ public class JavaRunner {
     }
 
     private static void relocateLdLibPath(File vmPath, List<String> extraDirs) {
-        // Java directory layout:
-        // .../server/libjvm.so
-        // .../libjava.so
-        // and so on. Hotspot itself relies on this we also rely on this.
+
         File vmDir = Objects.requireNonNull(vmPath.getParentFile());
         File libsDir = Objects.requireNonNull(vmDir.getParentFile());
+
         StringBuilder libPathBuilder =  new StringBuilder()
                 .append(libsDir.getAbsolutePath()).append(":")
                 .append(NATIVE_LIB_DIR).append(':')
@@ -199,9 +192,9 @@ public class JavaRunner {
         JREUtils.setLdLibraryPath(ldLibPath);
     }
 
-    private static void setImmutableEnvVars(File jreHome) {
+    private static void setImmutableEnvVars(File jreHome, String nativeDir) {
         try {
-            Os.setenv("POJAV_NATIVEDIR", NATIVE_LIB_DIR, true);
+            Os.setenv("POJAV_NATIVEDIR", nativeDir, true);
             Os.setenv("JAVA_HOME", jreHome.getAbsolutePath(), true);
             Os.setenv("HOME", Tools.DIR_GAME_HOME, true);
             Os.setenv("TMPDIR", Tools.DIR_CACHE.getAbsolutePath(), true);
@@ -257,6 +250,20 @@ public class JavaRunner {
      * @throws VMLoadException if an error occurred during VM loading
      */
     public static void startJvm(Runtime runtime, List<String> vmArgs, List<String> classpathEntries, String mainClass, List<String> applicationArgs) throws VMLoadException{
+        startJvm(runtime, vmArgs, classpathEntries, mainClass, applicationArgs, null);
+    }
+
+    /**
+     * Start the Java(tm) Virtual Machine.
+     * @param runtime the Runtime that we're starting.
+     * @param vmArgs the command line parameters for the virtual machine
+     * @param classpathEntries the absolute path for each classpath entry
+     * @param mainClass the application main class
+     * @param applicationArgs the application arguments
+     * @param extraLdPaths extra directories to add to the linker search path
+     * @throws VMLoadException if an error occurred during VM loading
+     */
+    public static void startJvm(Runtime runtime, List<String> vmArgs, List<String> classpathEntries, String mainClass, List<String> applicationArgs, List<String> extraLdPaths) throws VMLoadException{
         File runtimeHomeDir = MultiRTUtils.getRuntimeHome(runtime.name);
         File vmPath = findVmPath(runtimeHomeDir, runtime.arch);
         if(vmPath == null) {
@@ -268,7 +275,6 @@ public class JavaRunner {
         if(getCacioJavaArgs(runtimeArgs,runtime.javaVersion == 8)) hasJavaAgent = true;
         runtimeArgs.addAll(getJavaArgs(runtimeHomeDir.getAbsolutePath(), vmArgs));
 
-
         runtimeArgs.add("-XX:ActiveProcessorCount=" + java.lang.Runtime.getRuntime().availableProcessors());
         StringBuilder classpathBuilder = new StringBuilder().append("-Djava.class.path=");
         boolean first = true;
@@ -279,10 +285,18 @@ public class JavaRunner {
         }
         runtimeArgs.add(classpathBuilder.toString());
 
-        //JREUtils.initializeHooks();
+        String nativeDir = NATIVE_LIB_DIR;
+        if (extraLdPaths != null && !extraLdPaths.isEmpty()) {
+            StringBuilder nativeDirBuilder = new StringBuilder();
+            nativeDirBuilder.append(nativeDir).append(':');
+            for (String path : extraLdPaths) {
+                nativeDirBuilder.append(path).append(':');
+            }
+            nativeDir = nativeDirBuilder.toString();
+        }
 
-        setImmutableEnvVars(runtimeHomeDir);
-        relocateLdLibPath(vmPath, null);
+        setImmutableEnvVars(runtimeHomeDir, nativeDir);
+        relocateLdLibPath(vmPath, extraLdPaths);
 
         nativeLoadJVM(vmPath.getAbsolutePath(), runtimeArgs.toArray(new String[0]), mainClass, applicationArgs.toArray(new String[0]), hasJavaAgent);
     }

@@ -23,18 +23,25 @@ public class DownloaderProgressWrapper implements Tools.DownloaderFeedback {
     @Override
     public void updateProgress(int curr, int max) {
         Object[] va;
+        int progress;
+        if (max > 0) {
+            progress = (int) Math.max((float) curr / max * 100, 0);
+        } else {
+            progress = -1;
+        }
+
         if(extraString != null)  {
             va = new Object[3];
             va[0] = extraString;
-            va[1] = curr/BYTE_TO_MB;
-            va[2] = max/BYTE_TO_MB;
+            va[1] = curr / BYTE_TO_MB;
+            va[2] = max > 0 ? max / BYTE_TO_MB : 0f;
         }
         else {
             va = new Object[2];
-            va[0] = curr/BYTE_TO_MB;
-            va[1] = max/BYTE_TO_MB;
+            va[0] = curr / BYTE_TO_MB;
+            va[1] = max > 0 ? max / BYTE_TO_MB : 0f;
         }
-        // the allocations are fine because thats how java implements variadic arguments in bytecode: an array of whatever
-        ProgressKeeper.submitProgress(mProgressRecord, (int) Math.max((float)curr/max*100,0), mProgressString, va);
+
+        ProgressKeeper.submitProgress(mProgressRecord, progress, mProgressString, va);
     }
 }

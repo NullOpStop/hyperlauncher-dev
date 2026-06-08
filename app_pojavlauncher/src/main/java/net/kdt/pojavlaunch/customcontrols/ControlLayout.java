@@ -21,6 +21,7 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.kdt.pickafile.FileListView;
 import com.kdt.pickafile.FileSelectedListener;
@@ -28,7 +29,7 @@ import com.kdt.pickafile.FileSelectedListener;
 import net.kdt.pojavlaunch.MinecraftGLSurface;
 
 import git.artdeell.dnbootstrap.glfw.GLFW;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.customcontrols.buttons.ControlButton;
 import net.kdt.pojavlaunch.customcontrols.buttons.ControlDrawer;
@@ -71,7 +72,6 @@ public class ControlLayout extends FrameLayout {
 		super(ctx, attrs);
 	}
 
-
 	public void loadLayout(String jsonPath) throws IOException, JsonSyntaxException {
 		Point size = new Point(getWidth(), getHeight());
         try {
@@ -79,7 +79,7 @@ public class ControlLayout extends FrameLayout {
             loadLayout(layout);
             updateLoadedFileName(jsonPath);
         }catch (IOException | JsonSyntaxException e) {
-            // Load an empty layout on exception to avoid breakage when adding buttons in the editor
+
             CustomControls customControls = new CustomControls();
             customControls.mLayoutBitmaps = LayoutBitmaps.createEmpty();
             loadLayout(customControls);
@@ -106,23 +106,18 @@ public class ControlLayout extends FrameLayout {
 		System.gc();
 		mapTable.clear();
 
-		// Cleanup buttons only when input layout is null
 		if (controlLayout == null) return;
 
 		mLayout = controlLayout;
-		
 
-		// Joystick(s) first, to workaround the touch dispatch
 		for(ControlJoystickData joystick : mLayout.mJoystickDataList){
 			addJoystickView(joystick);
 		}
 
-		//CONTROL BUTTON
 		for (ControlData button : controlLayout.mControlDataList) {
 			addControlView(button);
 		}
 
-		//CONTROL DRAWER
 		for(ControlDrawerData drawerData : controlLayout.mDrawerDataList){
 			ControlDrawer drawer = addDrawerView(drawerData);
 			if(mModifiable) drawer.areButtonsVisible = true;
@@ -132,10 +127,9 @@ public class ControlLayout extends FrameLayout {
 
 		setModified(sanitizedModified);
 		mButtons = null;
-		getButtonChildren(); // Force refresh
-	} // loadLayout
+		getButtonChildren();
+	}
 
-	//CONTROL BUTTON
 	public void addControlButton(ControlData controlButton) {
 		mLayout.mControlDataList.add(controlButton);
 		addControlView(controlButton);
@@ -154,7 +148,6 @@ public class ControlLayout extends FrameLayout {
 		setModified(true);
 	}
 
-	// CONTROL DRAWER
 	public void addDrawer(ControlDrawerData drawerData){
 		mLayout.mDrawerDataList.add(drawerData);
 		addDrawerView();
@@ -174,7 +167,7 @@ public class ControlLayout extends FrameLayout {
 			view.setFocusableInTouchMode(false);
 		}
 		addView(view);
-		//CONTROL SUB BUTTON
+
 		for (ControlData subButton : view.getDrawerData().buttonProperties) {
 			addSubView(view, subButton);
 		}
@@ -183,9 +176,8 @@ public class ControlLayout extends FrameLayout {
 		return view;
 	}
 
-	//CONTROL SUB-BUTTON
 	public void addSubButton(ControlDrawer drawer, ControlData controlButton){
-		//Yep there isn't much here
+
 		drawer.getDrawerData().buttonProperties.add(controlButton);
 		addSubView(drawer, drawer.getDrawerData().buttonProperties.get(drawer.getDrawerData().buttonProperties.size()-1 ));
 	}
@@ -204,11 +196,9 @@ public class ControlLayout extends FrameLayout {
 		addView(view);
 		drawer.addButton(view);
 
-
 		setModified(true);
 	}
 
-	// JOYSTICK BUTTON
 	public void addJoystickButton(ControlJoystickData data){
 		mLayout.mJoystickDataList.add(data);
 		addJoystickView(data);
@@ -226,15 +216,13 @@ public class ControlLayout extends FrameLayout {
 
 	}
 
-
 	private void removeAllButtons() {
 		for(ControlInterface button : getButtonChildren()){
 			removeView(button.getControlView());
 		}
 
 		System.gc();
-		//i wanna be sure that all the removed Views will be removed after a reload
-		//because if frames will slowly go down after many control changes it will be warm and bad
+
 	}
 
 	public void saveLayout(String path) throws Exception {
@@ -256,12 +244,11 @@ public class ControlLayout extends FrameLayout {
 	}
 
 	public void setControlVisible(boolean isVisible) {
-		if (mModifiable) return; // Not using on custom controls activity
+		if (mModifiable) return;
 
 		mControlVisible = isVisible;
 		for(ControlInterface button : getButtonChildren()){
-            // Avoid going through the JNI each time.
-            // Avoid going through the JNI each time.
+
             button.setVisible(((button.getProperties().displayInGame && GLFW.isGrabbing()) || (button.getProperties().displayInMenu && !GLFW.isGrabbing())) && isVisible);
 		}
 	}
@@ -272,7 +259,7 @@ public class ControlLayout extends FrameLayout {
 		}
 		mModifiable = isModifiable;
 		if(isModifiable){
-			// In edit mode, all controls have to be shown
+
 			for(ControlInterface button : getButtonChildren()){
 				button.setVisible(true);
 			}
@@ -319,8 +306,7 @@ public class ControlLayout extends FrameLayout {
 	 */
 	public void editControlButton(ControlInterface button){
 		if(mControlDialog == null){
-			// When the panel is null, it needs to inflate first.
-			// So inflate it, then process it on the next frame
+
 			mControlDialog = new EditControlSideDialog(getContext(), this);
 			post(() -> editControlButton(button));
 			return;
@@ -342,14 +328,12 @@ public class ControlLayout extends FrameLayout {
 		}
 		mHandleView.setControlButton(button);
 
-		//mHandleView.show();
 	}
 
 	/** Swap the panel if the button position requires it */
 	public void adaptPanelPosition(){
 		if(mControlDialog != null) mControlDialog.adaptPanelPosition();
 	}
-
 
 	final HashMap<View, ControlInterface> mapTable = new HashMap<>();
 
@@ -359,16 +343,12 @@ public class ControlLayout extends FrameLayout {
 		return x > view.getLeft() && x < view.getRight() && y > view.getTop() && y < view.getBottom();
 	}
 
-	//While this is called onTouch, this should only be called from a ControlButton.
 	public void onTouch(View v, MotionEvent ev) {
 		int action = ev.getActionMasked();
 		ControlInterface lastControlButton = mapTable.get(v);
 
-		// Map location to screen coordinates
 		ev.offsetLocation(v.getX(), v.getY());
 
-
-		//Check if the action is cancelling, reset the lastControl button associated to the view
 		if (action == MotionEvent.ACTION_UP
 				|| action == MotionEvent.ACTION_CANCEL
 				|| action == MotionEvent.ACTION_POINTER_UP) {
@@ -379,22 +359,19 @@ public class ControlLayout extends FrameLayout {
 
 		if (action != MotionEvent.ACTION_MOVE && action != MotionEvent.ACTION_DOWN) return;
 
-		//Optimization pass to avoid looking at all children again
 		if (lastControlButton != null) {
 			if (eventInViewBounds(ev, lastControlButton.getControlView())) {
 				return;
 			}
 		}
 
-		//Release last keys
 		if (lastControlButton != null) lastControlButton.handleReleased();
 		mapTable.remove(v);
 
-		// Update the state of all swipeable buttons
 		for (ControlInterface button : getButtonChildren()) {
 			if (!button.getProperties().isSwipeable) continue;
 			if (eventInViewBounds(ev, button.getControlView())) {
-				//Press the new key
+
 				if (!button.equals(lastControlButton)) {
 					button.handlePressed();
 					mapTable.put(v, button);
@@ -425,9 +402,7 @@ public class ControlLayout extends FrameLayout {
             isKeyboardHidden = !keyboardShown;
             if(keyboardShown) imm.hideSoftInputFromWindow(getWindowToken(), 0);
         }else {
-            // When the input window cannot be hidden (meaning it's already hidden), it returns false
-            // Docs don't seem to suggest that this is the case anymore. But it is on a10 and i
-            // don't want to mess with the way insets are done on a10
+
             isKeyboardHidden = !imm.hideSoftInputFromWindow(getWindowToken(), 0);
         }
         if(isKeyboardHidden){
@@ -442,7 +417,6 @@ public class ControlLayout extends FrameLayout {
 	public void removeEditWindow() {
 		InputMethodManager imm = (InputMethodManager) getContext().getSystemService(INPUT_METHOD_SERVICE);
 
-		// When the input window cannot be hidden, it returns false
 		imm.hideSoftInputFromWindow(getWindowToken(), 0);
 		if(mControlDialog != null) {
 			mControlDialog.disappearColor();
@@ -458,7 +432,6 @@ public class ControlLayout extends FrameLayout {
 			mLayout.save(path);
 		} catch (IOException e) {Log.e("ControlLayout", "Failed to save the layout at:" + path);}
 	}
-
 
 	public boolean hasMenuButton() {
 		for(ControlInterface controlInterface : getButtonChildren()){
@@ -540,7 +513,7 @@ public class ControlLayout extends FrameLayout {
 		edit.setSingleLine();
 		edit.setText(mLayoutFileName);
 
-		AlertDialog.Builder builder = new AlertDialog.Builder(context);
+		MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 		builder.setTitle(R.string.global_save);
 		builder.setView(edit);
 		builder.setPositiveButton(android.R.string.ok, null);
@@ -557,7 +530,7 @@ public class ControlLayout extends FrameLayout {
 	}
 
 	public void openLoadDialog() {
-		AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+		MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext());
 		builder.setTitle(R.string.global_load);
 		builder.setPositiveButton(android.R.string.cancel, null);
 
@@ -582,7 +555,7 @@ public class ControlLayout extends FrameLayout {
 	}
 
 	public void openSetDefaultDialog() {
-		AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+		MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext());
 		builder.setTitle(R.string.customctrl_selectdefault);
 		builder.setPositiveButton(android.R.string.cancel, null);
 
@@ -607,7 +580,7 @@ public class ControlLayout extends FrameLayout {
 	}
 
 	public void openExitDialog(EditorExitable exitListener) {
-		AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+		MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext());
 		builder.setTitle(R.string.customctrl_editor_exit_title);
 		builder.setMessage(R.string.customctrl_editor_exit_msg);
 		builder.setPositiveButton(R.string.global_yes, (d,w)->exitListener.exitEditor());
@@ -615,9 +588,7 @@ public class ControlLayout extends FrameLayout {
 		builder.show();
 	}
 
-	// Copied from https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/widget/FrameLayout.java
-	// (and edited to avoid laying out control buttons)
-	@SuppressWarnings("RtlHardcoded") // Handled explicitly via getAbsoluteGravity()
+	@SuppressWarnings("RtlHardcoded")
 	private void layoutNonButtonChildren(int left, int top, int right, int bottom) {
 		final int count = getChildCount();
 		final int parentLeft = getPaddingLeft();

@@ -1,11 +1,15 @@
 package net.kdt.pojavlaunch.progresskeeper;
 
+import com.kdt.mcgui.ProgressLayout;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 public class ProgressKeeper {
+    public static final String INSTALL_MODPACK = ProgressLayout.INSTALL_MODPACK;
+
     private static final HashMap<String, List<ProgressListener>> sProgressListeners = new HashMap<>();
     private static final HashMap<String, ProgressState> sProgressStates = new HashMap<>();
     private static final List<TaskCountListener> sTaskCountListeners = new ArrayList<>();
@@ -67,6 +71,10 @@ public class ProgressKeeper {
         if(listenerWeakReferenceList != null) listenerWeakReferenceList.remove(listener);
     }
 
+    public static void clearProgress(String progressRecord) {
+        submitProgress(progressRecord, -1, -1);
+    }
+
     public static void addTaskCountListener(TaskCountListener listener) {
         addTaskCountListener(listener, true);
     }
@@ -91,7 +99,7 @@ public class ProgressKeeper {
      * @param runnable the runnable to run when no tasks are remaining
      */
     public static void waitUntilDone(final Runnable runnable) {
-        // If we do it the other way the listener would be removed before it was added, which will cause a listener object leak
+
         if(getTaskCount() == 0) {
             runnable.run();
             return;

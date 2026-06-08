@@ -26,4 +26,3 @@ public class DependentLibrary {
 
     public static class LibraryClassifierMap extends HashMap<String, MinecraftLibraryArtifact> {}
 }
-

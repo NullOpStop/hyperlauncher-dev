@@ -4,116 +4,85 @@ import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_DUMP_SHADERS;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_VSYNC_IN_ZINK;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_ZINK_PREFER_SYSTEM_DRIVER;
 
-import android.content.*;
-import android.system.*;
-import android.util.*;
+import android.content.Context;
+import android.os.Bundle;
+import android.system.Os;
+import android.util.ArrayMap;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.util.*;
-import net.kdt.pojavlaunch.*;
+import net.kdt.pojavlaunch.Logger;
+import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
+import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.plugins.LibraryPlugin;
-import net.kdt.pojavlaunch.prefs.*;
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class JREUtils {
-    public static void redirectAndPrintJRELog() {
-        Log.v("jrelog","Log starts here");
-        new Thread(new Runnable(){
-            int failTime = 0;
-            ProcessBuilder logcatPb;
-            @Override
-            public void run() {
-                try {
-                    if (logcatPb == null) {
-                        // No filtering by tag anymore as that relied on incorrect log levels set in log.h
-                        logcatPb = new ProcessBuilder().command("logcat", /* "-G", "1mb", */ "-v", "brief", "-s", "jrelog", "LIBGL", "NativeInput").redirectErrorStream(true);
-                    }
 
-                    Log.i("jrelog-logcat","Clearing logcat");
-                    new ProcessBuilder().command("logcat", "-c").redirectErrorStream(true).start();
-                    Log.i("jrelog-logcat","Starting logcat");
-                    java.lang.Process p = logcatPb.start();
-
-                    byte[] buf = new byte[1024];
-                    int len;
-                    while ((len = p.getInputStream().read(buf)) != -1) {
-                        String currStr = new String(buf, 0, len);
-                        Logger.appendToLog(currStr);
-                    }
-
-                    if (p.waitFor() != 0) {
-                        Log.e("jrelog-logcat", "Logcat exited with code " + p.exitValue());
-                        failTime++;
-                        Log.i("jrelog-logcat", (failTime <= 10 ? "Restarting logcat" : "Too many restart fails") + " (attempt " + failTime + "/10");
-                        if (failTime <= 10) {
-                            run();
-                        } else {
-                            Logger.appendToLog("ERROR: Unable to get more log.");
-                        }
-                    }
-                } catch (Throwable e) {
-                    Log.e("jrelog-logcat", "Exception on logging thread", e);
-                    Logger.appendToLog("Exception on logging thread:\n" + Log.getStackTraceString(e));
-                }
-            }
-        }).start();
-        Log.i("jrelog-logcat","Logcat thread started");
-
-    }
-
-    private static void overrideEnvVars(Map<String, String> envMap) throws IOException {
-        File customEnvFile = new File(Tools.DIR_GAME_HOME, "custom_env.txt");
-        if(!customEnvFile.exists() || !customEnvFile.isFile()) return;
-        BufferedReader reader = new BufferedReader(new FileReader(customEnvFile));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            // Not use split() as only split first one
-            int index = line.indexOf("=");
-            envMap.put(line.substring(0, index), line.substring(index + 1));
-        }
-        reader.close();
-    }
-
-    // Sets up ANGLE driver environment
     public static void setupAngleEnv(Context ctx, Map<String, String> envMap) {
-        if (!LauncherPreferences.PREF_USE_ANGLE) return;
         LibraryPlugin angle = LibraryPlugin.discoverPlugin(ctx, LibraryPlugin.ID_ANGLE_PLUGIN);
         if (angle == null) return;
-        String[] angleLibs = {"libEGL_angle.so", "libGLESv2_angle.so"};
-        if (!angle.checkLibraries(angleLibs)) {
-            Log.e("AngleEnvSetup", "AnglePlugin exists, but the ANGLE libraries are not present. Is the plugin corrupted?");
-            return;
-        }
-        envMap.put("LIBGL_EGL", angle.resolveAbsolutePath(angleLibs[0]));
-        envMap.put("LIBGL_GLES", angle.resolveAbsolutePath(angleLibs[1]));
+        if (!LauncherPreferences.PREF_USE_ANGLE) return;
+
+        envMap.put("ANGLE_PLATFORM", "vulkan");
+        envMap.put("ANGLE_VULKAN_IMAGE_DEFAULT_MAX_SAMPLES", "4");
+        envMap.put("POJAV_ANGLE_PATH", angle.resolveAbsolutePath("libEGL_angle.so"));
     }
 
     public static void setupFfmpegEnv(Context ctx, Map<String, String> envMap) {
         LibraryPlugin ffmpeg = LibraryPlugin.discoverPlugin(ctx, LibraryPlugin.ID_FFMPEG_PLUGIN);
-        if(ffmpeg == null) return;
+        if (ffmpeg == null) return;
         envMap.put("POJAV_FFMPEG_PATH", ffmpeg.resolveAbsolutePath("libffmpeg.so"));
     }
 
-    // Setup environment for mesa-based renderers
+    public static void setupMobileGluesEnv(Context ctx, Map<String, String> envMap) {
+        LibraryPlugin mobileGlues = LibraryPlugin.discoverPlugin(ctx, LibraryPlugin.ID_MOBILEGLUES_PLUGIN);
+        if (mobileGlues == null) return;
+
+        String[] mgLibs = {"libmobileglues.so", "libspirv-cross-c-shared.so"};
+        if (!mobileGlues.checkLibraries(mgLibs)) {
+            Log.e("MGEnvSetup", "MobileGlues plugin exists, but the libraries are not present.");
+            return;
+        }
+        String libPath = mobileGlues.getLibraryPath();
+        envMap.put("MOBILEGLUES_LIB_PATH", libPath);
+
+        String existingLd = System.getenv("LD_LIBRARY_PATH");
+        envMap.put("LD_LIBRARY_PATH", Tools.NATIVE_LIB_DIR + ":" + libPath + (existingLd != null ? ":" + existingLd : ""));
+
+        try {
+
+            System.loadLibrary("shaderconv");
+            System.loadLibrary("spirv-cross-c-shared");
+            System.load(mobileGlues.resolveAbsolutePath("libmobileglues.so"));
+            Log.i("MGEnvSetup", "Successfully preloaded MobileGlues libraries");
+        } catch (Throwable e) {
+            Log.e("MGEnvSetup", "Failed to preload MobileGlues dependencies: " + e.getMessage());
+        }
+    }
+
     public static void setupRendererEnv(Map<String, String> envMap, String renderer) {
         switch(renderer) {
             case "vulkan_zink":
                 envMap.put("GALLIUM_DRIVER", "zink");
                 envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "zink");
-                // HACK: GLSL version override for Mesa-based renderers (i.e. Zink)
-                // Required to run the game properly on some mobile Vulkan drivers (Minecraft fails to compile shaders without)
+
                 envMap.put("MESA_GLSL_VERSION_OVERRIDE", "460");
                 break;
             case "freedreno_kgsl":
                 if(GLInfoUtils.getGlInfo().isAdreno()) {
                     envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "kgsl");
-                    // On Adreno 5XX and lower only Core 3.1 is exposed by default due to missing hardware extensions.
-                    // 3.3 is required for modern Minecraft so let's force 3.3 if running on such GPU - it's known to be working.
+
                     if(GLInfoUtils.getGlInfo().isAdreno500Lower()) {
                         envMap.put("MESA_GL_VERSION_OVERRIDE", "3.3");
                         envMap.put("MESA_GLSL_VERSION_OVERRIDE", "330");
@@ -126,13 +95,10 @@ public class JREUtils {
         Map<String, String> envMap = new ArrayMap<>();
         envMap.put("LIBGL_MIPMAP", "3");
 
-        // Prevent OptiFine (and other error-reporting stuff in Minecraft) from balooning the log
         envMap.put("LIBGL_NOERROR", "1");
 
-        // On certain GLES drivers, overloading default functions shader hack fails, so disable it
         envMap.put("LIBGL_NOINTOVLHACK", "1");
 
-        // Fix white color on banner and sheep, since GL4ES 1.1.5
         envMap.put("LIBGL_NORMALIZE", "1");
 
         if(PREF_DUMP_SHADERS)
@@ -140,7 +106,6 @@ public class JREUtils {
         if(PREF_VSYNC_IN_ZINK)
             envMap.put("POJAV_VSYNC_IN_ZINK", "1");
 
-        // The OPEN GL version is changed according
         envMap.put("LIBGL_ES", (String) ExtraCore.getValue(ExtraConstants.OPEN_GL_VERSION));
 
         envMap.put("FORCE_VSYNC", String.valueOf(LauncherPreferences.PREF_FORCE_VSYNC));
@@ -149,21 +114,27 @@ public class JREUtils {
         envMap.put("force_glsl_extensions_warn", "true");
         envMap.put("allow_higher_compat_version", "true");
         envMap.put("allow_glsl_extension_directive_midshader", "true");
-		// This is currently required for YSM mod to function
+
 		File modRuntimeDir = new File(Tools.DIR_CACHE, "app_runtime_mod");
 		if (!modRuntimeDir.exists()) {
     		modRuntimeDir.mkdirs();
 		}
 		envMap.put("MOD_ANDROID_RUNTIME", modRuntimeDir.getAbsolutePath());
 
-        if(!renderer.equals("opengles2")) { // Don't enable ANGLE for GL4ES for now (it's currently broken)
+        if(!renderer.equals("opengles2")) {
             setupAngleEnv(context, envMap);
         }
         setupFfmpegEnv(context, envMap);
+        setupMobileGluesEnv(context, envMap);
         setupRendererEnv(envMap, renderer);
 
-        // HACK
-        envMap.put("POJAV_NATIVEDIR", Tools.NATIVE_LIB_DIR);
+        String nativeDir = Tools.NATIVE_LIB_DIR;
+        String mgLibPath = envMap.get("MOBILEGLUES_LIB_PATH");
+        if (mgLibPath != null) {
+
+            nativeDir = nativeDir + ":" + mgLibPath;
+        }
+        envMap.put("POJAV_NATIVEDIR", nativeDir);
         envMap.put("EGL_PLATFORM", "android");
 
         if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
@@ -173,7 +144,7 @@ public class JREUtils {
         }
 
         if(LauncherPreferences.PREF_FREEDRENO_SYSMEM) {
-            // We could also apply the FD_MESA_DEBUG only if freedreno is active but why making things complicated?
+
             Logger.appendToLog("Will use sysmem rendering for Turnip/Freedreno");
             envMap.put("FD_MESA_DEBUG", "sysmem");
             envMap.put("TU_DEBUG", "sysmem");
@@ -192,10 +163,6 @@ public class JREUtils {
     }
 
     public static void launchJavaVM(final AppCompatActivity activity, final Runtime runtime, File gameDirectory, final List<String> JVMArgs, final String userArgsString) throws Throwable {
-
-        // Force LWJGL to use the Freetype library intended for it, instead of using the one
-        // that we ship with Java (since it may be older than what's needed)
-        //
         Tools.fullyExit();
     }
 
@@ -210,13 +177,13 @@ public class JREUtils {
     public static ArrayList<String> parseJavaArguments(String args){
         ArrayList<String> parsedArguments = new ArrayList<>(0);
         args = args.trim().replace(" ", "");
-        //For each prefixes, we separate args.
+
         String[] separators = new String[]{"-XX:-","-XX:+", "-XX:","--", "-D", "-X", "-javaagent:", "-verbose"};
         for(String prefix : separators){
             while (true){
                 int start = args.indexOf(prefix);
                 if(start == -1) break;
-                //Get the end of the current argument by checking the nearest separator
+
                 int end = -1;
                 for(String separator: separators){
                     int tempEnd = args.indexOf(separator, start + prefix.length());
@@ -227,19 +194,17 @@ public class JREUtils {
                     }
                     end = Math.min(end, tempEnd);
                 }
-                //Fallback
+
                 if(end == -1) end = args.length();
 
-                //Extract it
                 String parsedSubString = args.substring(start, end);
                 args = args.replace(parsedSubString, "");
 
-                //Check if two args aren't bundled together by mistake
                 if(parsedSubString.indexOf('=') == parsedSubString.lastIndexOf('=')) {
                     int arraySize = parsedArguments.size();
                     if(arraySize > 0){
                         String lastString = parsedArguments.get(arraySize - 1);
-                        // Looking for list elements
+
                         if(lastString.charAt(lastString.length() - 1) == ',' ||
                                 parsedSubString.contains(",")){
                             parsedArguments.set(arraySize - 1, lastString + parsedSubString);
@@ -254,6 +219,18 @@ public class JREUtils {
         return parsedArguments;
     }
 
+    private static void overrideEnvVars(Map<String, String> envMap) {
+        String customEnv = LauncherPreferences.PREF_CUSTOM_ENV_VARS;
+        if (customEnv == null || customEnv.isEmpty()) return;
+
+        for (String line : customEnv.split("\n")) {
+            String[] parts = line.split("=", 2);
+            if (parts.length == 2) {
+                envMap.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+    }
+
     /**
      * Open the render library in accordance to the settings.
      * It will fallback if it fails to load the library.
@@ -266,14 +243,34 @@ public class JREUtils {
         boolean preloadVk = true;
         int glesVersion;
         switch (renderer){
+            case "mobileglues":
+                LibraryPlugin mobileGlues = LibraryPlugin.discoverPlugin(ContextExecutor.getContext(), LibraryPlugin.ID_MOBILEGLUES_PLUGIN);
+                if (mobileGlues != null) {
+                    renderLibrary = mobileGlues.resolveAbsolutePath("libmobileglues.so");
+                    useGles = true;
+                    glesVersion = 3;
+
+                    bypassNamespace = true;
+
+                    setLdLibraryPath(Tools.NATIVE_LIB_DIR + ":" + mobileGlues.getLibraryPath());
+
+                    try {
+                        System.loadLibrary("shaderconv");
+                        System.loadLibrary("spirv-cross-c-shared");
+                        System.load(renderLibrary);
+                    } catch (Throwable ignored) {}
+
+                    break;
+                }
+
             case "freedreno_kgsl":
                 preloadVk = false;
             case "vulkan_zink":
                 renderLibrary = "libEGL_mesa.so";
                 useGles = false;
-                bypassNamespace = true; // Mesa is linked to a bunch of libraries not available in the pojavexec namespace
+                bypassNamespace = true;
                 glesVersion = 3;
-                if(preloadVk) preloadVulkan(); // Zink requires Vulkan library to be preloaded
+                if(preloadVk) preloadVulkan();
                 break;
             case "opengles3_ltw" :
                 renderLibrary = "libltw.so";
@@ -300,14 +297,19 @@ public class JREUtils {
     public static int getDetectedVersion() {
         return GLInfoUtils.getGlInfo().glesMajorVersion;
     }
+
+    public static void redirectAndPrintJRELog() {
+
+        Log.i("JREUtils", "Redirection called but handled internally");
+    }
+
     public static native int chdir(String path);
 
     public static native void setLdLibraryPath(String ldLibraryPath);
     public static native boolean configureRenderspec(String eglPath, boolean useLoaderBypass, boolean useGles, int glesVersion);
     public static native void preloadVulkan();
     public static native void setUseTurnip(boolean enable);
-    //public static native void initializeHooks();
-    // Obtain AWT screen pixels to render on Android SurfaceView
+
     public static native boolean renderAWTScreenFrame(ByteBuffer tempBuffer);
     static {
         System.loadLibrary("pojavexec");

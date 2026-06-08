@@ -34,7 +34,7 @@ public class NativesExtractor {
         String[] includedLibraryNames = new File(Tools.NATIVE_LIB_DIR).list();
         ArrayList<String> blacklist = new ArrayList<>(includedLibraryNames.length);
         for(String libraryName : includedLibraryNames) {
-            // allow overriding jnidispatch (as the integrated version may be too old)
+
             if(libraryName.equals("libjnidispatch.so")) continue;
             blacklist.add(libraryName);
         }
@@ -61,16 +61,15 @@ public class NativesExtractor {
         byte[] buffer = new byte[8192];
         try (FileInputStream fileInputStream = new FileInputStream(source);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
-            // Wrap the ZIP input stream into a non-closeable stream to
-            // avoid it being closed by processEntry()
+
             NonCloseableInputStream entryCopyStream = new NonCloseableInputStream(zipInputStream);
             ZipEntry entry;
             while((entry = zipInputStream.getNextEntry()) != null) {
                 String entryName = entry.getName();
                 if(!extractFilter.shouldExtract(entryName) || entry.isDirectory()) continue;
-                // Entry name is actually the full path, so we need to strip the path before extraction
+
                 entryName = FileUtils.getFileName(entryName);
-                // getFileName may make the file name null, avoid that case.
+
                 if(entryName == null || LIBRARY_BLACKLIST.contains(entryName)) continue;
 
                 processEntry(entryCopyStream, entry, new File(mDestinationDir, entryName), buffer);
@@ -109,10 +108,10 @@ public class NativesExtractor {
             long expectedCrc32 = zipEntry.getCrc();
             long realSize = entryDestination.length();
             long realCrc32 = fileCrc32(entryDestination, buffer);
-            // File in archive is the same as the local one, don't extract
+
             if(realSize == expectedSize && realCrc32 == expectedCrc32) return;
         }
-        // copyInputStreamToFile copies the stream to a file and then closes it.
+
         org.apache.commons.io.FileUtils.copyInputStreamToFile(sourceStream, entryDestination);
     }
 
@@ -128,7 +127,7 @@ public class NativesExtractor {
 
         @Override
         public void close() {
-            // Do nothing (the point of this class)
+
         }
     }
 }

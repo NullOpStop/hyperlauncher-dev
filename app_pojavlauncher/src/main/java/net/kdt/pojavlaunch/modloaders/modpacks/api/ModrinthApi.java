@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.kdt.mcgui.ProgressLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.downloader.Downloader;
 import net.kdt.pojavlaunch.downloader.TaskMetadata;
@@ -36,7 +36,6 @@ public class ModrinthApi implements ModpackApi{
     public SearchResult searchMod(SearchFilters searchFilters, SearchResult previousPageResult) {
         ModrinthSearchResult modrinthSearchResult = (ModrinthSearchResult) previousPageResult;
 
-        // Fixes an issue where the offset being equal or greater than total_hits is ignored
         if (modrinthSearchResult != null && modrinthSearchResult.previousOffset >= modrinthSearchResult.totalResultCount) {
             ModrinthSearchResult emptyResult = new ModrinthSearchResult();
             emptyResult.results = new ModItem[0];
@@ -45,8 +44,6 @@ public class ModrinthApi implements ModpackApi{
             return emptyResult;
         }
 
-
-        // Build the facets filters
         HashMap<String, Object> params = new HashMap<>();
         StringBuilder facetString = new StringBuilder();
         facetString.append("[");
@@ -57,7 +54,11 @@ public class ModrinthApi implements ModpackApi{
         params.put("facets", facetString.toString());
         params.put("query", searchFilters.name);
         params.put("limit", 50);
-        params.put("index", "relevance");
+
+        String index = (searchFilters.name == null || searchFilters.name.isEmpty())
+                ? "downloads" : "relevance";
+        params.put("index", index);
+
         if(modrinthSearchResult != null)
             params.put("offset", modrinthSearchResult.previousOffset);
 
@@ -75,7 +76,7 @@ public class ModrinthApi implements ModpackApi{
                     hit.get("project_id").getAsString(),
                     hit.get("title").getAsString(),
                     hit.get("description").getAsString(),
-                    hit.get("icon_url").getAsString()
+                    hit.get("icon_url").isJsonNull() ? null : hit.get("icon_url").getAsString()
             );
         }
         if(modrinthSearchResult == null) modrinthSearchResult = new ModrinthSearchResult();
@@ -101,7 +102,7 @@ public class ModrinthApi implements ModpackApi{
             names[i] = version.get("name").getAsString();
             mcNames[i] = version.get("game_versions").getAsJsonArray().get(0).getAsString();
             urls[i] = version.get("files").getAsJsonArray().get(0).getAsJsonObject().get("url").getAsString();
-            // Assume there may not be hashes, in case the API changes
+
             JsonObject hashesMap = version.getAsJsonArray("files").get(0).getAsJsonObject()
                     .get("hashes").getAsJsonObject();
             if(hashesMap == null || hashesMap.get("sha1") == null){
@@ -117,7 +118,7 @@ public class ModrinthApi implements ModpackApi{
 
     @Override
     public ModLoader installModpack(ModDetail modDetail, int selectedVersion) throws IOException{
-        //TODO considering only modpacks for now
+
         return ModpackInstaller.downloadModpack(modDetail, selectedVersion, this::installMrpack);
     }
 
@@ -182,7 +183,7 @@ public class ModrinthApi implements ModpackApi{
                 if(!targetPath.getAbsolutePath().startsWith(absoluteInstancePath)) throw new IOException("Bad path!");
                 FileUtils.ensureParentDirectory(targetPath);
                 taskMetadatas.add(new TaskMetadata(
-                        targetPath, new URL(file.downloads[0]), // TODO source selection
+                        targetPath, new URL(file.downloads[0]),
                         file.fileSize, file.hashes.sha1,
                         DownloadMirror.DOWNLOAD_CLASS_NONE
                 ));

@@ -6,7 +6,7 @@ import android.os.Bundle;
 
 import androidx.preference.PreferenceCategory;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.prefs.CustomSeekBarPreference;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
@@ -15,7 +15,7 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
     private boolean mGyroAvailable = false;
     @Override
     public void onCreatePreferences(Bundle b, String str) {
-        // Get values
+
         int longPressTrigger = LauncherPreferences.PREF_LONGPRESS_TRIGGER;
         int prefButtonSize = (int) LauncherPreferences.PREF_BUTTONSIZE;
         int mouseScale = (int) (LauncherPreferences.PREF_MOUSESCALE * 100);
@@ -23,10 +23,6 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         float mouseSpeed = LauncherPreferences.PREF_MOUSESPEED;
         float gyroSpeed = LauncherPreferences.PREF_GYRO_SENSITIVITY;
         float joystickDeadzone = LauncherPreferences.PREF_DEADZONE_SCALE;
-
-
-        //Triggers a write for some reason which resets the value
-        addPreferencesFromResource(R.xml.pref_control);
 
         CustomSeekBarPreference seek2 = requirePreference("timeLongPressTrigger",
                 CustomSeekBarPreference.class);
@@ -52,7 +48,6 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
                 CustomSeekBarPreference.class);
         deadzoneSeek.setValue((int) (joystickDeadzone * 100f));
         deadzoneSeek.setSuffix(" %");
-
 
         Context context = getContext();
         if(context != null) {

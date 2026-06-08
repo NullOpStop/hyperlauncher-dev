@@ -58,6 +58,10 @@ bool linker_ns_load(const char* lib_search_path) {
     // to itself and causes a deadlock when loading the vulkan driver.
     ldfuncs.link_namespaces(driver_namespace, NULL, "libnativeloader.so");
     ldfuncs.link_namespaces(driver_namespace, NULL, "libnativeloader_lazy.so");
+
+    // Explicitly link libc++_shared.so to allow isolated libraries to find it if it's already in the default namespace
+    ldfuncs.link_namespaces(driver_namespace, NULL, "libc++_shared.so");
+
     ldfuncs.close(ldfuncs.dl_handle);
     return true;
 }

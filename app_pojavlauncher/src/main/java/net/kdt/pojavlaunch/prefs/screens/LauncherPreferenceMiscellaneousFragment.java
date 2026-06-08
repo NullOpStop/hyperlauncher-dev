@@ -7,7 +7,7 @@ import android.os.Bundle;
 
 import androidx.preference.Preference;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.LauncherActivity;
 import net.kdt.pojavlaunch.utils.GLInfoUtils;
@@ -17,7 +17,6 @@ public class LauncherPreferenceMiscellaneousFragment extends LauncherPreferenceF
     @Override
     public void onCreatePreferences(Bundle b, String str) {
         mVisibilityUpdater = this::updateVisibility;
-        addPreferencesFromResource(R.xml.pref_misc);
         Preference driverPreference = requirePreference("zinkPreferSystemDriver");
         PackageManager packageManager = driverPreference.getContext().getPackageManager();
         boolean supportsTurnip = RendererCompatUtil.checkVulkanSupport(packageManager) && GLInfoUtils.getGlInfo().isAdreno();

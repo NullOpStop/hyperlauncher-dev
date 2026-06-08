@@ -12,7 +12,7 @@ import android.view.ViewTreeObserver;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.customcontrols.buttons.ControlInterface;
 
 public class ControlHandleView extends View {
@@ -77,7 +77,6 @@ public class ControlHandleView extends View {
 
                 System.out.println(getX() - mView.getControlView().getX());
                 System.out.println(getY() - mView.getControlView().getY());
-
 
                 mView.getProperties().setWidth(getX() - mView.getControlView().getX());
                 mView.getProperties().setHeight(getY() - mView.getControlView().getY());

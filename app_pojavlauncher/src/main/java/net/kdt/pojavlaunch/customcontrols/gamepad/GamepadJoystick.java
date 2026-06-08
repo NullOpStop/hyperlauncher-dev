@@ -6,13 +6,11 @@ import android.util.Log;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 
-
 import net.kdt.pojavlaunch.utils.MathUtils;
 
 public class GamepadJoystick {
 
-    //Directions
-    public static final int DIRECTION_NONE = -1; //GamepadJoystick at the center
+    public static final int DIRECTION_NONE = -1;
 
     public static final int DIRECTION_EAST = 0;
     public static final int DIRECTION_NORTH_EAST = 1;
@@ -37,14 +35,12 @@ public class GamepadJoystick {
     }
 
     public double getAngleRadian(){
-        //From -PI to PI
-        // TODO misuse of the deadzone here !
+
         return -Math.atan2(getVerticalAxis(), getHorizontalAxis());
     }
 
-
     public double getAngleDegree(){
-        //From 0 to 360 degrees
+
         double result = Math.toDegrees(getAngleRadian());
         if(result < 0) result += 360;
 
@@ -71,12 +67,10 @@ public class GamepadJoystick {
                 && event.getAction() == MotionEvent.ACTION_MOVE;
     }
 
-
     public int getHeightDirection(){
         if(getMagnitude() == 0) return DIRECTION_NONE;
         return ((int) ((getAngleDegree()+22.5)/45)) % 8;
     }
-
 
     /* Setters */
     public void setXAxisValue(float value){

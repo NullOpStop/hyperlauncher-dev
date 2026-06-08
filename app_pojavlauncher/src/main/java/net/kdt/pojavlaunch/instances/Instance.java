@@ -73,12 +73,9 @@ public class Instance extends DisplayInstance {
         try(FileOutputStream fileOutputStream = new FileOutputStream(getInstanceIconLocation())) {
             bitmap.compress(
                     Build.VERSION.SDK_INT < Build.VERSION_CODES.R ?
-                            // On Android < 30, there was no distinction between "lossy" and "lossless",
-                            // and the type is picked by the quality parameter. We set the quality to 60.
-                            // so it should be lossy,
+
                             Bitmap.CompressFormat.WEBP:
-                            // On Android >= 30, we can explicitly specify that we want lossy compression
-                            // with the visual quality of 60.
+
                             Bitmap.CompressFormat.WEBP_LOSSY,
                     60,
                     fileOutputStream

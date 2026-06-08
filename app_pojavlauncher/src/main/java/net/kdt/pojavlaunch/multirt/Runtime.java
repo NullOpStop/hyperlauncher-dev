@@ -19,8 +19,6 @@ public class Runtime {
         this.arch = arch;
         this.javaVersion = javaVersion;
     }
-    
-
 
     @Override
     public boolean equals(Object o) {

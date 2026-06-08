@@ -18,7 +18,7 @@ public class TapDetector {
 
     public final static int DETECTION_METHOD_DOWN = 0x1;
     public final static int DETECTION_METHOD_UP = 0x2;
-    public final static int DETECTION_METHOD_BOTH = 0x3; //Unused for now
+    public final static int DETECTION_METHOD_BOTH = 0x3;
 
     private final static int TAP_MIN_DELTA_MS = -1;
     private final static int TAP_MAX_DELTA_MS = 300;
@@ -39,7 +39,7 @@ public class TapDetector {
      */
     public TapDetector(int tapNumberToDetect, int detectionMethod){
         this.mDetectionMethod = detectionMethod;
-        //We expect both ACTION_DOWN and ACTION_UP for the DETECTION_METHOD_BOTH
+
         this.mTapNumberToDetect = detectBothTouch() ? 2*tapNumberToDetect : tapNumberToDetect;
     }
 
@@ -52,7 +52,6 @@ public class TapDetector {
         int eventAction = e.getActionMasked();
         int pointerIndex = -1;
 
-        //Get the event to look forward
         if(detectDownTouch()){
             if(eventAction == ACTION_DOWN) pointerIndex = 0;
             else if(eventAction == ACTION_POINTER_DOWN) pointerIndex = e.getActionIndex();
@@ -62,46 +61,40 @@ public class TapDetector {
             else if(eventAction == ACTION_POINTER_UP) pointerIndex = e.getActionIndex();
         }
 
-        if(pointerIndex == -1) return false; // Useless event
+        if(pointerIndex == -1) return false;
 
-        //Store current event info
         float eventX = e.getX(pointerIndex);
         float eventY = e.getY(pointerIndex);
         long eventTime = e.getEventTime();
 
-        //Compute deltas
         long deltaTime = eventTime - mLastEventTime;
         int deltaX = (int) mLastX - (int) eventX;
         int deltaY = (int) mLastY - (int) eventY;
 
-        //Store current event info to persist on next event
         mLastEventTime = eventTime;
         mLastX = eventX;
         mLastY = eventY;
 
-        //Check for high enough speed and precision
         if(mCurrentTapNumber > 0){
             if  ((deltaTime < TAP_MIN_DELTA_MS || deltaTime > TAP_MAX_DELTA_MS) ||
                 ((deltaX*deltaX + deltaY*deltaY) > TAP_SLOP_SQUARE_PX)) {
                 if (mDetectionMethod == DETECTION_METHOD_BOTH && (eventAction == ACTION_UP || eventAction == ACTION_POINTER_UP)) {
-                    // For the both method, the user is expected to start with a down action.
+
                     resetTapDetectionState();
                     return false;
                 } else {
-                    // We invalidate previous taps, not this one though
+
                     mCurrentTapNumber = 0;
                 }
             }
         }
 
-        //A worthy tap happened
         mCurrentTapNumber += 1;
         if(mCurrentTapNumber >= mTapNumberToDetect){
            resetTapDetectionState();
            return true;
         }
 
-        //If not enough taps are reached
         return false;
     }
 

@@ -7,7 +7,6 @@ public class GamepadButton extends GamepadEmulatedButton {
     public boolean isToggleable = false;
     private boolean mIsToggled = false;
 
-
     @Override
     protected void onDownStateChanged(boolean isDown) {
         if(isToggleable) {

@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.modloaders.modpacks.models;
 
-
 import androidx.annotation.NonNull;
 
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +12,6 @@ import java.util.Map;
  */
 public class ModrinthIndex {
 
-
     public int formatVersion;
     public String game;
     public String versionId;
@@ -22,7 +20,6 @@ public class ModrinthIndex {
 
     public ModrinthIndexFile[] files;
     public Map<String, String> dependencies;
-
 
     public static class ModrinthIndexFile {
         public String path;

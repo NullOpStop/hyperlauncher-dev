@@ -32,10 +32,9 @@ Hyper Launcher is a fast and customizable Minecraft: Java Edition launcher for A
 It can run almost every version of Minecraft — from `rd-132211` to the latest snapshots (including Combat Test versions) — and supports modloaders such as [Forge](https://files.minecraftforge.net/), [Fabric](http://fabricmc.net/), NeoForge, and Quilt, as well as mods like [OptiFine](https://optifine.net).
 
 Hyper Launcher is designed for:
-- Minecraft Java gameplay on Android
-- Modern Material UI 3 Interface
+- Smooth Minecraft Java gameplay on Android
+- Modern Material UI 3 Design
 - Better modpack handling
-- Experimental performance improvements
 
 ---
 
@@ -49,9 +48,8 @@ Hyper Launcher is designed for:
 - Integrated account management
 - Renderer selection support
 - Performance tuning options
-- Mouse & keyboard support
 - Built-in modding tools
-
+- Mobile Glues plugin support
 ---
 
 ## Supported Mod Loaders
@@ -93,6 +91,8 @@ Build the launcher (it will automatically download all required components):
 - [x] Instance system in favor of profiles
 - [x] Out-of-the-box 1.21.5 support
 - [x] mrpack/CurseForge zip import
+- [ ] Modern Material 3 expressive interface
+- [ ] Mod manager
 - [ ] Better controller support
 - [ ] Enhanced renderer compatibility
 - [ ] Download manager improvements

@@ -1,12 +1,11 @@
 package net.kdt.pojavlaunch.modloaders.modpacks.api;
 
-
 import android.content.Context;
 
 import com.kdt.mcgui.ProgressLayout;
 
 import net.kdt.pojavlaunch.PojavApplication;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModDetail;
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModItem;
@@ -49,8 +48,7 @@ public interface ModpackApi {
      * @param selectedVersion The selected version
      */
     default void handleModpackInstallation(Context context, ModDetail modDetail, int selectedVersion) {
-        // Doing this here since when starting installation, the progress does not start immediately
-        // which may lead to two concurrent installations (very bad)
+
         ProgressLayout.setProgress(ProgressLayout.INSTALL_MODPACK, 0, R.string.global_waiting);
         PojavApplication.sExecutorService.execute(() -> {
             try {

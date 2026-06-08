@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.prefs.screens;
 
-
 import android.Manifest;
 import android.app.Activity;
 import android.content.SharedPreferences;
@@ -13,7 +12,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
 import net.kdt.pojavlaunch.LauncherActivity;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 /**
@@ -32,7 +31,6 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     @Override
     public void onCreatePreferences(Bundle b, String str) {
         mVisibilityUpdater = this::updateVisibility;
-        addPreferencesFromResource(R.xml.pref_main);
         setupNotificationRequestPreference();
     }
 

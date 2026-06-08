@@ -14,7 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.mirrors.DownloadMirror;
@@ -120,7 +120,7 @@ public abstract class ModVersionListFragment<T> extends Fragment implements Runn
             getTaskProxy().detachListener();
             setTaskProxy(null);
             mExpandableListView.setEnabled(true);
-            // Read the comment in FabricInstallFragment.onDownloadFinished() to see how this works
+
             getParentFragmentManager().popBackStackImmediate();
             onDownloadFinished(context, downloadedFile);
         });

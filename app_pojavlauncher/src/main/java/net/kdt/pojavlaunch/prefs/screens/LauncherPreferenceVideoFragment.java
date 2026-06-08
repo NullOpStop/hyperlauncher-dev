@@ -8,7 +8,7 @@ import androidx.preference.ListPreference;
 import androidx.preference.SwitchPreference;
 import androidx.preference.SwitchPreferenceCompat;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.plugins.LibraryPlugin;
 import net.kdt.pojavlaunch.prefs.CustomSeekBarPreference;
@@ -21,21 +21,19 @@ import net.kdt.pojavlaunch.utils.RendererCompatUtil;
 public class LauncherPreferenceVideoFragment extends LauncherPreferenceFragment {
     @Override
     public void onCreatePreferences(Bundle b, String str) {
-        addPreferencesFromResource(R.xml.pref_video);
+
         int resolution = (int) (LauncherPreferences.PREF_SCALE_FACTOR * 100);
 
         CustomSeekBarPreference resolutionSeekbar = requirePreference("resolutionRatio",
                 CustomSeekBarPreference.class);
         resolutionSeekbar.setSuffix(" %");
 
-        // #724 bug fix
         if (resolution < 25) {
             resolutionSeekbar.setValue(100);
         } else {
             resolutionSeekbar.setValue(resolution);
         }
 
-        // Sustained performance is only available since Nougat
         SwitchPreference sustainedPerfSwitch = requirePreference("sustainedPerformance",
                 SwitchPreference.class);
         sustainedPerfSwitch.setVisible(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
@@ -44,7 +42,6 @@ public class LauncherPreferenceVideoFragment extends LauncherPreferenceFragment 
         requirePreference("alternate_surface", SwitchPreferenceCompat.class).setChecked(LauncherPreferences.PREF_USE_ALTERNATE_SURFACE);
         requirePreference("force_vsync", SwitchPreferenceCompat.class).setChecked(LauncherPreferences.PREF_FORCE_VSYNC);
 
-        // Show ANGLE switch only if AnglePlugin is available
         LibraryPlugin angle = LibraryPlugin.discoverPlugin(getContext(), LibraryPlugin.ID_ANGLE_PLUGIN);
         SwitchPreferenceCompat angleSwitch = requirePreference("use_angle", SwitchPreferenceCompat.class);
         angleSwitch.setVisible(angle != null);

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 /**
  * An activity dedicated to importing control files.
@@ -39,14 +39,13 @@ public class ImportControlActivity extends Activity {
 
     private EditText mEditText;
 
-    
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if(Tools.checkStorageInteractive(this)) {
             Tools.initStorageConstants(getApplicationContext());
         }else {
-            // Return early, no initialization needed.
+
             return;
         }
 
@@ -71,9 +70,7 @@ public class ImportControlActivity extends Activity {
     protected void onPostResume() {
         super.onPostResume();
         if(!Tools.checkStorageInteractive(this)) {
-            // Don't try to read the file as when this check fails, external storage paths
-            // are no longer valid (likely unmounted).
-            // checkStorageInteractive() will finish this activity for us.
+
             return;
         }
         if(!mHasIntentChanged) return;
@@ -86,8 +83,6 @@ public class ImportControlActivity extends Activity {
         mEditText.setText(trimFileName(Tools.getFileName(this, mUriData)));
         mHasIntentChanged = false;
 
-        //Import and verify thread
-        //Kill the app if the file isn't valid.
         new Thread(() -> {
             importControlFile();
 
@@ -101,7 +96,6 @@ public class ImportControlActivity extends Activity {
             });
         }).start();
 
-        //Auto show the keyboard
         Tools.MAIN_HANDLER.postDelayed(() -> {
             InputMethodManager imm = (InputMethodManager) getApplicationContext().getSystemService(INPUT_METHOD_SERVICE);
             imm.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, 0);
@@ -115,7 +109,7 @@ public class ImportControlActivity extends Activity {
      */
     public void startImport(View view) {
         String fileName = trimFileName(mEditText.getText().toString());
-        //Step 1 check for suffixes.
+
         if(!isFileNameValid(fileName)){
             Toast.makeText(this, getText(R.string.import_control_invalid_name), Toast.LENGTH_SHORT).show();
             return;

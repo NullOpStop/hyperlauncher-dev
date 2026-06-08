@@ -9,78 +9,35 @@ import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_LONGPRESS_TRIGG
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_MOUSESPEED;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SCALE_FACTOR;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.view.View;
+import android.graphics.Color;
 import android.view.ViewGroup;
-import android.widget.Switch;
-import android.widget.TextView;
 
-import com.kdt.CustomSeekbar;
+import androidx.compose.ui.platform.ComposeView;
 
-import git.artdeell.mojo.R;
-import net.kdt.pojavlaunch.Tools;
-import net.kdt.pojavlaunch.utils.interfaces.SimpleSeekBarListener;
+import com.kdt.SideDialogView;
+
+import net.ashmeet.hyperlauncher.R;
+import net.kdt.pojavlaunch.ui.screens.QuickSettingComposeBridge;
 
 /**
  * Side dialog for quick settings that you can change in game
  * The implementation has to take action on some preference changes
  */
-public abstract class QuickSettingSideDialog extends com.kdt.SideDialogView {
+public abstract class QuickSettingSideDialog extends SideDialogView {
 
-    private SharedPreferences.Editor mEditor;
-    @SuppressLint("UseSwitchCompatOrMaterialCode")
-    private Switch mGyroSwitch, mGyroXSwitch, mGyroYSwitch, mGestureSwitch;
-    private CustomSeekbar mGyroSensitivityBar, mMouseSpeedBar, mGestureDelayBar, mResolutionBar;
-    private TextView mGyroSensitivityText, mGyroSensitivityDisplayText, mMouseSpeedText, mGestureDelayText, mGestureDelayDisplayText, mResolutionText;
-
-    private boolean mOriginalGyroEnabled, mOriginalGyroXEnabled, mOriginalGyroYEnabled, mOriginalGestureDisabled;
-    private float mOriginalGyroSensitivity, mOriginalMouseSpeed, mOriginalResolution;
-    private int mOriginalGestureDelay;
+    private final ComposeView mComposeView;
+    private final boolean mOriginalGyroEnabled, mOriginalGyroXEnabled, mOriginalGyroYEnabled, mOriginalGestureDisabled;
+    private final float mOriginalGyroSensitivity, mOriginalMouseSpeed, mOriginalResolution;
+    private final int mOriginalGestureDelay;
 
     public QuickSettingSideDialog(Context context, ViewGroup parent) {
-        super(context, parent, R.layout.dialog_quick_setting);
-        setTitle(R.string.quick_setting_title);
-        setupCancelButton();
+        this(context, parent, createComposeView(context));
     }
 
-    @Override
-    protected void onInflate() {
-        bindLayout();
-        Tools.runOnUiThread(() -> {
-            this.setupListeners();
-            this.updateGyroCompatibility();
-        });
-    }
-
-    @Override
-    protected void onDestroy() {
-        removeListeners();
-    }
-
-    private void bindLayout() {
-        // Bind layout elements
-        mGyroSwitch = mDialogContent.findViewById(R.id.checkboxGyro);
-        mGyroXSwitch = mDialogContent.findViewById(R.id.checkboxGyroX);
-        mGyroYSwitch = mDialogContent.findViewById(R.id.checkboxGyroY);
-        mGestureSwitch = mDialogContent.findViewById(R.id.checkboxGesture);
-
-        mGyroSensitivityBar = mDialogContent.findViewById(R.id.editGyro_seekbar);
-        mMouseSpeedBar = mDialogContent.findViewById(R.id.editMouseSpeed_seekbar);
-        mGestureDelayBar = mDialogContent.findViewById(R.id.editGestureDelay_seekbar);
-        mResolutionBar = mDialogContent.findViewById(R.id.editResolution_seekbar);
-
-        mGyroSensitivityText = mDialogContent.findViewById(R.id.editGyro_textView_percent);
-        mGyroSensitivityDisplayText = mDialogContent.findViewById(R.id.editGyro_textView);
-        mMouseSpeedText = mDialogContent.findViewById(R.id.editMouseSpeed_textView_percent);
-        mGestureDelayText = mDialogContent.findViewById(R.id.editGestureDelay_textView_percent);
-        mGestureDelayDisplayText = mDialogContent.findViewById(R.id.editGestureDelay_textView);
-        mResolutionText = mDialogContent.findViewById(R.id.editResolution_textView_percent);
-    }
-
-    private void setupListeners() {
-        mEditor = LauncherPreferences.DEFAULT_PREF.edit();
+    private QuickSettingSideDialog(Context context, ViewGroup parent, ComposeView composeView) {
+        super(context, parent, composeView);
+        mComposeView = composeView;
 
         mOriginalGyroEnabled = PREF_ENABLE_GYRO;
         mOriginalGyroXEnabled = PREF_GYRO_INVERT_X;
@@ -91,135 +48,34 @@ public abstract class QuickSettingSideDialog extends com.kdt.SideDialogView {
         mOriginalMouseSpeed = PREF_MOUSESPEED;
         mOriginalGestureDelay = PREF_LONGPRESS_TRIGGER;
         mOriginalResolution = PREF_SCALE_FACTOR;
-
-        mGyroSwitch.setChecked(mOriginalGyroEnabled);
-        mGyroXSwitch.setChecked(mOriginalGyroXEnabled);
-        mGyroYSwitch.setChecked(mOriginalGyroYEnabled);
-        mGestureSwitch.setChecked(mOriginalGestureDisabled);
-
-        mGyroSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            PREF_ENABLE_GYRO = isChecked;
-            onGyroStateChanged();
-            updateGyroVisibility(isChecked);
-            mEditor.putBoolean("enableGyro", isChecked);
-        });
-
-        mGyroXSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            PREF_GYRO_INVERT_X = isChecked;
-            onGyroStateChanged();
-            mEditor.putBoolean("gyroInvertX", isChecked);
-        });
-
-        mGyroYSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            PREF_GYRO_INVERT_Y = isChecked;
-            onGyroStateChanged();
-            mEditor.putBoolean("gyroInvertY", isChecked);
-        });
-
-        mGestureSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            PREF_DISABLE_GESTURES = isChecked;
-            updateGestureVisibility(isChecked);
-            mEditor.putBoolean("disableGestures", isChecked);
-        });
-
-        mGyroSensitivityBar.setOnSeekBarChangeListener((SimpleSeekBarListener) (seekBar, progress, fromUser) -> {
-            PREF_GYRO_SENSITIVITY = progress / 100f;
-            mEditor.putInt("gyroSensitivity", progress);
-            setSeekTextPercent(mGyroSensitivityText, progress);
-        });
-        mGyroSensitivityBar.setProgress((int) (mOriginalGyroSensitivity * 100f));
-        setSeekTextPercent(mGyroSensitivityText, mGyroSensitivityBar.getProgress());
-
-        mMouseSpeedBar.setOnSeekBarChangeListener((SimpleSeekBarListener) (seekBar, progress, fromUser) -> {
-            PREF_MOUSESPEED = progress / 100f;
-            mEditor.putInt("mousespeed", progress);
-            setSeekTextPercent(mMouseSpeedText, progress);
-        });
-        mMouseSpeedBar.setProgress((int) (mOriginalMouseSpeed * 100f));
-        setSeekTextPercent(mMouseSpeedText, mMouseSpeedBar.getProgress());
-
-        mGestureDelayBar.setOnSeekBarChangeListener((SimpleSeekBarListener) (seekBar, progress, fromUser) -> {
-            PREF_LONGPRESS_TRIGGER = progress;
-            mEditor.putInt("timeLongPressTrigger", progress);
-            setSeekTextMillisecond(mGestureDelayText, progress);
-        });
-        mGestureDelayBar.setProgress(mOriginalGestureDelay);
-        setSeekTextMillisecond(mGestureDelayText, mGestureDelayBar.getProgress());
-
-        mResolutionBar.setOnSeekBarChangeListener((SimpleSeekBarListener) (seekBar, progress, fromUser) -> {
-            PREF_SCALE_FACTOR = progress/100f;
-            mEditor.putInt("resolutionRatio", progress);
-            setSeekTextPercent(mResolutionText, progress);
-            onResolutionChanged();
-        });
-        mResolutionBar.setProgress((int) (mOriginalResolution * 100));
-        setSeekTextPercent(mResolutionText, mResolutionBar.getProgress());
-
-
-        updateGyroVisibility(mOriginalGyroEnabled);
-        updateGestureVisibility(mOriginalGestureDisabled);
     }
 
-    private static void setSeekTextMillisecond(TextView target, int value) {
-        setSeekText(target, R.string.millisecond_format, value);
+    private static ComposeView createComposeView(Context context) {
+        ComposeView view = new ComposeView(context);
+        view.setBackgroundColor(Color.TRANSPARENT);
+        return view;
     }
 
-    private static void setSeekTextPercent(TextView target, int value) {
-        setSeekText(target, R.string.percent_format, value);
-    }
+    @Override
+    protected void onInflate() {
+        QuickSettingComposeBridge.setContent(
+                mComposeView,
+                this::onResolutionChanged,
+                this::onGyroStateChanged
+        );
 
-    private static void setSeekText(TextView target, int format, int value) {
-        target.setText(target.getContext().getString(format, value));
-    }
-
-    private void updateGyroVisibility(boolean isEnabled) {
-        int visibility = isEnabled ? View.VISIBLE : View.GONE;
-        mGyroXSwitch.setVisibility(visibility);
-        mGyroYSwitch.setVisibility(visibility);
-
-        mGyroSensitivityBar.setVisibility(visibility);
-        mGyroSensitivityText.setVisibility(visibility);
-        mGyroSensitivityDisplayText.setVisibility(visibility);
-    }
-
-    private void updateGyroCompatibility() {
-        boolean isGyroAvailable = Tools.deviceSupportsGyro(mDialogContent.getContext());
-        if (!isGyroAvailable) {
-            mGyroSwitch.setVisibility(View.GONE);
-            updateGestureVisibility(false);
-        }
-    }
-
-    private void updateGestureVisibility(boolean isDisabled) {
-        int visibility = isDisabled ? View.GONE : View.VISIBLE;
-        mGestureDelayBar.setVisibility(visibility);
-        mGestureDelayText.setVisibility(visibility);
-        mGestureDelayDisplayText.setVisibility(visibility);
-    }
-
-    private void removeListeners() {
-        mGyroSwitch.setOnCheckedChangeListener(null);
-        mGyroXSwitch.setOnCheckedChangeListener(null);
-        mGyroYSwitch.setOnCheckedChangeListener(null);
-        mGestureSwitch.setOnCheckedChangeListener(null);
-
-        mGyroSensitivityBar.setOnSeekBarChangeListener(null);
-        mMouseSpeedBar.setOnSeekBarChangeListener(null);
-        mGestureDelayBar.setOnSeekBarChangeListener(null);
-        mResolutionBar.setOnSeekBarChangeListener(null);
-    }
-
-    private void setupCancelButton() {
         setStartButtonListener(android.R.string.cancel, v -> cancel());
         setEndButtonListener(android.R.string.ok, v -> {
-            mEditor.apply();
+            if (LauncherPreferences.DEFAULT_PREF != null) {
+                LauncherPreferences.DEFAULT_PREF.edit().apply();
+            }
             disappear(true);
         });
     }
 
     /** Resets all settings to their original values */
     public void cancel() {
-        // Reset all settings if we were editing
+
         if(isDisplaying()) {
             PREF_ENABLE_GYRO = mOriginalGyroEnabled;
             PREF_GYRO_INVERT_X = mOriginalGyroXEnabled;
@@ -230,6 +86,19 @@ public abstract class QuickSettingSideDialog extends com.kdt.SideDialogView {
             PREF_MOUSESPEED = mOriginalMouseSpeed;
             PREF_LONGPRESS_TRIGGER = mOriginalGestureDelay;
             PREF_SCALE_FACTOR = mOriginalResolution;
+
+            if (LauncherPreferences.DEFAULT_PREF != null) {
+                LauncherPreferences.DEFAULT_PREF.edit()
+                        .putBoolean("enableGyro", PREF_ENABLE_GYRO)
+                        .putBoolean("gyroInvertX", PREF_GYRO_INVERT_X)
+                        .putBoolean("gyroInvertY", PREF_GYRO_INVERT_Y)
+                        .putBoolean("disableGestures", PREF_DISABLE_GESTURES)
+                        .putInt("gyroSensitivity", (int)(PREF_GYRO_SENSITIVITY * 100))
+                        .putInt("mousespeed", (int)(PREF_MOUSESPEED * 100))
+                        .putInt("timeLongPressTrigger", PREF_LONGPRESS_TRIGGER)
+                        .putInt("resolutionRatio", (int)(PREF_SCALE_FACTOR * 100))
+                        .apply();
+            }
 
             onGyroStateChanged();
             onResolutionChanged();

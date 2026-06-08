@@ -13,7 +13,7 @@ import androidx.annotation.Nullable;
 
 import com.kdt.SideDialogView;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class ColorSelector extends SideDialogView implements HueSelectionListener, RectangleSelectionListener, AlphaSelectionListener, TextWatcher{
     private static final int ALPHA_MASK = ~(0xFF << 24);
@@ -32,7 +32,6 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
 
     private boolean mAlphaEnabled = true;
 
-
     public ColorSelector(Context context, ViewGroup parent, @Nullable ColorSelectionListener colorSelectionListener) {
         super(context, parent, R.layout.dialog_color_selector);
         mColorSelectionListener = colorSelectionListener;
@@ -41,7 +40,7 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
     @Override
     protected void onInflate() {
         super.onInflate();
-        // Initialize the view contents
+
         mHueView = mDialogContent.findViewById(R.id.color_selector_hue_view);
         mLuminosityIntensityView = mDialogContent.findViewById(R.id.color_selector_rectangle_view);
         mAlphaView = mDialogContent.findViewById(R.id.color_selector_alpha_view);
@@ -55,8 +54,6 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
         mTextColors = mTextView.getTextColors();
         mAlphaView.setVisibility(mAlphaEnabled ? View.VISIBLE : View.GONE);
 
-        // Set elevation to show above other side dialogs.
-        // Jank, should be done better
         View contentParent = mDialogContent.findViewById(R.id.side_dialog_scrollview);
         if(contentParent != null) {
             ViewGroup dialogLayout = (ViewGroup) mDialogContent.getParent();
@@ -78,8 +75,8 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
      */
     public void show(boolean fromRight, int previousColor) {
         appear(fromRight);
-        runColor(previousColor); // initialize
-        dispatchColorChange(); // set the hex text
+        runColor(previousColor);
+        dispatchColorChange();
     }
 
     @Override
@@ -112,7 +109,6 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
         return color & ALPHA_MASK | ((alpha & 0xFF) << 24);
     }
 
-    //IUO: called on all color changes
     protected void dispatchColorChange() {
         int color = Color.HSVToColor(mAlphaSelected, mHsvSelected);
         mColorView.setColor(color);
@@ -121,7 +117,6 @@ public class ColorSelector extends SideDialogView implements HueSelectionListene
         notifyColorSelector(color);
     }
 
-    //IUO: sets all Views to render the desired color. Used for initialization and HEX color input
     protected void runColor(int color) {
         Color.RGBToHSV(Color.red(color), Color.green(color), Color.blue(color), mHsvSelected);
         mHueTemplate[0] = mHsvSelected[0];

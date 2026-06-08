@@ -1,8 +1,6 @@
 package net.kdt.pojavlaunch;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -11,15 +9,19 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
-public class TestStorageActivity extends Activity {
+public class TestStorageActivity extends AppCompatActivity {
     private final int REQUEST_STORAGE_REQUEST_CODE = 1;
     private AlertDialog mPermissionRequestDialog;
     private boolean mPermsRequired = false;
@@ -49,7 +51,7 @@ public class TestStorageActivity extends Activity {
 
     private void showRerequestDialog() {
         if(mPermissionRequestDialog != null) mPermissionRequestDialog.dismiss();
-        mPermissionRequestDialog = new AlertDialog.Builder(this)
+        mPermissionRequestDialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.global_error)
                 .setMessage(R.string.toast_permission_denied)
                 .setPositiveButton(android.R.string.ok,(d,i)->requestStoragePermission())
@@ -71,12 +73,10 @@ public class TestStorageActivity extends Activity {
     }
 
     public static boolean isStorageAllowed(Context context) {
-        //Getting the permission status
+
         int result1 = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         int result2 = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE);
 
-
-        //If permission is granted returning true
         return result1 == PackageManager.PERMISSION_GRANTED &&
                 result2 == PackageManager.PERMISSION_GRANTED;
     }
@@ -92,7 +92,7 @@ public class TestStorageActivity extends Activity {
             startActivity(new Intent(this, MissingStorageActivity.class));
             return;
         }
-        //Initialize constants (implicitly) and preferences after we confirm that we have storage.
+
         LauncherPreferences.loadPreferences(this);
         AsyncAssetManager.unpackComponents(this);
         AsyncAssetManager.unpackSingleFiles(this);

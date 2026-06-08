@@ -16,7 +16,7 @@ public class OldVersionsUtils {
      * @param version The version about to be launched
      */
     public static void selectOpenGlVersion(JMinecraftVersionList.Version version){
-        // 1309989600 is 2011-07-07  2011-07-07T22:00:00+00:00
+
         String creationTime = version.time;
         if(!Tools.isValidString(creationTime)){
             ExtraCore.setValue(ExtraConstants.OPEN_GL_VERSION, "2");

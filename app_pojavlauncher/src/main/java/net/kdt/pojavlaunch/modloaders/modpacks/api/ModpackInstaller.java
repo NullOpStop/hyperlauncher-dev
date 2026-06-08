@@ -2,7 +2,7 @@ package net.kdt.pojavlaunch.modloaders.modpacks.api;
 
 import com.kdt.mcgui.ProgressLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.instances.InstanceInstaller;
 import net.kdt.pojavlaunch.instances.Instances;
@@ -20,11 +20,11 @@ import java.util.concurrent.Callable;
 public class ModpackInstaller {
 
     public static ModLoader installModpack(String modpackName, String title, File modpackFile, String icon, InstallFunction installFunction) throws IOException {
-        // Build a new minecraft instance, folder first
+
         ModLoader modLoaderInfo;
         Instance instance = Instances.createInstance(i-> i.name = title, modpackName.substring(0, Math.min(16,modpackName.length())));
         try {
-            // Install the modpack
+
             modLoaderInfo = installFunction.installModpack(modpackFile, instance.getGameDirectory());
 
             if(modLoaderInfo == null) throw new IOException("Unknown modpack mod loader information");

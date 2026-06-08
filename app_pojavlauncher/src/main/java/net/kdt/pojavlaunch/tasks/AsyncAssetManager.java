@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.tasks;
 
-
 import static net.kdt.pojavlaunch.Architecture.archAsString;
 import static net.kdt.pojavlaunch.PojavApplication.sExecutorService;
 
@@ -44,7 +43,6 @@ public class AsyncAssetManager {
         if(rt_version == null) return;
         if(rt_version.equals(current_rt_version)) return;
 
-        // Install the runtime in an async manner, hope for the best
         String finalRt_version = rt_version;
         sExecutorService.execute(() -> {
 
@@ -80,7 +78,6 @@ public class AsyncAssetManager {
         sExecutorService.execute(() -> {
             tryUnpackComponent(ctx, "caciocavallo", false);
             tryUnpackComponent(ctx, "caciocavallo17", false);
-            //tryUnpackComponent(ctx, "lwjgl3", false);
 
             tryUnpackComponent(ctx, "security", true);
             tryUnpackComponent(ctx, "arc_dns_injector", true);
@@ -142,8 +139,6 @@ public class AsyncAssetManager {
             Tools.copyAssetFile(ctx, sourcePath, componentTarget.getAbsolutePath(), true);
         }
 
-        // Always write the version file separately after extracting everything else, to improve
-        // reliability.
         Tools.write(new File(componentTarget, "version"), builtinVersion);
     }
 

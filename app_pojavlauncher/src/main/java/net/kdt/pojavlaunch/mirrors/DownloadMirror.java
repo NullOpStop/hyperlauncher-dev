@@ -49,8 +49,6 @@ public class DownloadMirror {
         }
     }
 
-    //TODO make use of this
-
     /**
      * Get the transformed URL for downloading a file through a mirror.
      * @param downloadClass the download class (one of the constants above)

@@ -62,7 +62,6 @@ public class ControlDrawerData {
         this(buttonProperties, properties, Orientation.LEFT);
     }
 
-
     public ControlDrawerData(ArrayList<ControlData> buttonProperties, ControlData properties, Orientation orientation){
         this.buttonProperties = buttonProperties;
         this.properties = properties;

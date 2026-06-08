@@ -26,12 +26,12 @@ package net.kdt.pojavlaunch;
      */
 @SuppressWarnings("unused")
 public class AWTInputEvent {
-// InputEvent
+
     /**
      * This flag indicates that the Shift key was down when the event
      * occurred.
      */
-    public static final int SHIFT_MASK          = 1; //first bit
+    public static final int SHIFT_MASK          = 1;
 
     /**
      * This flag indicates that the Control key was down when the event
@@ -52,7 +52,7 @@ public class AWTInputEvent {
      * middle mouse button was pressed or released.
      */
     public static final int ALT_MASK            = 1 << 3;
-    
+
     /**
      * The AltGraph key modifier constant.
      */
@@ -126,8 +126,6 @@ public class AWTInputEvent {
      */
     public static final int ALT_GRAPH_DOWN_MASK = 1 << 13;
 
-
-// KeyEvent
     /**
      * The first number in the range of ids used for key events.
      */
@@ -151,13 +149,13 @@ public class AWTInputEvent {
      * The "key pressed" event. This event is generated when a key
      * is pushed down.
      */
-    public static final int KEY_PRESSED = 1 + KEY_FIRST; //Event.KEY_PRESS
+    public static final int KEY_PRESSED = 1 + KEY_FIRST;
 
     /**
      * The "key released" event. This event is generated when a key
      * is let up.
      */
-    public static final int KEY_RELEASED = 2 + KEY_FIRST; //Event.KEY_RELEASE
+    public static final int KEY_RELEASED = 2 + KEY_FIRST;
 
     /* Virtual key codes. */
 
@@ -823,9 +821,7 @@ public class AWTInputEvent {
      * @since 1.4
      */
     public static final int KEY_LOCATION_NUMPAD   = 4;
-    
-    
-// MOUSE
+
     /**
      * The first number in the range of ids used for mouse events.
      */
@@ -846,39 +842,39 @@ public class AWTInputEvent {
      * The "mouse pressed" event. This <code>MouseEvent</code>
      * occurs when a mouse button is pushed down.
      */
-    public static final int MOUSE_PRESSED = 1 + MOUSE_FIRST; //Event.MOUSE_DOWN
+    public static final int MOUSE_PRESSED = 1 + MOUSE_FIRST;
 
     /**
      * The "mouse released" event. This <code>MouseEvent</code>
      * occurs when a mouse button is let up.
      */
-    public static final int MOUSE_RELEASED = 2 + MOUSE_FIRST; //Event.MOUSE_UP
+    public static final int MOUSE_RELEASED = 2 + MOUSE_FIRST;
 
     /**
      * The "mouse moved" event. This <code>MouseEvent</code>
      * occurs when the mouse position changes.
      */
-    public static final int MOUSE_MOVED = 3 + MOUSE_FIRST; //Event.MOUSE_MOVE
+    public static final int MOUSE_MOVED = 3 + MOUSE_FIRST;
 
     /**
      * The "mouse entered" event. This <code>MouseEvent</code>
      * occurs when the mouse cursor enters the unobscured part of component's
      * geometry.
      */
-    public static final int MOUSE_ENTERED = 4 + MOUSE_FIRST; //Event.MOUSE_ENTER
+    public static final int MOUSE_ENTERED = 4 + MOUSE_FIRST;
 
     /**
      * The "mouse exited" event. This <code>MouseEvent</code>
      * occurs when the mouse cursor exits the unobscured part of component's
      * geometry.
      */
-    public static final int MOUSE_EXITED = 5 + MOUSE_FIRST; //Event.MOUSE_EXIT
+    public static final int MOUSE_EXITED = 5 + MOUSE_FIRST;
 
     /**
      * The "mouse dragged" event. This <code>MouseEvent</code>
      * occurs when the mouse position changes while a mouse button is pressed.
      */
-    public static final int MOUSE_DRAGGED = 6 + MOUSE_FIRST; //Event.MOUSE_DRAG
+    public static final int MOUSE_DRAGGED = 6 + MOUSE_FIRST;
 
     /**
      * The "mouse wheel" event.  This is the only <code>MouseWheelEvent</code>.

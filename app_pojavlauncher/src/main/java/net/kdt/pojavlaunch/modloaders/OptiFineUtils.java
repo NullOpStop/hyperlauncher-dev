@@ -13,9 +13,25 @@ public class OptiFineUtils {
 
     public static OptiFineVersions downloadOptiFineVersions() throws IOException {
         try {
-            return DownloadUtils.downloadStringCached("https://optifine.net/downloads",
-                    "of_downloads_page", new OptiFineScraper());
-        }catch (DownloadUtils.ParseException e) {
+            return DownloadUtils.downloadStringCached("https://optifine.net/downloads.php",
+                    "of_downloads_page", new OptiFineScraper("https://optifine.net/"));
+        } catch (IOException e) {
+            try {
+                return DownloadUtils.downloadStringCached("https://optifined.net/downloads.php",
+                        "of_downloads_page", new OptiFineScraper("https://optifined.net/"));
+            } catch (DownloadUtils.ParseException ex) {
+                ex.printStackTrace();
+                return null;
+            } catch (IOException ex) {
+
+                 try {
+                     return DownloadUtils.downloadStringCached("https://optifined.net/downloads",
+                             "of_downloads_page", new OptiFineScraper("https://optifined.net/"));
+                 } catch (Exception exc) {
+                     throw ex;
+                 }
+            }
+        } catch (DownloadUtils.ParseException e) {
             e.printStackTrace();
             return null;
         }

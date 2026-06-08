@@ -6,7 +6,7 @@ import android.widget.ExpandableListAdapter;
 
 import com.kdt.mcgui.ProgressLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.instances.InstanceInstaller;
 import net.kdt.pojavlaunch.instances.Instances;
@@ -51,6 +51,7 @@ public class OptiFineInstallFragment extends ModVersionListFragment<OptiFineUtil
                 instance.name = "OptiFine";
                 instance.installer = instanceInstaller;
                 instance.sharedData = true;
+                instance.icon = "optifine";
             }, "OptiFine");
             ProgressLayout.clearProgress(ProgressLayout.INSTALL_MODPACK);
             instanceInstaller.start();

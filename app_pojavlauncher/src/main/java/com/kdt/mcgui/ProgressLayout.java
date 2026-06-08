@@ -14,7 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.progresskeeper.ProgressListener;
@@ -34,6 +34,7 @@ public class ProgressLayout extends ConstraintLayout implements View.OnClickList
     public static final String DOWNLOAD_VERSION_LIST = "download_verlist";
     public static final String AUTHENTICATE = "authenticate";
     public static final String INSTALL_MODPACK = "install_modpack";
+    public static final String CONTENT_INSTALL = "content_install";
     public static final String EXTRACT_COMPONENTS = "extract_components";
     public static final String EXTRACT_SINGLE_FILES = "extract_single_files";
     public static final String INSTANCE_INSTALL = "instance_install";

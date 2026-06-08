@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- App name part -->
-    <string name="app_name">MojoLauncher (Minecraft: Java Edition for Android)</string>
-    <string name="app_short_name">MojoLauncher</string>
+    <string name="app_name">HyperX Launcher (Minecraft: Java Edition for Android)</string>
+    <string name="app_short_name">HyperX Launcher</string>
 
-    <!-- Action bar part -->
 
     <!-- Languages list part -->
 
@@ -20,16 +19,20 @@
 
     <!-- AlertDialog title -->
     <string name="alerttitle_installmod">Select a mod installer</string>
+    <string name="installer_mods">Mods</string>
+    <string name="installer_shaders">Shaders</string>
+    <string name="installer_packs">Resource Packs</string>
+    <string name="installer_search_hint">Search projects</string>
 
     <!-- Error messages -->
-    <string name="error_fatal">MojoLauncher has unexpectedly crashed</string>
+    <string name="error_fatal">Hyper Launcher has unexpectedly crashed</string>
     <string name="error_no_version">No version!</string>
     <string name="error_show_more">Show more</string>
     <string name="error_show_less">Show less</string>
 
     <!-- Toast messages -->
     <string name="toast_permission_denied">The read/write to storage permission is required!</string>
-    <string name="toast_optifine_success">Install successful</string>
+    <string name="toast_optifine_success">hyper</string>
     <!--
     <string name="toast_3">Exit</string>
     -->
@@ -42,7 +45,7 @@
     <!-- MCLauncherActivity: Strings -->
     <string name="mcl_launch_cleancache">Cleaning cache files</string>
     <string name="mcl_launch_downloading">Downloading %s</string>
-    <string name="mcl_launch_downloading_progress">"Downloading %s (%.2f MB / %.2f MB)"</string>
+    <string name="mcl_launch_downloading_progress" formatted="false">Downloading %s (%.2f MB / %.2f MB)</string>
     <string name="mcl_launch_download_assets">Preparing to download resources</string>
 
     <string name="mcl_options">Options</string>
@@ -57,6 +60,8 @@
     <string name="mcl_setting_subtitle_resolution_scaler">Allows you to decrease the game resolution. 100% is full resolution.</string>
     <string name="mcl_setting_title_longpresstrigger">Trigger long press delay</string>
     <string name="mcl_setting_subtitle_longpresstrigger">Change long press trigger delay for destroying blocks and dropping items.</string>
+    <string name="mcl_setting_title_buttonallcaps">Button labels: All caps</string>
+    <string name="mcl_setting_subtitle_buttonallcaps">Toggle all-caps labels for control buttons.</string>
     <string name="mcl_setting_title_buttonscale">Control buttons scaling</string>
     <string name="mcl_setting_subtitle_buttonscale">Upscale them if the buttons are too small.</string>
     <string name="mcl_setting_title_mousescale">Mouse scaling</string>
@@ -68,6 +73,7 @@
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions, mid</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno - all versions, fast, Adreno-only</string>
     <string name="mcl_setting_renderer_ltw">LTW (OpenGL ES 3) - 1.17+ only, fast</string>
+    <string name="mcl_setting_renderer_mobileglues">Mobile Glues - FCL Renderer</string>
     <string name="mcl_setting_veroption_release">Release</string>
     <string name="mcl_setting_veroption_snapshot">Snapshot</string>
     <string name="mcl_setting_veroption_oldalpha">Old-alpha</string>
@@ -91,6 +97,7 @@
     <string name="global_select">Select</string>
     <string name="global_retry">Retry</string>
     <string name="global_default">Default</string>
+    <string name="global_install">Install</string>
 
     <!-- MainActivity: strings -->
     <string name="mcn_exit_title">Application/Game exited with code %d, check latestlog.txt for more details.</string>
@@ -109,7 +116,7 @@
     <string name="control_left">◀</string>
     <string name="control_right">▶</string>
     <string name="control_down">▼</string>
-    <string name="control_jump">⬛</string>
+    <string name="control_jump">♦</string>
     <string name="control_thirdperson">3rd</string>
     <string name="control_listplayers">Tab</string>
     <string name="control_mouse">Mouse</string>
@@ -213,6 +220,7 @@
     <string name="preference_force_vsync_description">Limit thermal throttling by limiting peak performance.</string>
     <string name="preference_use_angle_title">Use ANGLE</string>
     <string name="preference_use_angle_description">Allows using ANGLE instead of the system driver for LTW. Can fix graphical issues with mods on some GPUs</string>
+    <string name="main_select_instance_directory">Select Instance Directory</string>
     <string name="preference_force_english_title">Force language to English</string>
     <string name="preference_force_english_description">Allows you to see original strings, as intended by developers. Requires a restart.</string>
     <string name="preference_edit_controls_title">Edit custom controls</string>
@@ -243,7 +251,7 @@
     <string name="color_default_hex" translatable="false">FFFF0000</string>
     <string name="notif_channel_name">General</string>
     <string name="notif_channel_id" translatable="false">channel_id</string>
-    <string name="lazy_service_default_title">Mojo Foreground Service</string>
+    <string name="lazy_service_default_title"> Hyper Launcher Foreground Service</string>
     <string name="mcl_setting_veroption_installed">Installed</string>
     <string name="use_global_default">(Use global default)</string>
     <string name="default_control">Default controlmap</string>
@@ -273,9 +281,7 @@
     <string name="preference_gyro_sample_rate_title">Gyroscope sampling rate</string>
     <string name="preference_gyro_sample_rate_description">If you have performance issues with gyroscope controls, increase this.</string>
     <string name="microsoft_login_retry_later">Too many requests, please try again later.</string>
-    <string name="storage_required">MojoLauncher requires external storage to be attached. Please reconnect it and restart the app.</string>
-    <string name="mcl_setting_title_buttonallcaps">Only use capital letters in button labels</string>
-    <string name="mcl_setting_subtitle_buttonallcaps">Disable this if you want to use lowercase letters in your controls.</string>
+    <string name="storage_required">Hyper Launcher requires external storage to be attached. Please reconnect it and restart the app.</string>
     <string name="create_instance">Create new instance</string>
     <string name="preference_shader_dump_title">Enable shader dumping</string>
     <string name="preference_shader_dump_description">Log converted shaders into the log file.</string>
@@ -345,7 +351,7 @@
     <string name="modpack_download_downloading_mods">Downloading mods (%.2f MB / %.2f MB)</string>
     <string name="modpack_download_downloading_mods_fc">Downloading mods (File %d out of %d)</string>
     <string name="modpack_download_applying_overrides">Applying overrides (%d/%d)</string>
-    <string name="modpack_install_notification_title">Mojo Modpack Installer</string>
+    <string name="modpack_install_notification_title">Hyper Modpack Installer</string>
     <string name="modpack_install_notification_success">Click here to finish modpack installation</string>
     <string name="modpack_install_notification_data_not_available">Failed to download mod loader information</string>
     <string name="modpack_install_modloader_download_failed">Failed to download the mod loader files</string>
@@ -371,13 +377,13 @@
     <string name="notif_download_finished_desc">Click here to start it!</string>
     <string name="preference_category_gestures">Gestures</string>
     <string name="preference_category_buttons">Buttons</string>
-    <string name="preference_category_experimental_settings">Experimental fuckury</string>
+    <string name="preference_category_experimental_settings">Experimental stuff</string>
     <string name="preference_category_java_tweaks">Java Tweaks</string>
     <string name="preference_category_main_categories">Categories</string>
     <string name="preference_category_miscellaneous">Miscellaneous settings</string>
     <string name="preference_category_video">Video settings</string>
     <string name="notification_permission_dialog_title">Permission request</string>
-    <string name="notification_permission_dialog_text">MojoLauncher requires a permission to post notifications to prevent game/modpack downloads from stopping when you leave the app. Without this permission, Android may shut down your downloads when you put MojoLauncher in background mode.</string>
+    <string name="notification_permission_dialog_text">Hyper Launcher requires a permission to post notifications to prevent game/modpack downloads from stopping when you leave the app. Without this permission, Android may shut down your downloads when you put Launcher in background mode.</string>
     <string name="notification_permission_toast">You can always change your mind later by going into Settings</string>
     <string name="preference_ask_for_notification_title">Allow notifications</string>
     <string name="preference_ask_for_notification_description">Click to re-request the notification permission, required for game/modpack background downloads to work properly.</string>
@@ -432,7 +438,7 @@
     <string name="mcl_button_social_media">Discord</string>
     <string name="ltw_render_distance_warning_msg">Your GPU is not capable of rendering above 7 render distance without Sodium or other similar mods. The render distance will be automatically reduced when you click "OK".</string>
     <string name="mcl_button_open_directory">Open game directory</string>
-    <string name="social_media_invite" translatable="false">https://discord.gg/VHdwQFsaGX</string>
+    <string name="social_media_invite" translatable="false">https://discord.gg/8DUXE9S9pS</string>
     <string name="local_login_bad_username_title">Unsuitable username</string>
     <string name="local_login_bad_username_text">The username must be between 3–16 characters long, and must only contain latin letters, numbers 0–9 and underscores.</string>
     <string name="quick_setting_title">Quick settings</string>
@@ -488,4 +494,31 @@
     <string name="import_local_modpack">Import local modpack</string>
     <string name="preference_sysmem_title">Force rendering into the system memory</string>
     <string name="preference_sysmem_summary">Forces Freedreno to render directly into the system memory. Enable if performance is low or you experience rendering issues</string>
+
+    <!-- Missing strings for SettingsScreen.kt -->
+    <string name="preference_appearance_title">Appearance</string>
+    <string name="preference_appearance_description">Theme, background and animations</string>
+    <string name="preference_theme_title">App Theme</string>
+    <string name="preference_animation_type_title">Animation style</string>
+    <string name="preference_animation_intensity_title">Animation intensity</string>
+    <string name="preference_animation_intensity_description">Adjust how prominent the animations are.</string>
+    <string name="preference_mouse_cursor_title">Custom mouse cursor</string>
+    <string name="preference_mouse_cursor_description">Select a custom image for the mouse cursor.</string>
+    <string name="preference_mouse_hotspot_title">Mouse cursor hotspot</string>
+    <string name="preference_mouse_hotspot_description">Set the click point of the custom mouse cursor.</string>
+    <string name="preference_mouse_reset_title">Reset mouse cursor</string>
+    <string name="preference_mouse_reset_description">Reset the mouse cursor to default.</string>
+    <string name="preference_experimental_mipmap_title">Enable mipmaps</string>
+    <string name="preference_experimental_mipmap_desc">Experimental: Generate mipmaps for textures.</string>
+    <string name="preference_experimental_no_error_title">Disable GL error checking</string>
+    <string name="preference_experimental_no_error_desc">Experimental: Speed up rendering by not checking for GL errors.</string>
+    <string name="preference_experimental_network_optimization_title">Network optimization</string>
+    <string name="preference_experimental_network_optimization_desc">Experimental: Tweaks for better network performance.</string>
+    <string name="mcl_setting_title_preferred_graphics_backend">Preferred graphics backend</string>
+    <string name="mcl_setting_subtitle_preferred_graphics_backend">Changes the graphics backend for Minecraft 26.2+.</string>
+    <string name="mcl_setting_graphics_backend_default">Default</string>
+    <string name="mcl_setting_graphics_backend_opengl">OpenGL</string>
+    <string name="mcl_setting_graphics_backend_vulkan">Vulkan</string>
+    <string name="preference_physical_mouse_title">Enable physical mouse</string>
+    <string name="preference_physical_mouse_description">Enables support for physical mouse input (requires Android 8.0+).</string>
 </resources>

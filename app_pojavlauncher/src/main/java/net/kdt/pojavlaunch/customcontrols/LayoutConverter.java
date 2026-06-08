@@ -31,7 +31,7 @@ public class LayoutConverter {
         try {
             JSONObject layoutJobj = new JSONObject(jsonLayoutData);
 
-            if (!layoutJobj.has("version")) { //v1 layout
+            if (!layoutJobj.has("version")) {
                 return LayoutConverter.convertV1Layout(size, layoutJobj);
             } else {
                 int version = layoutJobj.getInt("version");
@@ -54,7 +54,6 @@ public class LayoutConverter {
         }
     }
 
-
     /**
      * Normalize the layout to v8 from v6/7. An issue from the joystick height and position has to be fixed.
      * @param oldLayoutJson The old layout
@@ -64,7 +63,7 @@ public class LayoutConverter {
         CustomControls layout = Tools.GLOBAL_GSON.fromJson(oldLayoutJson.toString(), CustomControls.class);
         for (ControlJoystickData data : layout.mJoystickDataList) {
             if (data.getHeight() > data.getWidth()) {
-                // Make the size square, adjust the dynamic position related to height
+
                 float ratio = data.getHeight() / data.getWidth();
 
                 data.dynamicX = data.dynamicX.replace("${height}", "(" + ratio + " * ${height})");
@@ -86,7 +85,6 @@ public class LayoutConverter {
         layout.version = 6;
         return layout;
     }
-
 
     private static CustomControls convertV2Layout(Point size, JSONObject oldLayoutJson) throws JSONException {
         CustomControls layout = Tools.GLOBAL_GSON.fromJson(oldLayoutJson.toString(), CustomControls.class);
@@ -140,6 +138,7 @@ public class LayoutConverter {
             int[] keycodes = new int[]{LwjglGlfwKeycode.GLFW_KEY_UNKNOWN,
                     LwjglGlfwKeycode.GLFW_KEY_UNKNOWN,
                     LwjglGlfwKeycode.GLFW_KEY_UNKNOWN,
+                    LwjglGlfwKeycode.GLFW_KEY_UNKNOWN,
                     LwjglGlfwKeycode.GLFW_KEY_UNKNOWN};
             n_button.dynamicX = button.getString("dynamicX");
             n_button.dynamicY = button.getString("dynamicY");
@@ -185,7 +184,6 @@ public class LayoutConverter {
         empty.version = 3;
         return empty;
     }
-
 
     /**
      * Convert the layout stroke width to the V5 form

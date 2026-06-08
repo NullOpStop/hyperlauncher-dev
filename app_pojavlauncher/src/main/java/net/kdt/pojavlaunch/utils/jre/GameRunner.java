@@ -10,12 +10,20 @@ import androidx.appcompat.app.AppCompatActivity;
 import net.kdt.pojavlaunch.Architecture;
 import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.authenticator.AuthType;
 import net.kdt.pojavlaunch.authenticator.accounts.MinecraftAccount;
 import net.kdt.pojavlaunch.instances.Instance;
+import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.lifecycle.LifecycleAwareAlertDialog;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
+import net.kdt.pojavlaunch.plugins.LibraryPlugin;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.skin.InvalidSkinException;
+import net.kdt.pojavlaunch.skin.LocalUuidUtils;
+import net.kdt.pojavlaunch.skin.PreparedAccount;
+import net.kdt.pojavlaunch.skin.SkinManager;
+import net.kdt.pojavlaunch.skin.SkinManagerKt;
 import net.kdt.pojavlaunch.utils.DateUtils;
 import net.kdt.pojavlaunch.utils.FileUtils;
 import net.kdt.pojavlaunch.utils.GLInfoUtils;
@@ -35,7 +43,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class GameRunner {
     /**
@@ -90,7 +98,7 @@ public class GameRunner {
         GLInfoUtils.GLInfo info = GLInfoUtils.getGlInfo();
         return info.isAdreno() &&
                 info.glesMajorVersion >= 3 &&
-                // 1.21.5 fixes the RD issue, released on march 25 2025
+
                 DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2025, 2, 25);
     }
 
@@ -103,8 +111,7 @@ public class GameRunner {
             Log.e("Tools", "Failed to load config", e);
         }
         int renderDistance = GameOptionsUtils.parseIntDefault(MCOptionUtils.get("renderDistance"),12);
-        // 7 is the render distance "magic number" above which MC creates too many buffers
-        // for Adreno's OpenGL ES implementation
+
         return renderDistance > 7;
     }
 
@@ -113,7 +120,7 @@ public class GameRunner {
     }
 
     private static boolean isCompatContext(JMinecraftVersionList.Version version) throws Exception{
-        // Day before the release date of 21w10a, the first OpenGL 3 Core Minecraft version
+
         return DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2021, 3, 9);
     }
 
@@ -125,7 +132,6 @@ public class GameRunner {
         return LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, dialogCreator);
     }
 
-    // Autoswitch to LTW if supported, otherwise - crash with resId dialog message. Returns LTW renderer strings if succeeded
     private static String switchLtw(boolean hasLtw, Instance instance, AppCompatActivity activity, int resId) throws InterruptedException, IOException {
         if(hasLtw) {
             String ltwRenderer = "opengles3_ltw";
@@ -159,15 +165,13 @@ public class GameRunner {
                         .setPositiveButton(android.R.string.ok, (d, w)->{});
 
             if(LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, dialogCreator)) {
-                return; // If the dialog's lifecycle has ended, return without
-                // actually launching the game, thus giving us the opportunity
-                // to start after the activity is shown again
+                return;
+
             }
         }
         File gamedir = instance.getGameDirectory();
         JMinecraftVersionList.Version versionInfo = Tools.getVersionInfo(versionId);
 
-        // Switch renderer to GL4ES when running a compat context version on LTW
         if(isCompatContext(versionInfo) && !hasAngelica(gamedir) && rendererName.equals("opengles3_ltw")) {
             instance.renderer = rendererName = "opengles2";
             instance.write();
@@ -175,12 +179,11 @@ public class GameRunner {
 
         boolean isGl4es = rendererName.equals("opengles2");
         boolean ltwSupported = RendererCompatUtil.getCompatibleRenderers(activity).rendererIds.contains("opengles3_ltw");
-        // Block Sodium from running with GL4ES on 1.17+
+
         if(!isCompatContext(versionInfo) && isGl4es && hasSodium(gamedir)) {
             rendererName = switchLtw(ltwSupported, instance, activity, R.string.compat_sodium_not_supported);
         }
 
-        // Switch renderer to LTW when running 1.21.5
         if(!isGl4esCompatible(versionInfo) && isGl4es) {
             rendererName = switchLtw(ltwSupported, instance, activity, R.string.compat_version_not_supported);
         }
@@ -190,7 +193,7 @@ public class GameRunner {
 
         if(isLtw && checkRenderDistance(versionInfo, gamedir)) {
             if(showDialog(activity, R.string.ltw_render_distance_warning_msg)) return;
-            // If the code goes here, it means that the user clicked "OK". Fix the render distance.
+
             try {
                 MCOptionUtils.set("renderDistance", "7");
                 MCOptionUtils.save();
@@ -199,7 +202,7 @@ public class GameRunner {
             }
         }
 
-        GameOptionsUtils.fixOptions(isLtw);
+        GameOptionsUtils.fixOptions(isLtw, versionInfo);
 
         if(isLtw && GLInfoUtils.getGlInfo().forcedMsaa) {
             if(showDialog(activity, R.string.ltw_4x_msaa_warning_msg)) return;
@@ -210,11 +213,31 @@ public class GameRunner {
 
         Runtime runtime = MultiRTUtils.forceReread(pickRuntime(instance, requiredJavaVersion));
 
-        // Pre-process specific files
+        SkinManager skinManager = null;
+        String localAuthlibUrl = null;
+        if (minecraftAccount.authType == AuthType.LOCAL) {
+            skinManager = new SkinManager(SkinManagerKt.getAndroidSkinAnalyzerFacade());
+            try {
+                PreparedAccount preparedAccount = skinManager.prepareAccount(
+                        minecraftAccount.username,
+                        minecraftAccount.skinPath != null ? new File(minecraftAccount.skinPath) : null,
+                        minecraftAccount.capePath != null ? new File(minecraftAccount.capePath) : null,
+                        null
+                );
+
+                minecraftAccount.profileId = preparedAccount.getFormattedUuid();
+                skinManager.startServer();
+                localAuthlibUrl = skinManager.getAuthlibUrl();
+            } catch (InvalidSkinException e) {
+                Log.e("GameRunner", "Invalid skin: " + e.getMessage());
+            } catch (Exception e) {
+                Log.e("GameRunner", "Failed to start local skin server", e);
+            }
+        }
+
         disableSplash(gamedir);
         List<String> launchArgs = getMinecraftClientArgs(minecraftAccount, versionInfo, gamedir);
 
-        // Select the appropriate openGL version
         OldVersionsUtils.selectOpenGlVersion(versionInfo);
 
         ArrayList<String> launchClassPath = new ArrayList<>(classpath.length);
@@ -248,7 +271,7 @@ public class GameRunner {
         FileUtils.ensureDirectory(lwjglExtractDir);
         javaArgList.add("-Dorg.lwjgl.system.SharedLibraryExtractPath="+lwjglExtractDir.getAbsolutePath());
 
-        addAuthlibInjectorArgs(javaArgList, minecraftAccount);
+        addAuthlibInjectorArgs(javaArgList, minecraftAccount, localAuthlibUrl);
 
         javaArgList.addAll(getMinecraftJVMArgs(versionId));
 
@@ -274,15 +297,27 @@ public class GameRunner {
 
         Log.i("GameRunner", "Running with "+ launchArgs.toString());
 
+        List<String> extraLdPaths = null;
+        if (rendererName.equals("mobileglues")) {
+            LibraryPlugin mobileGlues = LibraryPlugin.discoverPlugin(activity, LibraryPlugin.ID_MOBILEGLUES_PLUGIN);
+            if (mobileGlues != null) {
+                extraLdPaths = Collections.singletonList(mobileGlues.getLibraryPath());
+            }
+        }
+
         try {
             JavaRunner.nativeSetupExit(activity);
-            JavaRunner.startJvm(runtime, javaArgList, launchClassPath, versionInfo.mainClass, launchArgs);
+            JavaRunner.startJvm(runtime, javaArgList, launchClassPath, versionInfo.mainClass, launchArgs, extraLdPaths);
         }catch (VMLoadException e) {
             LifecycleAwareAlertDialog.DialogCreator dialogCreator = (dialog, builder) ->
                 builder.setMessage(e.toString(activity)).setPositiveButton(android.R.string.ok, (d, w)->{});
 
             if(LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, dialogCreator)) {
                 return;
+            }
+        } finally {
+            if (skinManager != null) {
+                skinManager.stopServer();
             }
         }
 
@@ -310,15 +345,26 @@ public class GameRunner {
         }
     }
 
-    private static void addAuthlibInjectorArgs(List<String> javaArgList, MinecraftAccount minecraftAccount) {
-        String injectorUrl = minecraftAccount.authType.injectorUrl;
+    private static void addAuthlibInjectorArgs(List<String> javaArgList, MinecraftAccount minecraftAccount, String localAuthlibUrl) {
+        String injectorUrl = localAuthlibUrl != null ? localAuthlibUrl : minecraftAccount.authType.injectorUrl;
         if(injectorUrl == null) return;
-        javaArgList.add("-javaagent:"+Tools.DIR_DATA+"/authlib-injector/authlib-injector.jar="+injectorUrl);
+
+        File injectorJar = new File(Tools.DIR_DATA, "authlib-injector/authlib-injector.jar");
+        if (!injectorJar.exists()) {
+            try {
+                Tools.copyAssetFile(ContextExecutor.getContext(), "components/authlib-injector/authlib-injector.jar", injectorJar.getParent(), true);
+            } catch (IOException e) {
+                Log.e("GameRunner", "Failed to copy authlib-injector", e);
+            }
+        }
+
+        javaArgList.add("-javaagent:"+injectorJar.getAbsolutePath()+"="+injectorUrl);
+        javaArgList.add("-Dauthlibinjector.side=client");
     }
 
     private static List<String> getMinecraftJVMArgs(String versionName) {
         JMinecraftVersionList.Version versionInfo = Tools.getVersionInfo(versionName, true);
-        // Parse Forge 1.17+ additional JVM Arguments
+
         if (versionInfo.inheritsFrom == null || versionInfo.arguments == null || versionInfo.arguments.jvm == null) {
             return Collections.emptyList();
         }
@@ -334,7 +380,7 @@ public class GameRunner {
             for (Object arg : versionInfo.arguments.jvm) {
                 if (arg instanceof String) {
                     minecraftArgs.add((String) arg);
-                } //TODO: implement (?maybe?)
+                }
             }
         }
         return JSONUtils.insertJSONValueList(minecraftArgs, varArgMap);
@@ -350,9 +396,7 @@ public class GameRunner {
         String userType = "mojang";
         try {
             Date creationDate = DateUtils.getOriginalReleaseDate(versionInfo);
-            // Minecraft 22w43a which adds chat reporting (and signing) was released on
-            // 26th October 2022. So, if the date is not before that (meaning it is equal or higher)
-            // change the userType to MSA to fix the missing signature
+
             if(creationDate != null && !DateUtils.dateBefore(creationDate, 2022, 9, 26)) {
                 userType = "msa";
             }
@@ -360,11 +404,11 @@ public class GameRunner {
             Log.e("CheckForProfileKey", "Failed to determine profile creation date, using \"mojang\"", e);
         }
 
-
         Map<String, String> varArgMap = new ArrayMap<>();
-        varArgMap.put("auth_session", profile.accessToken); // For legacy versions of MC
+        varArgMap.put("auth_session", profile.accessToken);
         varArgMap.put("auth_access_token", profile.accessToken);
         varArgMap.put("auth_player_name", username);
+
         varArgMap.put("auth_uuid", profile.profileId.replace("-", ""));
         varArgMap.put("auth_xuid", profile.xuid);
         varArgMap.put("assets_root", Tools.ASSETS_PATH);
@@ -378,11 +422,11 @@ public class GameRunner {
 
         List<String> minecraftArgs = new ArrayList<>();
         if (versionInfo.arguments != null && versionInfo.arguments.game != null) {
-            // Support Minecraft 1.13+
+
             for (Object arg : versionInfo.arguments.game) {
                 if (arg instanceof String) {
                     minecraftArgs.add((String) arg);
-                } //TODO: implement else clause
+                }
             }
         }
         if(versionInfo.minecraftArguments != null){

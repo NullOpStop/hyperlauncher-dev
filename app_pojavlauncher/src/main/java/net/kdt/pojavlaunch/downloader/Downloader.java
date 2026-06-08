@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class Downloader {
     private static final double ONE_MEGABYTE = (1024d * 1024d);
@@ -92,7 +92,8 @@ public class Downloader {
             reducedList.add(element);
         }
         if(reducedList.isEmpty()) return;
-        try (ExecutorService executorService = Executors.newFixedThreadPool(4)) {
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        try {
             for(TaskMetadata element : reducedList) executorService.submit(new CompleteMetadataTask(element, this));
             executorService.shutdown();
             while (!executorService.awaitTermination(33, TimeUnit.MILLISECONDS)) {
@@ -100,6 +101,8 @@ public class Downloader {
                 if(exception != null) throw exception;
                 reportCountProgress(R.string.newerdl_inserting_metadata_count, reducedList.size());
             }
+        } finally {
+            executorService.shutdownNow();
         }
     }
 

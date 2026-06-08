@@ -32,7 +32,6 @@ public class MCOptionUtils {
         void onOptionChanged();
     }
 
-
     public static void load(){
         load(sOptionFolderPath == null
                 ? Tools.DIR_GAME_NEW
@@ -42,7 +41,7 @@ public class MCOptionUtils {
     public static void load(@NonNull String folderPath) {
         File optionFile = new File(folderPath + "/options.txt");
         if(!optionFile.exists()) {
-            try { // Needed for new instances I guess  :think:
+            try {
                 optionFile.createNewFile();
             } catch (IOException e) { e.printStackTrace(); }
         }
@@ -51,7 +50,7 @@ public class MCOptionUtils {
             sOptionFolderPath = folderPath;
             setupFileObserver();
         }
-        sOptionFolderPath = folderPath; // Yeah I know, it may be redundant
+        sOptionFolderPath = folderPath;
 
         sParameterMap.clear();
 
@@ -89,10 +88,8 @@ public class MCOptionUtils {
     public static List<String> getAsList(String key){
         String value = get(key);
 
-        // Fallback if the value doesn't exist
         if (value == null) return new ArrayList<>();
 
-        // Remove the edges
         value = value.replace("[", "").replace("]", "");
         if (value.isEmpty()) return new ArrayList<>();
 

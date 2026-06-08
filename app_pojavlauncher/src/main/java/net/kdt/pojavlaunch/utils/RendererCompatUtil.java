@@ -9,12 +9,13 @@ import android.os.Build;
 
 import net.kdt.pojavlaunch.Architecture;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.plugins.LibraryPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class RendererCompatUtil {
     private static RenderersList sCompatibleRenderers;
@@ -34,20 +35,25 @@ public class RendererCompatUtil {
         String[] defaultRenderers = resources.getStringArray(R.array.renderer_values);
         String[] defaultRendererNames = resources.getStringArray(R.array.renderer);
         boolean deviceHasVulkan = checkVulkanSupport(context.getPackageManager());
-        // Current Mesa requires API29+
+
         boolean deviceCompatibleMesa = SDK_INT >= 29;
         boolean deviceHasOpenGLES3 = JREUtils.getDetectedVersion() >= 3;
-        // LTW is an optional dependency
+
         boolean appHasLtw = new File(Tools.NATIVE_LIB_DIR, "libltw.so").exists();
+
+        boolean hasMobileGlues = LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_MOBILEGLUES_PLUGIN) != null;
+
         List<String> rendererIds = new ArrayList<>(defaultRenderers.length);
         List<String> rendererNames = new ArrayList<>(defaultRendererNames.length);
         for(int i = 0; i < defaultRenderers.length; i++) {
             String rendererId = defaultRenderers[i];
             if(rendererId.contains("vulkan") && !deviceHasVulkan) continue;
             if(rendererId.contains("zink") && !deviceCompatibleMesa) continue;
-            // freedreno is available only on Adreno GPUs
+
             if(rendererId.contains("freedreno") && (!(GLInfoUtils.getGlInfo().isAdreno()) || !deviceCompatibleMesa)) continue;
             if(rendererId.contains("ltw") && (!deviceHasOpenGLES3 || !appHasLtw)) continue;
+            if(rendererId.contains("mobileglues") && !hasMobileGlues) continue;
+
             rendererIds.add(rendererId);
             rendererNames.add(defaultRendererNames[i]);
         }

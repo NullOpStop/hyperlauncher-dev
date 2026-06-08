@@ -3,6 +3,7 @@ package net.kdt.pojavlaunch;
 import static android.os.Build.VERSION.SDK_INT;
 import static net.kdt.pojavlaunch.PojavApplication.sExecutorService;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.NotificationChannel;
@@ -38,15 +39,16 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import net.ashmeet.hyperlauncher.BuildConfig;
 import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutorTask;
@@ -78,8 +80,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import git.artdeell.mojo.BuildConfig;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 @SuppressWarnings("IOStreamConstructor")
 public final class Tools {
@@ -92,17 +93,15 @@ public final class Tools {
 
     public static final String URL_HOME = "https://pojavlauncherteam.github.io";
     public static String NATIVE_LIB_DIR;
-    public static String DIR_DATA; //Initialized later to get context
+    public static String DIR_DATA;
     public static File DIR_CACHE;
     public static String MULTIRT_HOME;
     public static int DEVICE_ARCHITECTURE;
 
-    // New since 3.3.1
     public static String DIR_ACCOUNT_NEW;
     public static String DIR_GAME_HOME = Environment.getExternalStorageDirectory().getAbsolutePath() + "/games/PojavLauncher";
     public static String DIR_GAME_NEW;
 
-    // New since 2.4.2
     public static String DIR_HOME_VERSION;
     public static String DIR_HOME_LIBRARY;
 
@@ -112,7 +111,6 @@ public final class Tools {
     public static String OBSOLETE_RESOURCES_PATH;
     public static String CTRLMAP_PATH;
     public static String CTRLDEF_FILE;
-
 
     private static @Nullable File getPojavStorageRoot(Context ctx) {
         if(SDK_INT >= 29) {
@@ -193,17 +191,16 @@ public final class Tools {
         manager.createNotificationChannel(channel);
     }
 
-
     public static DisplayMetrics getDisplayMetrics(Activity activity) {
         DisplayMetrics displayMetrics = new DisplayMetrics();
 
         if(SDK_INT >= Build.VERSION_CODES.N && (activity.isInMultiWindowMode() || activity.isInPictureInPictureMode())){
-            //For devices with free form/split screen, we need window size, not screen size.
+
             displayMetrics = activity.getResources().getDisplayMetrics();
         }else{
             if (SDK_INT >= Build.VERSION_CODES.R) {
                 Objects.requireNonNull(activity.getDisplay()).getRealMetrics(displayMetrics);
-            } else { // Removed the clause for devices with unofficial notch support, since it also ruins all devices with virtual nav bars before P
+            } else {
                 activity.getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
             }
         }
@@ -243,26 +240,21 @@ public final class Tools {
     public static void setInsetsMode(Activity activity, boolean noSystemBars, boolean ignoreNotch) {
         Window window = activity.getWindow();
         View insetView = activity.findViewById(android.R.id.content);
-        // Don't ignore system bars in window mode (will put game behind window button bar)
+
         if(SDK_INT >= Build.VERSION_CODES.N && activity.isInMultiWindowMode()) noSystemBars = false;
 
         int bgColor;
-        // The status bars are completely transparent and will take their color from the inset view
-        // background drawable.
+
         if(!noSystemBars) bgColor = activity.getResources().getColor(R.color.background_status_bar);
         else bgColor = Color.BLACK;
 
-        // On API 35 onwards, apps are edge-to-edge by default and are controlled entirely though the
-        // inset API. On levels below, we still need to set the correct cutout mode.
         if(SDK_INT >= Build.VERSION_CODES.P) setCutoutMode(window, ignoreNotch);
 
-        // The AppCompat APIs don't work well, and break when opening alert dialogs on older Android
-        // versions. Use the legacy fullscreen flags for lower APIs. (notch is already handled above)
         if(SDK_INT < Build.VERSION_CODES.R) {
             setLegacyFullscreen(insetView, noSystemBars);
             return;
         }
-        // Code below expects this to be set to false, since that's the SDK 35 default.
+
         if(SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.setDecorFitsSystemWindows(false);
         }
@@ -292,16 +284,15 @@ public final class Tools {
         insetView.requestApplyInsets();
     }
 
-    // Note: this should *NOT* be used for positioning and sizing things on the screen
     public static DisplayMetrics currentDisplayMetrics;
 
     public static float dpToPx(float dp) {
-        //Better hope for the currentDisplayMetrics to be good
+
         return dp * currentDisplayMetrics.density;
     }
 
     public static float pxToDp(float px){
-        //Better hope for the currentDisplayMetrics to be good
+
         return px / currentDisplayMetrics.density;
     }
 
@@ -358,8 +349,8 @@ public final class Tools {
         }
 
         Runnable runnable = () -> {
-            final String errMsg = showMore ? printToString(e) : rolledMessage != null ? rolledMessage : e.getMessage();
-            AlertDialog.Builder builder = new AlertDialog.Builder(ctx)
+            @SuppressLint("StringFormatInvalid") final String errMsg = showMore ? printToString(e) : rolledMessage != null ? rolledMessage : e.getMessage();
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(ctx)
                     .setTitle(titleId)
                     .setMessage(errMsg)
                     .setPositiveButton(android.R.string.ok, (p1, p2) -> {
@@ -409,22 +400,16 @@ public final class Tools {
         showErrorRemote(context.getString(rolledMessage), e);
     }
     public static void showErrorRemote(String rolledMessage, Throwable e) {
-        // I WILL embrace layer violations because Android's concept of layers is STUPID
-        // We live in the same process anyway, why make it any more harder with this needless
-        // abstraction?
 
-        // Add your Context-related rage here
         ContextExecutor.execute(new ShowErrorActivity.RemoteErrorTask(e, rolledMessage));
     }
-
-
 
     public static void dialogOnUiThread(final Activity activity, final CharSequence title, final CharSequence message) {
         activity.runOnUiThread(()->dialog(activity, title, message));
     }
 
     public static void dialog(final Context context, final CharSequence title, final CharSequence message) {
-        new AlertDialog.Builder(context)
+        new MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
@@ -442,7 +427,7 @@ public final class Tools {
     }
 
     public static boolean shouldSkipLibrary(DependentLibrary library) {
-        // Don't use lwjgl from libraries, we have our own bundled in.
+
         return library.name.startsWith("org.lwjgl");
     }
 
@@ -450,8 +435,7 @@ public final class Tools {
         for (DependentLibrary libItem : libraries) {
             String[] version = libItem.name.split(":")[2].split("\\.");
             if (libItem.name.startsWith("net.java.dev.jna:jna:")) {
-                // Special handling for LabyMod 1.8.9, Forge 1.12.2(?) and oshi
-                // we have libjnidispatch 5.13.0 in jniLibs directory
+
                 if (Integer.parseInt(version[0]) >= 5 && Integer.parseInt(version[1]) >= 13)
                     continue;
                 Log.d(APP_NAME, "Library " + libItem.name + " has been changed to version 5.13.0");
@@ -463,8 +447,6 @@ public final class Tools {
                 libItem.downloads.artifact.size = 1879325;
                 libItem.replaced = true;
             } else if (libItem.name.startsWith("com.github.oshi:oshi-core:")) {
-                //if (Integer.parseInt(version[0]) >= 6 && Integer.parseInt(version[1]) >= 3) return;
-                // FIXME: ensure compatibility
 
                 if (Integer.parseInt(version[0]) != 6 || Integer.parseInt(version[1]) != 2)
                     continue;
@@ -477,9 +459,7 @@ public final class Tools {
                 libItem.downloads.artifact.size = 957945;
                 libItem.replaced = true;
             } else if (libItem.name.startsWith("org.ow2.asm:asm-all:")) {
-                // Early versions of the ASM library get repalced with 5.0.4 because Pojav's LWJGL is compiled for
-                // Java 8, which is not supported by old ASM versions. Mod loaders like Forge, which depend on this
-                // library, often include lwjgl in their class transformations, which causes errors with old ASM versions.
+
                 if (Integer.parseInt(version[0]) >= 5) continue;
                 Log.d(APP_NAME, "Library " + libItem.name + " has been changed to version 5.0.4");
                 createLibraryInfo(libItem);
@@ -551,24 +531,23 @@ public final class Tools {
                 preProcessLibraries(customVer.libraries);
             } else {
                 JMinecraftVersionList.Version inheritsVer;
-                //If it won't download, just search for it
+
                 try{
                     inheritsVer = GLOBAL_GSON.fromJson(read(DIR_HOME_VERSION + "/" + customVer.inheritsFrom + "/" + customVer.inheritsFrom + ".json"), JMinecraftVersionList.Version.class);
                 }catch(IOException e) {
                     throw new RuntimeException("Can't find the source version for "+ versionName +" (req version="+customVer.inheritsFrom+")");
                 }
-                //inheritsVer.inheritsFrom = inheritsVer.id;
+
                 insertSafety(inheritsVer, customVer,
                         "assetIndex", "assets", "id",
                         "mainClass", "minecraftArguments",
                         "releaseTime", "time", "type"
                 );
 
-                // Go through the libraries, remove the ones overridden by the custom version
                 List<DependentLibrary> inheritLibraryList = new ArrayList<>(Arrays.asList(inheritsVer.libraries));
                 outer_loop:
                 for(DependentLibrary library : customVer.libraries){
-                    // Clean libraries overridden by the custom version
+
                     String libName = library.name.substring(0, library.name.lastIndexOf(":"));
 
                     for(DependentLibrary inheritLibrary : inheritLibraryList) {
@@ -579,20 +558,16 @@ public final class Tools {
                                     libName.substring(libName.lastIndexOf(":") + 1) + " with " +
                                     inheritLibName.substring(inheritLibName.lastIndexOf(":") + 1));
 
-                            // Remove the library , superseded by the overriding libs
                             inheritLibraryList.remove(inheritLibrary);
                             continue outer_loop;
                         }
                     }
                 }
 
-                // Fuse libraries
                 inheritLibraryList.addAll(Arrays.asList(customVer.libraries));
                 inheritsVer.libraries = inheritLibraryList.toArray(new DependentLibrary[0]);
                 preProcessLibraries(inheritsVer.libraries);
 
-
-                // Inheriting Minecraft 1.13+ with append custom args
                 if (inheritsVer.arguments != null && customVer.arguments != null &&
                     inheritsVer.arguments.game != null && customVer.arguments.game != null) {
                     List totalArgList = new ArrayList(Arrays.asList(inheritsVer.arguments.game));
@@ -607,12 +582,12 @@ public final class Tools {
                         Object perCustomArg = customVer.arguments.game[i];
                         if (perCustomArg instanceof String) {
                             String perCustomArgStr = (String) perCustomArg;
-                            // Check if there is a duplicate argument on combine
+
                             if (perCustomArgStr.startsWith("--") && totalArgList.contains(perCustomArgStr)) {
                                 perCustomArg = customVer.arguments.game[i + 1];
                                 if (perCustomArg instanceof String) {
                                     perCustomArgStr = (String) perCustomArg;
-                                    // If the next is argument value, skip it
+
                                     if (!perCustomArgStr.startsWith("--")) {
                                         nskip++;
                                     }
@@ -631,7 +606,6 @@ public final class Tools {
                 customVer = inheritsVer;
             }
 
-            // LabyMod 4 sets version instead of majorVersion
             if (customVer.javaVersion != null && customVer.javaVersion.majorVersion == 0) {
                 customVer.javaVersion.majorVersion = customVer.javaVersion.version;
             }
@@ -641,7 +615,6 @@ public final class Tools {
         }
     }
 
-    // Prevent NullPointerException
     private static void insertSafety(JMinecraftVersionList.Version targetVer, JMinecraftVersionList.Version fromVer, String... keyArr) {
         for (String key : keyArr) {
             Object value = null;
@@ -677,7 +650,6 @@ public final class Tools {
     public interface DownloaderFeedback {
         void updateProgress(int curr, int max);
     }
-
 
     public static int getTotalDeviceMemory(Context ctx){
         ActivityManager actManager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
@@ -718,14 +690,13 @@ public final class Tools {
 
     public static String getFileName(Context ctx, Uri uri) {
         try(Cursor c = ctx.getContentResolver().query(uri, null, null, null, null)) {
-            if(c == null) return uri.getLastPathSegment(); // idk myself but it happens on asus file manager
+            if(c == null) return uri.getLastPathSegment();
             if(!c.moveToFirst()) return uri.getLastPathSegment();
             int columnIndex = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
             if(columnIndex == -1) return uri.getLastPathSegment();
             return c.getString(columnIndex);
         } catch (Exception e) {
-            // Turns out that the content resolver can throw you literally anything if the underlying provider crashes
-            // Fall back in that case
+
             return uri.getLastPathSegment();
         }
     }
@@ -733,8 +704,7 @@ public final class Tools {
     /** Swap the main fragment with another */
     public static void swapFragment(FragmentActivity fragmentActivity , Class<? extends Fragment> fragmentClass,
                                     @Nullable String fragmentTag, @Nullable Bundle bundle) {
-        // When people tab out, it might happen
-        //TODO handle custom animations
+
         fragmentActivity.getSupportFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
                 .addToBackStack(fragmentClass.getName())
@@ -759,7 +729,6 @@ public final class Tools {
         intent.putExtra("modUri", uri);
         context.startActivity(intent);
     }
-
 
     public static void installRuntimeFromUri(Context context, Uri uri){
         sExecutorService.execute(() -> {
@@ -813,9 +782,7 @@ public final class Tools {
         if(file.isDirectory()) return DocumentsContract.Document.MIME_TYPE_DIR;
         String mimeType = null;
         try (FileInputStream fileInputStream = new FileInputStream(file)){
-            // Theoretically we don't even need the buffer since we don't care about the
-            // contents of the file after the guess, but mark-supported streams
-            // are a requirement of URLConnection.guessContentTypeFromStream()
+
             try(BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream)) {
                 mimeType = URLConnection.guessContentTypeFromStream(bufferedInputStream);
             }
@@ -871,14 +838,19 @@ public final class Tools {
     }
 
     public static void dialogForceClose(Context ctx) {
-        new android.app.AlertDialog.Builder(ctx)
+        new MaterialAlertDialogBuilder(ctx)
                 .setMessage(R.string.mcn_exit_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (p1, p2) -> {
                     try {
-                        Tools.fullyExit();
+                        Intent intent = new Intent(ctx, LauncherActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        ctx.startActivity(intent);
+
+                        MAIN_HANDLER.postDelayed(Tools::fullyExit, 100);
                     } catch (Throwable th) {
                         Log.w(Tools.APP_NAME, "Could not enable System.exit() method!", th);
+                        Tools.fullyExit();
                     }
                 }).show();
     }

@@ -17,13 +17,14 @@ public class DownloadUtils {
     public static final String USER_AGENT = Tools.APP_NAME;
 
     public static void download(String url, OutputStream os) throws IOException {
+        if (url == null) throw new MalformedURLException("Download URL is null");
         download(new URL(url), os);
     }
 
     public static void download(URL url, OutputStream os) throws IOException {
         InputStream is = null;
         try {
-            // System.out.println("Connecting: " + url.toString());
+
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestProperty("User-Agent", USER_AGENT);
             conn.setConnectTimeout(10000);
@@ -64,9 +65,11 @@ public class DownloadUtils {
 
     public static void downloadFileMonitored(String urlInput, File outputFile, @Nullable byte[] buffer,
                                              Tools.DownloaderFeedback monitor) throws IOException {
+        if (urlInput == null) throw new MalformedURLException("Download URL is null");
         FileUtils.ensureParentDirectory(outputFile);
 
         HttpURLConnection conn = (HttpURLConnection) new URL(urlInput).openConnection();
+        conn.setRequestProperty("User-Agent", USER_AGENT);
         InputStream readStr = conn.getInputStream();
         try (FileOutputStream fos = new FileOutputStream(outputFile)) {
             int current;
@@ -100,9 +103,7 @@ public class DownloadUtils {
             }
         }
         String urlContent = DownloadUtils.downloadString(url);
-        // if we download the file and fail parsing it, we will yeet outta there
-        // and not cache the unparseable sting. We will return this after trying to save the downloaded
-        // string into cache
+
         T parseResult = parseCallback.process(urlContent);
 
         boolean tryWriteCache;
@@ -136,10 +137,10 @@ public class DownloadUtils {
     }
 
     public static <T> T ensureSha1(File outputFile, @Nullable String sha1, Callable<T> downloadFunction) throws IOException {
-        // Skip if needed
+
         if(sha1 == null) {
-            // If the file exists and we don't know it's SHA1, don't try to redownload it.
-            if(outputFile.exists()) return null;
+
+            if(outputFile.exists() && outputFile.length() > 0) return null;
             else return downloadFile(downloadFunction);
         }
 
@@ -161,6 +162,7 @@ public class DownloadUtils {
      * @return the length in bytes or -1 if not available
      */
     public static long getContentLength(String url) {
+        if (url == null) return -1;
         try {
             HttpURLConnection urlConnection = (HttpURLConnection) new URL(url).openConnection();
             urlConnection.setRequestMethod("HEAD");
@@ -190,4 +192,3 @@ public class DownloadUtils {
         }
     }
 }
-

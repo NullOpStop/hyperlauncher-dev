@@ -13,17 +13,13 @@ import net.kdt.pojavlaunch.customcontrols.handleview.EditControlSideDialog;
 
 import java.util.ArrayList;
 
-
-
 @SuppressLint("ViewConstructor")
 public class ControlDrawer extends ControlButton {
-
 
     public final ArrayList<ControlSubButton> buttons;
     public final ControlDrawerData drawerData;
     public final ControlLayout parentLayout;
     public boolean areButtonsVisible;
-
 
     public ControlDrawer(ControlLayout layout, ControlDrawerData drawerData) {
         super(layout, drawerData.properties);
@@ -33,7 +29,6 @@ public class ControlDrawer extends ControlButton {
         this.drawerData = drawerData;
         areButtonsVisible = layout.getModifiable();
     }
-
 
     public void addButton(ControlData properties){
         addButton(new ControlSubButton(parentLayout, properties, this));
@@ -57,7 +52,6 @@ public class ControlDrawer extends ControlButton {
         }
     }
 
-    //Syncing stuff
     private void alignButtons(){
         if(buttons == null) return;
         if(drawerData.orientation == ControlDrawerData.Orientation.FREE) return;
@@ -88,7 +82,6 @@ public class ControlDrawer extends ControlButton {
             buttons.get(i).updateProperties();
         }
     }
-
 
     private void resizeButtons(){
         if (buttons == null || drawerData.orientation == ControlDrawerData.Orientation.FREE) return;
@@ -141,8 +134,8 @@ public class ControlDrawer extends ControlButton {
     public boolean onTouchEvent(MotionEvent event) {
         if(!getControlLayoutParent().getModifiable()){
             switch (event.getActionMasked()){
-                case MotionEvent.ACTION_UP: // 1
-                case MotionEvent.ACTION_POINTER_UP: // 6
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_POINTER_UP:
                     switchButtonVisibility();
                     break;
             }
@@ -151,7 +144,6 @@ public class ControlDrawer extends ControlButton {
 
         return super.onTouchEvent(event);
     }
-
 
     @Override
     public void setX(float x) {
@@ -177,7 +169,6 @@ public class ControlDrawer extends ControlButton {
         return result && !containsChild(button);
     }
 
-    //Getters
     public ControlDrawerData getDrawerData() {
         return drawerData;
     }

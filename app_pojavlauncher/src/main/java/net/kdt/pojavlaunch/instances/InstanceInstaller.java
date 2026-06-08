@@ -28,8 +28,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.jar.JarFile;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class InstanceInstaller implements ContextExecutorTask {
     private static final File sLastInstallInfo = new File(Tools.DIR_CACHE, "last_installer.json");
@@ -37,7 +38,8 @@ public class InstanceInstaller implements ContextExecutorTask {
     private static final String[] TRUSTED_URLS = new String[] {
             "https://maven.neoforged.net/releases/net/neoforged/neoforge/",
             "https://maven.minecraftforge.net/net/minecraftforge/forge/",
-            "https://optifine.net/adloadx"
+            "https://optifine.net/adloadx",
+            "https://optifined.net/adloadx"
     };
 
     public String installerJar;
@@ -80,6 +82,17 @@ public class InstanceInstaller implements ContextExecutorTask {
                 DownloadUtils.downloadFileMonitored(installerDownloadUrl(), installerJar(), buffer, wrapper);
                 return null;
             });
+
+            if (installerSha1 == null) {
+                try (JarFile ignored = new JarFile(installerJar())) {
+
+                } catch (IOException e) {
+
+                    boolean deleted = installerJar().delete();
+                    throw new IOException("Downloaded file is not a valid JAR: " + e.getMessage() + (deleted ? " (File deleted for retry)" : ""), e);
+                }
+            }
+
             ContextExecutor.execute(this);
         } finally {
             ProgressLayout.clearProgress(ProgressLayout.INSTANCE_INSTALL);

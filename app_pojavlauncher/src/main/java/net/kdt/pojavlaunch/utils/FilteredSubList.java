@@ -34,7 +34,7 @@ public class FilteredSubList<E> extends AbstractList<E> implements List<E> {
                 mArrayList.add(item);
             }
         }
-        // Should we trim ?
+
         mArrayList.trimToSize();
     }
 
@@ -97,9 +97,6 @@ public class FilteredSubList<E> extends AbstractList<E> implements List<E> {
         return mArrayList.subList(fromIndex, toIndex);
     }
 
-
-
-    // Predicate is API 24+, so micro backport
     public interface BasicPredicate<E> {
         boolean test(E item);
     }

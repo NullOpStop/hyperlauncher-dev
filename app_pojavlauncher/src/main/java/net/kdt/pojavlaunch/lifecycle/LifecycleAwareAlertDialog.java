@@ -9,6 +9,8 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import net.kdt.pojavlaunch.Tools;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,8 +40,8 @@ public abstract class LifecycleAwareAlertDialog implements LifecycleEventObserve
             dialogHidden(mLifecycleEnded);
             return;
         }
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        // Install the default cancel/dismiss handling
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+
         builder.setOnDismissListener(wrapDismissListener(null));
         dialogCreator.createDialog(this, builder);
         mLifecycle.addObserver(this);
@@ -78,14 +80,14 @@ public abstract class LifecycleAwareAlertDialog implements LifecycleEventObserve
             if(listener != null) listener.onCancel(dialog);
         };
     }
-    
+
     public interface DialogCreator {
         /**
          * This methods is called when the LifecycleAwareAlertDialog needs to set up its dialog.
          * @param alertDialog an instance of LifecycleAwareAlertDialog for wrapping listeners
-         * @param dialogBuilder the AlertDialog builder
+         * @param dialogBuilder the MaterialAlertDialogBuilder
          */
-        void createDialog(LifecycleAwareAlertDialog alertDialog, AlertDialog.Builder dialogBuilder);
+        void createDialog(LifecycleAwareAlertDialog alertDialog, MaterialAlertDialogBuilder dialogBuilder);
     }
 
     /**
@@ -102,7 +104,7 @@ public abstract class LifecycleAwareAlertDialog implements LifecycleEventObserve
     public static boolean haltOnDialog(Lifecycle lifecycle, Context context, DialogCreator dialogCreator) throws InterruptedException {
         Object waitLock = new Object();
         AtomicBoolean hasLifecycleEnded = new AtomicBoolean(false);
-        // This runnable is moved here in order to reduce bracket/lambda hell
+
         Runnable showDialogRunnable = () -> {
             LifecycleAwareAlertDialog lifecycleAwareDialog = new LifecycleAwareAlertDialog() {
                 @Override
@@ -115,9 +117,7 @@ public abstract class LifecycleAwareAlertDialog implements LifecycleEventObserve
         };
         synchronized (waitLock) {
             Tools.runOnUiThread(showDialogRunnable);
-            // the wait() method makes the thread wait on the end of the synchronized block.
-            // so we put it here to make sure that the thread won't get notified before wait()
-            // is called
+
             waitLock.wait();
         }
         return hasLifecycleEnded.get();

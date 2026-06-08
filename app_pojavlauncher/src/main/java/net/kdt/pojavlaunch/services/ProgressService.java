@@ -1,5 +1,6 @@
 package net.kdt.pojavlaunch.services;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -13,11 +14,12 @@ import android.os.Process;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.progresskeeper.TaskCountListener;
@@ -37,6 +39,12 @@ public class ProgressService extends Service implements TaskCountListener {
         ContextCompat.startForegroundService(context, intent);
     }
 
+    /** Simple wrapper to stop the service */
+    public static void stopService(Context context) {
+        Intent intent = new Intent(context, ProgressService.class);
+        context.stopService(intent);
+    }
+
     private NotificationCompat.Builder mNotificationBuilder;
 
     @Override
@@ -50,7 +58,7 @@ public class ProgressService extends Service implements TaskCountListener {
         mNotificationBuilder = new NotificationCompat.Builder(this, "channel_id")
                 .setContentTitle(getString(R.string.lazy_service_default_title))
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel,  getString(R.string.notification_terminate), pendingKillIntent)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.icon)
                 .setNotificationSilent();
     }
 
@@ -59,7 +67,7 @@ public class ProgressService extends Service implements TaskCountListener {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(intent != null) {
             if(intent.getBooleanExtra("kill", false)) {
-                stopSelf(); // otherwise Android tries to restart the service since it "crashed"
+                stopSelf();
                 Process.killProcess(Process.myPid());
                 return START_NOT_STICKY;
             }
@@ -89,6 +97,7 @@ public class ProgressService extends Service implements TaskCountListener {
         ProgressKeeper.removeTaskCountListener(this);
     }
 
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     @Override
     public boolean onUpdateTaskCount(int taskCount) {
         Tools.MAIN_HANDLER.post(()->{

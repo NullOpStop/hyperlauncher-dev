@@ -16,7 +16,7 @@ import net.kdt.pojavlaunch.JAssetInfo;
 import net.kdt.pojavlaunch.JAssets;
 import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.NewJREUtil;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.downloader.Downloader;
@@ -62,8 +62,8 @@ public class MinecraftDownloader extends Downloader {
     private LinkedHashSet<File> mClassPath;
     private SubstitutionMap mSubstitutionMap;
 
-    private File mSourceJarFile; // The source client JAR picked during the inheritance process
-    private File mTargetJarFile; // The destination client JAR to which the source will be copied to.
+    private File mSourceJarFile;
+    private File mTargetJarFile;
     private String mVersionName;
 
     public MinecraftDownloader() {
@@ -86,16 +86,16 @@ public class MinecraftDownloader extends Downloader {
      * @param listener The download status listener
      */
     public void start(@Nullable AssetManager assetManager, @Nullable JMinecraftVersionList.Version version,
-                      @NonNull String realVersion, // this was there for a reason
+                      @NonNull String realVersion,
                       @NonNull AsyncMinecraftDownloader.DoneListener listener) {
         sExecutorService.execute(() -> {
             try {
                 downloadGame(assetManager, version, realVersion);
                 listener.onDownloadDone(mClassPath.toArray(new File[0]));
             } catch(JsonParseException e) {
-                listener.onDownloadFailed(e); // Handled separately from the general case because it subclasses RuntimeException. Ugh.
+                listener.onDownloadFailed(e);
             } catch(RuntimeException e) {
-                throw e; // log fatal errors to Google Play
+                throw e;
             } catch (Exception e) {
                 listener.onDownloadFailed(e);
             }
@@ -111,8 +111,7 @@ public class MinecraftDownloader extends Downloader {
      * @throws Exception when an exception occurs in the function body or in any of the downloading threads.
      */
     private void downloadGame(AssetManager assetManager, JMinecraftVersionList.Version verInfo, String versionName) throws Exception {
-        // Put up a dummy progress line, for the activity to start the service and do all the other necessary
-        // work to keep the launcher alive. We will replace this line when we will start downloading stuff.
+
         ProgressLayout.setProgress(ProgressLayout.DOWNLOAD_MINECRAFT, 0, R.string.newdl_starting);
 
         mTargetJarFile = createGameJarPath(versionName);
@@ -131,7 +130,7 @@ public class MinecraftDownloader extends Downloader {
         mClassPath = new LinkedHashSet<>(downloadLibCount);
         growDownloadList(downloadLibCount);
         for(DependentLibrary dependentLibrary : mAllLibraries.values()) {
-            // Special handling for JNA Android natives
+
             if(dependentLibrary.name.startsWith("net.java.dev.jna:jna:") && !dependentLibrary.replaced) {
                 scheduleAarDownload(Tools.MAVEN_CENTRAL, dependentLibrary);
             }
@@ -223,7 +222,7 @@ public class MinecraftDownloader extends Downloader {
         });
         return Tools.GLOBAL_GSON.fromJson(Tools.read(targetFile), JAssets.class);
     }
-    
+
     private MinecraftClientInfo getClientInfo(JMinecraftVersionList.Version verInfo) {
         Map<String, MinecraftClientInfo> downloads = verInfo.downloads;
         if(downloads == null) return null;
@@ -254,7 +253,7 @@ public class MinecraftDownloader extends Downloader {
 
         if(Tools.isValidString(verInfo.inheritsFrom)) {
             JMinecraftVersionList.Version inheritedVersion = AsyncMinecraftDownloader.getListedVersion(verInfo.inheritsFrom);
-            // Infinite inheritance !?! :noway:
+
             downloadAndProcessMetadata(assetManager, inheritedVersion, verInfo.inheritsFrom);
         }
 
@@ -375,14 +374,14 @@ public class MinecraftDownloader extends Downloader {
             }
 
             String libraryTrimmedName = MavenNameUtils.mavenBaseName(dependentLibrary.name);
-            // Move the more recent library to the front of the list
+
             if (mAllLibraries.containsKey(libraryTrimmedName)) {
                 mAllLibraries.remove(libraryTrimmedName);
             }
             mAllLibraries.put(libraryTrimmedName, dependentLibrary);
         }
     }
-    
+
     private void scheduleAssetDownloads(JAssets assets) throws IOException {
         Map<String, JAssetInfo> assetObjects = assets.objects;
         if(assetObjects == null) return;
@@ -431,7 +430,7 @@ public class MinecraftDownloader extends Downloader {
                 minecraftClientInfo.sha1,
                 minecraftClientInfo.size
         );
-        // Store the path of the JAR to copy it into our new version folder later.
+
         mSourceJarFile = clientJar;
     }
 }

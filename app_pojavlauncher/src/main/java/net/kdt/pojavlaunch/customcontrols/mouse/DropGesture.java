@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch.customcontrols.mouse;
 
-
 import android.os.Handler;
 
 import net.kdt.pojavlaunch.LwjglGlfwKeycode;

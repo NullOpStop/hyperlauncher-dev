@@ -14,7 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import fr.spse.extended_view.ExtendedButton;
 
@@ -38,9 +38,9 @@ public class LauncherMenuButton extends ExtendedButton {
         setCompoundDrawablePadding(padding);
         setPaddingRelative(padding, 0, 0, 0);
         setGravity(Gravity.CENTER_VERTICAL);
-
+        setTextColor(ResourcesCompat.getColor(resources, R.color.icon_outline_color, null));
         setTextSize(TypedValue.COMPLEX_UNIT_PX, getResources().getDimensionPixelSize(R.dimen._12ssp));
-
+        setBackground(ResourcesCompat.getDrawable(resources, R.drawable.menu_background, null));
         // Set drawable size
         int[] sizes = getExtendedViewData().getSizeCompounds();
         sizes[0] = resources.getDimensionPixelSize(R.dimen._30sdp);

@@ -19,6 +19,10 @@ public class DisplayInstance {
         return new File(mInstanceRoot, "icon.webp");
     }
 
+    public File getInstanceRoot() {
+        return mInstanceRoot;
+    }
+
     private void sanitizeIcon() {
         if(!InstanceIconProvider.hasStaticIcon(icon)) {
             icon = InstanceIconProvider.FALLBACK_ICON_NAME;

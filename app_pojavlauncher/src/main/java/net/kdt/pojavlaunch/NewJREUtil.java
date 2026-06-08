@@ -24,11 +24,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class NewJREUtil {
     private static final String DOWNLOAD_URL = "https://mojolauncher.github.io/jre-download/";
-    
+
     private static String getRemoteRuntimeVersion(InternalRuntime internalRuntime) throws IOException{
         return DownloadUtils.downloadString(DOWNLOAD_URL+internalRuntime.path+"/version");
     }
@@ -51,19 +51,18 @@ public class NewJREUtil {
             remote_runtime_version = getRemoteRuntimeVersion(internalRuntime);
         }catch (IOException exc) {
             Log.i("NewJreUtil", "Failed to get remote runtime version", exc);
-            // We failed to get the version of the runtime available on the web server.
-            // Let's just hope that we have an internal version installed in that case.
+
             if(installed_runtime_version == null)
                 throw new RuntimeSelectionException(RuntimeSelectionException.RUNTIME_STATE_INTERNAL_RUNTIME_MISSING, internalRuntime.majorVersion);
             return;
         }
-        // this implicitly checks for null, so it will unpack the runtime even if we don't have one installed
+
         if(!remote_runtime_version.equals(installed_runtime_version)) unpackInternalRuntime(assetManager, internalRuntime, remote_runtime_version);
         writeLastUpdateTime(internalRuntime);
     }
 
     private static class RuntimeDownloaderVerifier {
-        
+
         private final Map<String, byte[]> mSignatures;
         private final String mRuntimePath;
         private final byte[] mDownloadBuffer = new byte[8192];
@@ -124,10 +123,10 @@ public class NewJREUtil {
             throwInstallFail(internalRuntime, e);
         } finally {
             ProgressLayout.clearProgress(ProgressLayout.UNPACK_RUNTIME);
-            // Those files being deleted are on a "i wish" basis
-            if(universalCache != null && universalCache.isFile()) //noinspection ResultOfMethodCallIgnored
+
+            if(universalCache != null && universalCache.isFile())
                 universalCache.delete();
-            if(platformCache != null && platformCache.isFile()) //noinspection ResultOfMethodCallIgnored
+            if(platformCache != null && platformCache.isFile())
                 platformCache.delete();
         }
     }
@@ -149,9 +148,8 @@ public class NewJREUtil {
         return MathUtils.findNearestPositive(targetVersion, runtimeList, (runtime)->runtime.majorVersion);
     }
 
-
     public static void installNewJreIfNeeded(AssetManager assetManager, JMinecraftVersionList.Version versionInfo) throws IOException, RuntimeSelectionException {
-        //Now we have the reliable information to check if our runtime settings are good enough
+
         if (versionInfo.javaVersion == null || versionInfo.javaVersion.component.equalsIgnoreCase("jre-legacy")) return;
 
         int gameRequiredVersion = versionInfo.javaVersion.majorVersion;
@@ -159,20 +157,18 @@ public class NewJREUtil {
         Instance instance = Instances.loadSelectedInstance();
         String profileRuntime = Tools.getSelectedRuntime(instance);
         Runtime runtime = MultiRTUtils.read(profileRuntime);
-        // Partly trust the user with his own selection, if the game can even try to run in this case
+
         if (runtime.javaVersion >= gameRequiredVersion) {
-            // Check whether the selection is an internal runtime
+
             InternalRuntime internalRuntime = getInternalRuntime(runtime);
-            // If it is, check if updates are available from the APK file
+
             if(internalRuntime != null) {
-                // Not calling showRuntimeFail on failure here because we did, technically, find the compatible runtime
+
                 checkInternalRuntime(assetManager, internalRuntime);
             }
             return;
         }
 
-        // If the runtime version selected by the user is not appropriate for this version (which means the game won't run at all)
-        // automatically pick from either an already installed runtime, or a runtime packed with the launcher
         MathUtils.RankedValue<?> nearestInstalledRuntime = getNearestInstalledRuntime(gameRequiredVersion);
         MathUtils.RankedValue<?> nearestInternalRuntime = getNearestInternalRuntime(gameRequiredVersion);
 
@@ -180,7 +176,6 @@ public class NewJREUtil {
                 nearestInternalRuntime, nearestInstalledRuntime, (value)->value.rank
         );
 
-        // No possible selections
         if(selectedRankedRuntime == null) {
             throw new RuntimeSelectionException(RuntimeSelectionException.RUNTIME_STATE_SELECTION_FAILED, gameRequiredVersion);
         }
@@ -189,22 +184,19 @@ public class NewJREUtil {
         String appropriateRuntime;
         InternalRuntime internalRuntime;
 
-        // Perform checks on the picked runtime
         if(selected instanceof Runtime) {
-            // If it's an already installed runtime, save its name and check if
-            // it's actually an internal one (just in case)
+
             Runtime selectedRuntime = (Runtime) selected;
             appropriateRuntime = selectedRuntime.name;
             internalRuntime = getInternalRuntime(selectedRuntime);
         } else if (selected instanceof InternalRuntime) {
-            // If it's an internal runtime, set it's name as the appropriate one.
+
             internalRuntime = (InternalRuntime) selected;
             appropriateRuntime = internalRuntime.name;
         } else {
             throw new RuntimeException("Unexpected type of selected: "+selected.getClass().getName());
         }
 
-        // If it turns out the selected runtime is actually an internal one, attempt automatic installation or update
         if(internalRuntime != null) {
             checkInternalRuntime(assetManager, internalRuntime);
         }

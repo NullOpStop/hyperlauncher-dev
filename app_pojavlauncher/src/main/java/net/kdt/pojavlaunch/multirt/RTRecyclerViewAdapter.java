@@ -14,11 +14,12 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import net.kdt.pojavlaunch.Architecture;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
@@ -51,14 +52,14 @@ public class RTRecyclerViewAdapter extends RecyclerView.Adapter<RTRecyclerViewAd
         return LauncherPreferences.PREF_DEFAULT_RUNTIME.equals(rt.name);
     }
 
-    @SuppressLint("NotifyDataSetChanged") //not a problem, given the typical size of the list
+    @SuppressLint("NotifyDataSetChanged")
     public void setDefault(Runtime rt){
         LauncherPreferences.PREF_DEFAULT_RUNTIME = rt.name;
         LauncherPreferences.DEFAULT_PREF.edit().putString("defaultRuntime",LauncherPreferences.PREF_DEFAULT_RUNTIME).apply();
         notifyDataSetChanged();
     }
 
-    @SuppressLint("NotifyDataSetChanged") //not a problem, given the typical size of the list
+    @SuppressLint("NotifyDataSetChanged")
     public void setIsEditing(boolean isEditing) {
         mIsDeleting = isEditing;
         notifyDataSetChanged();
@@ -67,7 +68,6 @@ public class RTRecyclerViewAdapter extends RecyclerView.Adapter<RTRecyclerViewAd
     public boolean getIsEditing(){
         return mIsDeleting;
     }
-
 
     public class RTViewHolder extends RecyclerView.ViewHolder {
         final TextView mJavaVersionTextView;
@@ -92,7 +92,7 @@ public class RTRecyclerViewAdapter extends RecyclerView.Adapter<RTRecyclerViewAd
             setupOnClickListeners();
         }
 
-        @SuppressLint("NotifyDataSetChanged") // same as all the other ones
+        @SuppressLint("NotifyDataSetChanged")
         private void setupOnClickListeners(){
             mSetDefaultButton.setOnClickListener(v -> {
                 if(mCurrentRuntime != null) {
@@ -105,7 +105,7 @@ public class RTRecyclerViewAdapter extends RecyclerView.Adapter<RTRecyclerViewAd
                 if (mCurrentRuntime == null) return;
 
                 if(MultiRTUtils.getRuntimes().size() < 2) {
-                    new AlertDialog.Builder(mContext)
+                    new MaterialAlertDialogBuilder(mContext)
                             .setTitle(R.string.global_error)
                             .setMessage(R.string.multirt_config_removeerror_last)
                             .setPositiveButton(android.R.string.ok,(adapter, which)->adapter.dismiss())
@@ -147,7 +147,6 @@ public class RTRecyclerViewAdapter extends RecyclerView.Adapter<RTRecyclerViewAd
                 return;
             }
 
-            // Problematic runtime moment, force propose deletion
             mDeleteButton.setVisibility(View.VISIBLE);
             if(runtime.versionString == null){
                 mFullJavaVersionTextView.setText(R.string.multirt_runtime_corrupt);

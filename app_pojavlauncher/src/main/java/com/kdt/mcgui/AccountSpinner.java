@@ -21,12 +21,14 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatSpinner;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.AuthType;
@@ -45,7 +47,7 @@ import java.util.HashMap;
 import java.util.Objects;
 
 import fr.spse.extended_view.ExtendedTextView;
-import git.artdeell.mojo.R;
+
 
 public class AccountSpinner extends AppCompatSpinner implements LoginListener, AdapterView.OnItemSelectedListener, ValueAnimator.AnimatorUpdateListener {
     private Adapter mAdapter;
@@ -90,10 +92,6 @@ public class AccountSpinner extends AppCompatSpinner implements LoginListener, A
         return false;
     };
 
-    public AccountSpinner(@NonNull Context context, int mode) {
-        super(context, mode);
-        init();
-    }
 
     public AccountSpinner(@NonNull Context context) {
         super(context);
@@ -109,17 +107,6 @@ public class AccountSpinner extends AppCompatSpinner implements LoginListener, A
         super(context, attrs, defStyleAttr);
         init();
     }
-
-    public AccountSpinner(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int mode) {
-        super(context, attrs, defStyleAttr, mode);
-        init();
-    }
-
-    public AccountSpinner(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int mode, Resources.Theme popupTheme) {
-        super(context, attrs, defStyleAttr, mode, popupTheme);
-        init();
-    }
-
 
 
     private void init() {
@@ -351,7 +338,7 @@ public class AccountSpinner extends AppCompatSpinner implements LoginListener, A
         }
 
         private void showDeleteDialog(Context context, int position) {
-            new AlertDialog.Builder(context)
+            new MaterialAlertDialogBuilder(context)
                     .setMessage(R.string.warning_remove_account)
                     .setPositiveButton(android.R.string.cancel, null)
                     .setNeutralButton(R.string.global_delete, (dialog, which) -> {

@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 import androidx.annotation.Nullable;
 import androidx.core.math.MathUtils;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.customcontrols.buttons.ControlInterface;
 
 /**
@@ -52,19 +52,25 @@ public class ActionRow extends LinearLayout {
         setTranslationZ(11);
         setVisibility(GONE);
         setOrientation(HORIZONTAL);
+
+        int height = getResources().getDimensionPixelOffset(R.dimen._40sdp);
         setLayoutParams(new LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                getResources().getDimensionPixelOffset(R.dimen._40sdp)
+                height
         ));
+
+        int padding = getResources().getDimensionPixelOffset(R.dimen.padding_tiny);
+        setPadding(padding, padding, padding, padding);
 
         actionButtons[0] = new DeleteButton(getContext());
         actionButtons[1] = new CloneButton(getContext());
         actionButtons[2] = new AddSubButton(getContext());
 
-        // This is not pretty code, don't do this.
         for(ActionButtonInterface buttonInterface: actionButtons){
             View button = ((View)(buttonInterface));
-            addView(button, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1F));
+            LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            params.setMarginEnd(padding);
+            addView(button, params);
         }
 
         setElevation(5F);
@@ -114,12 +120,12 @@ public class ActionRow extends LinearLayout {
     }
 
     private int pickSide(){
-        if(mFollowedView == null) return mSide; //Value should not matter
+        if(mFollowedView == null) return mSide;
 
         if(mSide != SIDE_AUTO) return mSide;
-        //TODO improve the "algo"
+
         ViewGroup parent = ((ViewGroup) mFollowedView.getParent());
-        if(parent == null) return mSide;//Value should not matter
+        if(parent == null) return mSide;
 
         int side = SIDE_TOP;
         float futurePos = getYPosition(side);

@@ -37,6 +37,16 @@ public class FabriclikeUtils {
         this.mName = mName;
     }
 
+    public static FabriclikeUtils getById(String id) {
+        if ("quilt".equals(id)) return QUILT_UTILS;
+        if ("legacy_fabric".equals(id)) return LEGACY_FABRIC_UTILS;
+        return FABRIC_UTILS;
+    }
+
+    public String getId() {
+        return mCachePrefix;
+    }
+
     public FabricVersion[] downloadGameVersions() throws IOException{
         try {
             return DownloadUtils.downloadStringCached(String.format(GAME_METADATA_URL, mApiUrl), mCachePrefix+"_game_versions",
@@ -104,7 +114,7 @@ public class FabriclikeUtils {
             JSONObject jsonObject = jsonArray.getJSONObject(i).getJSONObject("loader");
             FabricVersion fabricVersion = new FabricVersion();
             fabricVersion.version = jsonObject.getString("version");
-            //Quilt has a skill issue and does not say which versions are stable or not
+
             if(jsonObject.has("stable")) {
                 fabricVersion.stable = jsonObject.getBoolean("stable");
             } else {

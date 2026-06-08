@@ -90,6 +90,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     public MinecraftGLSurface(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
         setFocusable(true);
+        setFocusableInTouchMode(true);
         GLFW.setGamepadEnableHandler(this);
     }
 
@@ -107,11 +108,13 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
      */
     public void start(boolean isAlreadyRunning, View touchpad) {
         mTouchpad = touchpad;
+        requestFocus();
         if (Tools.isAndroid8OrHigher()) setUpPointerCapture();
         mInGUIProcessor.setAbstractTouchpad(touchpad);
         mRefreshOnly = isAlreadyRunning;
         mSurface = mSurfaceProvider.create(getContext(), this);
-        ((ViewGroup) getParent()).addView(mSurface);
+
+        ((ViewGroup) getParent()).addView(mSurface, 0);
     }
 
     /**
@@ -121,28 +124,30 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     @Override
     @SuppressWarnings("accessibility")
     public boolean onTouchEvent(MotionEvent e) {
-        // Kinda need to send this back to the layout
+
         if(((ControlLayout)getParent()).getModifiable()) return false;
 
-        // Looking for a mouse to handle, won't have an effect if no mouse exists.
+        boolean isMouse = false;
         for (int i = 0; i < e.getPointerCount(); i++) {
             int toolType = e.getToolType(i);
             if(toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+                isMouse = true;
                 if(Tools.isAndroid8OrHigher() &&
+                        LauncherPreferences.PREF_ENABLE_PHYSICAL_MOUSE &&
                         mPointerCapture != null) {
                     mPointerCapture.handleAutomaticCapture();
+
                     return true;
                 }
-            }else if(toolType != MotionEvent.TOOL_TYPE_STYLUS) continue;
-
-            // Mouse found
-            // Avoid going through the JNI each time.
-            if(GLFW.isGrabbing()) return false;
-            GLFW.cursorX = e.getX(i) / getWidth();
-            GLFW.cursorY = e.getY(i) / getHeight();
-            GLFW.sendMousePos();
-            return true; //mouse event handled successfully
+            }else if(toolType == MotionEvent.TOOL_TYPE_STYLUS) {
+                if(GLFW.isGrabbing()) return false;
+                GLFW.cursorX = e.getX(i) / getWidth();
+                GLFW.cursorY = e.getY(i) / getHeight();
+                GLFW.sendMousePos();
+                return true;
+            }
         }
+
         if (mIngameProcessor == null || mInGUIProcessor == null) return true;
         return mCurrentTouchProcessor.processTouchEvent(e);
     }
@@ -150,8 +155,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     private void createGamepad(InputDevice inputDevice) {
         if(GLFW.gamepadButtonBuffer != null) {
             mGamepadHandler = new DirectGamepad();
-            // Only send this if there was a gamepad event, to avoid forcing users without gamepads through
-            // Controlify calibration
+
             GLFW.nativeNotifyGamepadConnected();
         }else {
             mGamepadHandler = new Gamepad(inputDevice, DefaultDataProvider.INSTANCE, mTouchpad);
@@ -175,14 +179,12 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
         for(int i = 0; i < event.getPointerCount(); i++) {
             if(event.getToolType(i) != MotionEvent.TOOL_TYPE_MOUSE && event.getToolType(i) != MotionEvent.TOOL_TYPE_STYLUS ) continue;
-            // Mouse found
+
             mouseCursorIndex = i;
             break;
         }
-        if(mouseCursorIndex == -1) return false; // we cant consoom that, theres no mice!
+        if(mouseCursorIndex == -1) return false;
 
-        // Make sure we grabbed the mouse if necessary
-        // Avoid going through the JNI each time.
         updateGrabState(GLFW.isGrabbing());
 
         switch(event.getActionMasked()) {
@@ -205,9 +207,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
     /** The event for keyboard/ gamepad button inputs */
     public boolean processKeyEvent(KeyEvent event) {
-        //Log.i("KeyEvent", event.toString());
 
-        //Filtering useless events by order of probability
         int eventKeycode = event.getKeyCode();
         if(eventKeycode == KeyEvent.KEYCODE_UNKNOWN) return true;
         if(eventKeycode == KeyEvent.KEYCODE_VOLUME_DOWN) return false;
@@ -215,20 +215,16 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         if(event.getRepeatCount() != 0) return true;
         int action = event.getAction();
         if(action == KeyEvent.ACTION_MULTIPLE) return true;
-        // Ignore the cancelled up events. They occur when the user switches layouts.
-        // In accordance with https://developer.android.com/reference/android/view/KeyEvent#FLAG_CANCELED
+
         if(action == KeyEvent.ACTION_UP &&
                 (event.getFlags() & KeyEvent.FLAG_CANCELED) != 0) return true;
 
-        //Sometimes, key events comes from SOME keys of the software keyboard
-        //Even weirder, is is unknown why a key or another is selected to trigger a keyEvent
         if((event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == KeyEvent.FLAG_SOFT_KEYBOARD){
-            if(eventKeycode == KeyEvent.KEYCODE_ENTER) return true; //We already listen to it.
+            if(eventKeycode == KeyEvent.KEYCODE_ENTER) return true;
             touchCharInput.dispatchKeyEvent(event);
             return true;
         }
 
-        //Sometimes, key events may come from the mouse
         if(event.getDevice() != null
                 && ( (event.getSource() & InputDevice.SOURCE_MOUSE_RELATIVE) == InputDevice.SOURCE_MOUSE_RELATIVE
                 ||   (event.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE)  ){
@@ -250,7 +246,6 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         char codepoint = action == KeyEvent.ACTION_DOWN ? (char) event.getUnicodeChar(event.getMetaState()) : 0;
         GLFW.sendRawKeyEvent(eventKeycode, action == KeyEvent.ACTION_DOWN ? 1 : 0, CallbackBridge.getCurrentMods(), codepoint);
 
-        // Some events will be generated an infinite number of times when no consumed
         return (event.getFlags() & KeyEvent.FLAG_FALLBACK) == KeyEvent.FLAG_FALLBACK;
     }
 
@@ -286,9 +281,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
             post(this::refreshSize);
             return;
         }
-        // Use the width and height of the View instead of display dimensions to avoid
-        // getting squiched/stretched due to inconsistencies between the layout and
-        // screen dimensions.
+
         int newWidth = Tools.getDisplayFriendlyRes(getWidth(), LauncherPreferences.PREF_SCALE_FACTOR);
         int newHeight = Tools.getDisplayFriendlyRes(getHeight(), LauncherPreferences.PREF_SCALE_FACTOR);
         if (newHeight < 1 || newWidth < 1) {
@@ -305,11 +298,9 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     }
 
     private void realStart(){
-        // Initial size set. Request immedate refresh, otherwise the initial width and height for the game
-        // may be broken/unknown.
+
         refreshSize(true);
 
-        //Load Minecraft options:
         MCOptionUtils.set("fullscreen", "off");
         MCOptionUtils.set("overrideWidth", String.valueOf(windowWidth));
         MCOptionUtils.set("overrideHeight", String.valueOf(windowHeight));
@@ -318,7 +309,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
         new Thread(() -> {
             try {
-                // Wait until the listener is attached
+
                 synchronized(mSurfaceReadyListenerLock) {
                     if(mSurfaceReadyListener == null) mSurfaceReadyListenerLock.wait();
                 }
@@ -371,7 +362,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
             if(mGamepadHandler != null && mGamepadHandler instanceof Gamepad) {
                 ((Gamepad)mGamepadHandler).removeSelf();
             }
-            // Force gamepad recreation on next event
+
             mGamepadHandler = null;
         });
     }

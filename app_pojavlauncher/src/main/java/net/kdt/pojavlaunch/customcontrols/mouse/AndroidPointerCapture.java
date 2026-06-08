@@ -41,6 +41,7 @@ public class AndroidPointerCapture implements ViewTreeObserver.OnWindowFocusChan
     }
 
     public void handleAutomaticCapture() {
+        if(!LauncherPreferences.PREF_ENABLE_PHYSICAL_MOUSE) return;
         if(!mHostView.hasWindowFocus()) {
             mHostView.requestFocus();
         } else {
@@ -64,31 +65,25 @@ public class AndroidPointerCapture implements ViewTreeObserver.OnWindowFocusChan
     @Override
     public boolean onCapturedPointer(View view, MotionEvent event) {
         checkSameDevice(event.getDevice());
-        // Yes, we actually not only receive relative mouse events here, but also absolute touchpad ones!
-        // Therefore, we need to know when it's a touchpad and when it's a mouse.
 
         if((event.getSource() & InputDevice.SOURCE_CLASS_TRACKBALL) != 0) {
-            // If the source claims to be a relative device by belonging to the trackball class,
-            // use its coordinates directly.
+
             if(mDeviceSupportsRelativeAxis) {
-                // If some OEM decides to do a funny and make an absolute touchpad report itself as
-                // a trackball, we will at least have semi-valid relative positions
+
                 accumulateHistoricalValues(event, MotionEvent.AXIS_RELATIVE_X, MotionEvent.AXIS_RELATIVE_Y);
             }else {
-                // Otherwise trust the OS, i guess??
+
                 accumulateHistoricalValues(event, MotionEvent.AXIS_X, MotionEvent.AXIS_Y);
             }
         }else {
-            // If it's not a trackball, it's likely a touchpad and needs tracking like a touchscreen.
+
             mPointerTracker.trackEvent(event);
-            // The relative position will already be written down into the mVector variable.
+
         }
 
-        // Avoid going through the JNI each time.
         if(!GLFW.isGrabbing()) {
             enableTouchpadIfNecessary();
-            // Yes, if the user's touchpad is multi-touch we will also receive events for that.
-            // So, handle the scrolling gesture ourselves.
+
             mVector[0] *= mMousePrescale;
             mVector[1] *= mMousePrescale;
             if(event.getPointerCount() < 2) {
@@ -98,7 +93,7 @@ public class AndroidPointerCapture implements ViewTreeObserver.OnWindowFocusChan
                 mScroller.performScroll(mVector);
             }
         } else {
-            // Position is updated by many events, hence it is send regardless of the event value
+
             applyMotionVector(view, 1);
         }
 
@@ -152,7 +147,9 @@ public class AndroidPointerCapture implements ViewTreeObserver.OnWindowFocusChan
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
-        if(hasFocus && Tools.isAndroid8OrHigher()) mHostView.requestPointerCapture();
+        if(hasFocus && Tools.isAndroid8OrHigher() && LauncherPreferences.PREF_ENABLE_PHYSICAL_MOUSE) {
+            mHostView.requestPointerCapture();
+        }
     }
 
     public void detach() {

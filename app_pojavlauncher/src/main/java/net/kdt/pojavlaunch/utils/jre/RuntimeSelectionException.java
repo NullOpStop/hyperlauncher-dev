@@ -1,17 +1,18 @@
 package net.kdt.pojavlaunch.utils.jre;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import net.kdt.pojavlaunch.ShowErrorActivity;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutorTask;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class RuntimeSelectionException extends Exception implements ContextExecutorTask {
-    // Do not change. Android really hates when this value changes for some reason.
+
     private static final long serialVersionUID = -7482301619612640658L;
     public static final int RUNTIME_STATE_INSTALLATION_FAILED = 0;
     public static final int RUNTIME_STATE_SELECTION_FAILED = 1;
@@ -26,7 +27,7 @@ public class RuntimeSelectionException extends Exception implements ContextExecu
 
     @Override
     public void executeWithActivity(Activity activity) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity);
         builder.setTitle(R.string.runtime_error_title);
         int msgString;
         switch (mRuntimeState) {

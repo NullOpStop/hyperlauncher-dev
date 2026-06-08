@@ -2,6 +2,7 @@ package net.kdt.pojavlaunch.lifecycle;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
 
 import net.kdt.pojavlaunch.Tools;
 
@@ -10,7 +11,6 @@ import java.lang.ref.WeakReference;
 public class ContextExecutor {
     private static WeakReference<Application> sApplication;
     private static WeakReference<Activity> sActivity;
-
 
     /**
      * Schedules a ContextExecutorTask to be executed. For more info on tasks, please read
@@ -47,6 +47,15 @@ public class ContextExecutor {
     }
 
     /**
+     * @return a context, either an Activity if available, or the Application if not.
+     */
+    public static Context getContext() {
+        Activity activity = Tools.getWeakReference(sActivity);
+        if (activity != null) return activity;
+        return Tools.getWeakReference(sApplication);
+    }
+
+    /**
      * Set the Activity that this ContextExecutor will use for executing tasks
      * @param activity the activity to be used
      */
@@ -78,6 +87,5 @@ public class ContextExecutor {
         if(sApplication != null)
             sApplication.clear();
     }
-
 
 }

@@ -9,7 +9,7 @@ import android.widget.BaseAdapter;
 
 import androidx.core.graphics.ColorUtils;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 import net.kdt.pojavlaunch.Tools;
 
@@ -22,7 +22,6 @@ public class InstanceAdapter extends BaseAdapter {
     private Instances mInstances;
     private int mSelectionIndex;
     private final InstanceAdapterExtra[] mExtraEntires;
-
 
     public InstanceAdapter(InstanceAdapterExtra[] extraEntries) {
         if(extraEntries == null) extraEntries = new InstanceAdapterExtra[0];
@@ -70,13 +69,8 @@ public class InstanceAdapter extends BaseAdapter {
     public void setViewInstance(View v, DisplayInstance i, int idx, boolean displaySelection) {
         ExtendedTextView extendedTextView = (ExtendedTextView) v;
 
-        //MinecraftProfile minecraftProfile = mProfiles.get(nm);
-        //if(minecraftProfile == null) minecraftProfile = dummy;
         Drawable cachedIcon = InstanceIconProvider.fetchIcon(v.getResources(), i);
         extendedTextView.setCompoundDrawablesRelative(cachedIcon, null, extendedTextView.getCompoundsDrawables()[2], null);
-
-        // Historically, the profile name "New" was hardcoded as the default profile name
-        // We consider "New" the same as putting no name at all
 
         String profileName = Tools.validOrNullString(i.name);
         String versionName = Tools.validOrNullString(i.versionId);
@@ -92,7 +86,6 @@ public class InstanceAdapter extends BaseAdapter {
             extendedTextView.setText(versionName);
         else extendedTextView.setText(String.format("%s - %s", profileName, versionName));
 
-        // Set selected background if needed
         if(idx == mSelectionIndex && displaySelection) {
             extendedTextView.setBackgroundColor(ColorUtils.setAlphaComponent(Color.WHITE, 60));
         }else {

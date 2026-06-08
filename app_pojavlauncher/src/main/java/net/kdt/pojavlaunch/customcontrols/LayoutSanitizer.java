@@ -5,7 +5,6 @@ import java.util.List;
 
 public class LayoutSanitizer {
 
-    // Maybe add more conditions here later?
     private static boolean isValidFormula(String formula) {
         return !formula.contains("Infinity") && !formula.contains("NaN");
     }

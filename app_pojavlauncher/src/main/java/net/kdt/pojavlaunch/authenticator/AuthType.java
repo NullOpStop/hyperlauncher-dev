@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import net.kdt.pojavlaunch.authenticator.impl.ElyByBackgroundLogin;
 import net.kdt.pojavlaunch.authenticator.impl.MicrosoftBackgroundLogin;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public enum AuthType {
     @SerializedName("microsoft")
@@ -13,14 +13,14 @@ public enum AuthType {
             MicrosoftBackgroundLogin.CREATOR,
             R.drawable.ic_auth_ms,
             null,
-            "https://mineskin.eu/skin/%s" // Switched from mc-heads.net cause blocked in Russia
+            "https://minotar.net/skin/%s"
     ),
     @SerializedName("elyby")
     ELY_BY(
             ElyByBackgroundLogin.CREATOR,
             R.drawable.ic_auth_elyby,
             "ely.by",
-            "http://skinsystem.ely.by/skins/%s.png"
+            "https://skinsystem.ely.by/skins/%s.png"
     ),
     @SerializedName("local")
     LOCAL(null, 0, null, null);

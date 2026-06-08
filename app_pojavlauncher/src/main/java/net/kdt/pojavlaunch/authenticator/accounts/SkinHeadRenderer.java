@@ -14,18 +14,16 @@ public class SkinHeadRenderer {
         MIRROR_MATRIX.setScale(-1, 1);
     }
 
-    // Points of an isometric cube
     private static final float[][] ISO_POINTS = {
-            {0.5f,         1.0f }, // 0 Bottom-most point
-            {0.9330127f,   0.75f}, // 1 Bottom right point
-            {0.066987306f, 0.75f}, // 2 Bottom left point
-            {0.5f,         0.0f }, // 3 Topmost point
-            {0.9330127f,   0.25f}, // 4 Top right point
-            {0.066987306f, 0.25f}, // 5 Top left point
-            {0.5f,         0.5f }  // 6 Center point
+            {0.5f,         1.0f },
+            {0.9330127f,   0.75f},
+            {0.066987306f, 0.75f},
+            {0.5f,         0.0f },
+            {0.9330127f,   0.25f},
+            {0.066987306f, 0.25f},
+            {0.5f,         0.5f }
     };
 
-    // Faces of an isometric cube
     private static final int FACE_LEFT = 0;
     private static final int FACE_RIGHT = 1;
     private static final int FACE_TOP = 2;
@@ -55,7 +53,7 @@ public class SkinHeadRenderer {
     }
 
     private Bitmap getSubregion(Bitmap src, int left, int top, int right, int bottom, boolean mirror) {
-        // Provision for HD skins: scale regular skin coordinate inputs
+
         left   *= mCoordScale;
         top    *= mCoordScale;
         right  *= mCoordScale;
@@ -135,7 +133,6 @@ public class SkinHeadRenderer {
     public Bitmap render(int side, Bitmap sourceSkin) {
         if(!prepareCoordScale(sourceSkin.getWidth())) return null;
 
-        // Bitmap overlay regions
         Bitmap overlayTopFace = getSubregion(sourceSkin, 40, 0, 48,8);
         Bitmap overlayLeftFace = getSubregion(sourceSkin, 32, 8, 40,16);
         Bitmap overlayRightFace = getSubregion(sourceSkin, 40, 8, 48,16);
@@ -143,7 +140,6 @@ public class SkinHeadRenderer {
         Bitmap overlayRearLeftFace = getSubregion(sourceSkin, 56, 8, 64, 16, true);
         Bitmap overlayRearRightFace = getSubregion(sourceSkin, 48, 8, 56, 16, true);
 
-        // Bitmap head regions
         Bitmap topFace = getSubregion(sourceSkin, 8,0,16,8);
         Bitmap leftFace = getSubregion(sourceSkin, 0,8,8,16);
         Bitmap rightFace = getSubregion(sourceSkin, 8,8,16,16);
@@ -153,30 +149,24 @@ public class SkinHeadRenderer {
 
         float multiplier = 1f * side;
 
-        // The head should be slightly smaller than the accessory overlay around it,
-        // and should appear to be in the middle of the accessory overlay.
         float headOffset = multiplier / 16f;
         float headMultiplier = multiplier * 14f/16f;
 
-        // Rear side of overlay layer
         drawMesh(canvas, overlayRearLeftFace, FACE_REAR_LEFT, multiplier, 0);
         drawMesh(canvas, overlayRearRightFace, FACE_REAR_RIGHT, multiplier, 0);
         drawMesh(canvas, overlayBottomFace, FACE_BOTTOM, multiplier, 0);
 
-        // Player head
         drawMesh(canvas, leftFace, FACE_LEFT, headMultiplier,  headOffset);
         drawMesh(canvas, rightFace, FACE_RIGHT, headMultiplier,  headOffset);
         drawMesh(canvas, topFace, FACE_TOP, headMultiplier,  headOffset);
 
-        // Front side of the overlay layer
         drawMesh(canvas, overlayLeftFace, FACE_LEFT, multiplier, 0);
         drawMesh(canvas, overlayRightFace, FACE_RIGHT, multiplier, 0);
         drawMesh(canvas, overlayTopFace, FACE_TOP, multiplier, 0);
 
-        // Free all regions
         for(Bitmap region : mTempBitmaps) region.recycle();
         mTempBitmaps.clear();
-        // Done!
+
         return renderTarget;
     }
 }

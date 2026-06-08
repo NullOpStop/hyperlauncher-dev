@@ -31,13 +31,12 @@ public class ControlSubButton extends ControlButton {
 
     @Override
     public void setVisible(boolean isVisible) {
-        // STUB, visibility handled by the ControlDrawer
-        //setVisibility(isVisible ? VISIBLE : (!mProperties.isHideable && parentDrawer.getVisibility() == GONE) ? VISIBLE : View.GONE);
+
     }
 
     @Override
     public void onGrabState(boolean isGrabbing) {
-        // STUB, visibility lifecycle handled by the ControlDrawer
+
     }
 
     @Override
@@ -57,7 +56,7 @@ public class ControlSubButton extends ControlButton {
         }
 
         if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-            //mCanTriggerLongClick = true;
+
             onLongClick(this);
         }
         return true;
@@ -86,7 +85,7 @@ public class ControlSubButton extends ControlButton {
     public void snapAndAlign(float x, float y) {
         if(parentDrawer.drawerData.orientation == ControlDrawerData.Orientation.FREE)
             super.snapAndAlign(x, y);
-        // Else the button is forced into place
+
     }
 
     @Override

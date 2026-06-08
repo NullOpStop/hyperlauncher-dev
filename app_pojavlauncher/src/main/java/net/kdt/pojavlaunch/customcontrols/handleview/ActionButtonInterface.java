@@ -19,6 +19,6 @@ public interface ActionButtonInterface extends View.OnClickListener {
     /** Whether the button should be shown, given the current contextual information that it has */
     boolean shouldBeVisible();
 
-    @Override  // Wrapper to remove the arg
+    @Override
     default void onClick(View v){onClick();}
 }

@@ -30,7 +30,6 @@ public class CallbackBridge {
         }, 33);
     }
 
-
     public static void sendKeyPress(int keyCode) {
         GLFW.sendKeyEvent(keyCode, true, getCurrentMods());
         GLFW.sendKeyEvent(keyCode, false, getCurrentMods());
@@ -115,7 +114,7 @@ public class CallbackBridge {
         });
     }
 
-    @SuppressWarnings("unused") //TODO: actually use it
+    @SuppressWarnings("unused")
     public static void openPath(String path) {
         ContextExecutor.executeActivity(ctx->{
             try {
@@ -133,4 +132,3 @@ public class CallbackBridge {
         minibridgeInit();
     }
 }
-

@@ -14,7 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import net.kdt.pojavlaunch.MainActivity;
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.utils.NotificationUtils;
 
@@ -49,7 +49,7 @@ public class GameService extends Service {
                 .setContentText(getString(R.string.notification_game_runs))
                 .setContentIntent(contentIntent)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel,  getString(R.string.notification_terminate), pendingKillIntent)
-                .setSmallIcon(R.drawable.notif_icon)
+                .setSmallIcon(R.drawable.icon)
                 .setNotificationSilent();
 
         Notification notification = notificationBuilder.build();
@@ -58,12 +58,12 @@ public class GameService extends Service {
         } else {
             startForeground(NotificationUtils.NOTIFICATION_ID_GAME_SERVICE, notification);
         }
-        return START_NOT_STICKY; // non-sticky so android wont try restarting the game after the user uses the "Quit" button
+        return START_NOT_STICKY;
     }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        //At this point in time  only the game runs and the user poofed the window, time to die
+
         stopSelf();
         Process.killProcess(Process.myPid());
     }

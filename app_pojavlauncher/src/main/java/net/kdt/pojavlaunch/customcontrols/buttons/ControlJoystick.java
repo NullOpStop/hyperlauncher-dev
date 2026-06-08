@@ -29,7 +29,7 @@ import io.github.controlwear.virtual.joystick.android.JoystickView;
 @SuppressLint("ViewConstructor")
 public class ControlJoystick extends JoystickView implements ControlInterface {
     public final static int DIRECTION_FORWARD_LOCK = 8;
-    // Directions keycode
+
     private final int[] mDirectionForwardLock = new int[]{LwjglGlfwKeycode.GLFW_KEY_LEFT_CONTROL};
     private final int[] mDirectionForward = new int[]{LwjglGlfwKeycode.GLFW_KEY_W};
     private final int[] mDirectionRight = new int[]{LwjglGlfwKeycode.GLFW_KEY_D};
@@ -116,7 +116,6 @@ public class ControlJoystick extends JoystickView implements ControlInterface {
 
     @Override
     public void handleReleased() {/*STUB since non swipeable*/}
-
 
     @Override
     public void setBackground() {

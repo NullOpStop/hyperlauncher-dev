@@ -16,8 +16,8 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Keep;
-import androidx.appcompat.app.AlertDialog;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.kdt.LoggerView;
 
 import net.kdt.pojavlaunch.customcontrols.keyboard.AwtCharSender;
@@ -44,7 +44,7 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 
-import git.artdeell.mojo.R;
+import net.ashmeet.hyperlauncher.R;
 
 public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouchListener {
 
@@ -59,7 +59,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
 
     private boolean mIsVirtualMouseEnabled;
     private boolean mIsTrusted;
-    
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,10 +104,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
             float prevX = 0, prevY = 0;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                // MotionEvent reports input details from the touch screen
-                // and other input controls. In this case, you are only
-                // interested in events where the touch position changed.
-                // int index = event.getActionIndex();
+
                 int action = event.getActionMasked();
 
                 float x = event.getX();
@@ -121,7 +118,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
                     sendScaledMousePosition(mouseX,mouseY);
                     AWTInputBridge.sendMousePress(AWTInputEvent.BUTTON1_DOWN_MASK);
                 } else {
-                    if (action == MotionEvent.ACTION_MOVE) { // 2
+                    if (action == MotionEvent.ACTION_MOVE) {
                         mouseX = Math.max(0, Math.min(v.getWidth(), mouseX + x - prevX));
                         mouseY = Math.max(0, Math.min(v.getHeight(), mouseY + y - prevY));
                         placeMouseAt(mouseX, mouseY);
@@ -145,11 +142,11 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
             }
 
             switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_UP: // 1
-                case MotionEvent.ACTION_CANCEL: // 3
-                case MotionEvent.ACTION_POINTER_UP: // 6
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_POINTER_UP:
                     break;
-                case MotionEvent.ACTION_MOVE: // 2
+                case MotionEvent.ACTION_MOVE:
                     sendScaledMousePosition(x + mTextureView.getX(), y);
                     break;
             }
@@ -176,7 +173,6 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
         } catch (Throwable th) {
             Tools.showError(this, th, true);
         }
-
 
         getOnBackPressedDispatcher().addCallback(new OnBackPressedCallback(true) {
             @Override
@@ -207,7 +203,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
 
     public Runtime selectRuntime(int javaVersion) {
         if(javaVersion == -1) {
-            finalErrorDialog(getString(R.string.execute_jar_failed_to_read_file));
+            finalErrorDialog(getString(R.string.execute_jar_failed_to_read_file) + "\n(Invalid Java class version)");
             return null;
         }
         String nearestRuntime = MultiRTUtils.getNearestJreName(javaVersion);
@@ -243,13 +239,22 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
 
     private void runModInstaller(File modFile, List<String> javaArgs) {
         JarFileProperties jarFileProperties = null;
+        String errorMessage = getString(R.string.execute_jar_failed_to_read_file);
         try {
+            if (modFile == null || !modFile.exists()) {
+                throw new IOException("File does not exist: " + (modFile == null ? "null" : modFile.getAbsolutePath()));
+            }
             jarFileProperties = JarFileProperties.read(modFile);
+            if (jarFileProperties == null) {
+                errorMessage += "\n(Manifest or Main-Class not found)";
+            }
         }catch (IOException e) {
             Log.i("JavaGUILauncherActivity", "Failed to read JarFileProperties", e);
+            errorMessage += "\n" + e.getMessage();
         }
+
         if(jarFileProperties == null) {
-            finalErrorDialog(getString(R.string.execute_jar_failed_to_read_file));
+            finalErrorDialog(errorMessage);
             return;
         }
         Runtime selectedRuntime = selectRuntime(jarFileProperties.minJavaVersion);
@@ -262,7 +267,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
     }
 
     private void finalErrorDialog(CharSequence msg) {
-        runOnUiThread(()-> new AlertDialog.Builder(this)
+        runOnUiThread(()-> new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.global_error)
                 .setMessage(msg)
                 .setPositiveButton(android.R.string.ok, (d,w)->this.finish())
@@ -278,31 +283,29 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
         decorView.setSystemUiVisibility(uiOptions);
     }
 
-
-
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View v, MotionEvent e) {
         boolean isDown;
         switch (e.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN: // 0
-            case MotionEvent.ACTION_POINTER_DOWN: // 5
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
                 isDown = true;
                 break;
-            case MotionEvent.ACTION_UP: // 1
-            case MotionEvent.ACTION_CANCEL: // 3
-            case MotionEvent.ACTION_POINTER_UP: // 6
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_POINTER_UP:
                 isDown = false;
                 break;
             default:
                 return false;
         }
-        
+
         switch (v.getId()) {
             case R.id.installmod_mouse_pri:
                 AWTInputBridge.sendMousePress(AWTInputEvent.BUTTON1_DOWN_MASK, isDown);
                 break;
-                
+
             case R.id.installmod_mouse_sec:
                 AWTInputBridge.sendMousePress(AWTInputEvent.BUTTON3_DOWN_MASK, isDown);
                 break;
@@ -331,7 +334,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
 
     @SuppressWarnings("SuspiciousNameCombination")
     void sendScaledMousePosition(float x, float y){
-        // Clamp positions to the borders of the usable view, then scale them
+
         x = androidx.core.math.MathUtils.clamp(x, mTextureView.getX(), mTextureView.getX() + mTextureView.getWidth());
         y = androidx.core.math.MathUtils.clamp(y, mTextureView.getY(), mTextureView.getY() + mTextureView.getHeight());
 
@@ -368,7 +371,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
             if(javaArgs != null) {
                 javaArgList.addAll(javaArgs);
             }
-            
+
             if (LauncherPreferences.PREF_JAVA_SANDBOX && !mIsTrusted) {
                 Collections.reverse(javaArgList);
                 javaArgList.add("-Xbootclasspath/a:" + Tools.DIR_DATA + "/security/pro-grade.jar");
@@ -421,10 +424,9 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
         return classVersionToJavaVersion(majorVersion);
     }
     public static int classVersionToJavaVersion(int majorVersion) {
-        if(majorVersion < 46) return 2; // there isn't even an arm64 port of jre 1.1 (or anything before 1.8 in fact)
+        if(majorVersion < 46) return 2;
         return majorVersion - 44;
     }
-
 
     @Keep
     public static void querySystemClipboard() {
@@ -435,7 +437,7 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
                 return;
             }
             ClipData.Item firstClipItem = clipData.getItemAt(0);
-            //TODO: coerce to HTML if the clip item is styled
+
             CharSequence clipItemText = firstClipItem.getText();
             if(clipItemText == null) {
                 AWTInputBridge.nativeClipboardReceived(null, null);
