@@ -26,10 +26,10 @@ def getVersionName = {
 }
 
 def getCFApiKey = {
-    String key = System.getenv('$2a$10$gh97kqzcB/TKSYpqqacaE.N0SJGN121gGUF.6xsxiEu1ZmfaOYmcy')
-    if(key != null) return key
+    String key = System.getenv('CF_API_KEY')
+    if (key != null) return key
     File curseforgeKeyFile = new File("./curseforge_key.txt")
-    if(curseforgeKeyFile.canRead() && curseforgeKeyFile.isFile()) {
+    if (curseforgeKeyFile.canRead() && curseforgeKeyFile.isFile()) {
         return curseforgeKeyFile.text
     }
     return "DUMMY"
