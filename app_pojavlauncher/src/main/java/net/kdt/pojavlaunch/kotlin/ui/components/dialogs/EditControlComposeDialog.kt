@@ -242,6 +242,7 @@ fun EditControlComposeDialog(
                     PreferenceSlider(
                         title = stringResource(R.string.customctrl_corner_radius),
                         value = cornerRadius,
+                        enabled = controlInterface !is ControlJoystick,
                         onValueChange = {
                             cornerRadius = it
                             data.cornerRadius = it
