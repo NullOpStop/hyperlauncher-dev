@@ -330,6 +330,12 @@ public class ControlLayout extends FrameLayout {
 
 	}
 
+	public void refreshEditDialog() {
+		if (mControlDialog != null) {
+			mControlDialog.updateComposeContent();
+		}
+	}
+
 	/** Swap the panel if the button position requires it */
 	public void adaptPanelPosition(){
 		if(mControlDialog != null) mControlDialog.adaptPanelPosition();

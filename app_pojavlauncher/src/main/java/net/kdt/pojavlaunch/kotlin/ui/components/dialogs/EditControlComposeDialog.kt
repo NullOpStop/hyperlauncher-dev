@@ -45,6 +45,13 @@ fun EditControlComposeDialog(
         val specialKeys = remember { ControlData.buildSpecialButtonArray() }
         val allKeyNames = remember { specialKeys + EfficientAndroidLWJGLKeycode.generateKeyName() }
 
+        LaunchedEffect(data.getWidth()) {
+            width = data.getWidth().toString()
+        }
+        LaunchedEffect(data.getHeight()) {
+            height = data.getHeight().toString()
+        }
+
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color.Transparent,

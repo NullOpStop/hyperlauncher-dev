@@ -81,6 +81,9 @@ public class ControlHandleView extends View {
                 mView.getProperties().setWidth(getX() - mView.getControlView().getX());
                 mView.getProperties().setHeight(getY() - mView.getControlView().getY());
                 mView.regenerateDynamicCoordinates();
+                if (mView.getControlLayoutParent() != null) {
+                    mView.getControlLayoutParent().refreshEditDialog();
+                }
                 break;
         }
 

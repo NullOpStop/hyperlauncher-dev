@@ -102,7 +102,8 @@ public class EditControlSideDialog extends SideDialogView {
         updateComposeContent();
     }
 
-    private void updateComposeContent() {
+    public void updateComposeContent() {
+        if (mCurrentlyEditedButton == null) return;
         EditControlComposeBridge.setContent(
                 mComposeView,
                 mCurrentlyEditedButton,
