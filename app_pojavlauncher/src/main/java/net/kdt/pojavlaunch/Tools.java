@@ -111,6 +111,8 @@ public final class Tools {
     public static String OBSOLETE_RESOURCES_PATH;
     public static String CTRLMAP_PATH;
     public static String CTRLDEF_FILE;
+    
+    public static String LOCAL_RENDERER = "opengles2";
 
     private static @Nullable File getPojavStorageRoot(Context ctx) {
         if(SDK_INT >= 29) {

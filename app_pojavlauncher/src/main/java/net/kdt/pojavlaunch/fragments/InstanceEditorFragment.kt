@@ -20,13 +20,15 @@ import net.kdt.pojavlaunch.extra.ExtraCore
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
 import net.kdt.pojavlaunch.instances.Instances
+import net.kdt.pojavlaunch.kotlin.ui.screens.InstanceEditorScreen
 import net.kdt.pojavlaunch.multirt.MultiRTUtils
 import net.kdt.pojavlaunch.multirt.Runtime
 import net.kdt.pojavlaunch.profiles.VersionSelectorDialog
-import net.kdt.pojavlaunch.ui.screens.InstanceEditorScreen
+
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import net.kdt.pojavlaunch.utils.CropperUtils
 import net.kdt.pojavlaunch.utils.RendererCompatUtil
+import java.io.File
 import java.io.IOException
 
 class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
@@ -44,6 +46,7 @@ class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
     private var mCustomDirectory by mutableStateOf("")
     private var mSelectedRuntime by mutableStateOf<Runtime?>(null)
     private var mSelectedRendererIndex by mutableIntStateOf(0)
+    private var mPreferredBackend by mutableStateOf("default")
     private var mInstanceIconDrawable by mutableStateOf<android.graphics.drawable.Drawable?>(null)
 
     private var mRenderNames: List<String> = emptyList()
@@ -93,6 +96,7 @@ class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
             mArgsMode = instance.argsMode
             mSharedData = instance.sharedData
             mCustomDirectory = if (instance.sharedData) "" else instance.instanceRoot.absolutePath
+            mPreferredBackend = instance.preferredBackend ?: "default"
 
             mSelectedRuntime = mAvailableRuntimes.find { it.name == instance.selectedRuntime }
                 ?: mAvailableRuntimes.lastOrNull()
@@ -160,6 +164,11 @@ class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
                             }
                             Tools.swapFragment(requireActivity(), FileSelectorFragment::class.java, FileSelectorFragment.TAG, bundle)
                         },
+                        onOpenLogs = { openInstanceFolder("logs") },
+                        onOpenConfig = { openInstanceFolder("config") },
+                        onOpenMods = { openInstanceFolder("mods") },
+                        onOpenShaderPacks = { openInstanceFolder("shaderpacks") },
+                        onOpenResourcePacks = { openInstanceFolder("resourcepacks") },
 
                         instanceIcon = mInstanceIconDrawable,
                         name = mName,
@@ -180,10 +189,24 @@ class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
 
                         rendererDisplayNames = mRenderDisplayNames,
                         selectedRendererIndex = mSelectedRendererIndex,
-                        onRendererSelected = { mSelectedRendererIndex = it }
+                        onRendererSelected = { mSelectedRendererIndex = it },
+
+                        preferredBackend = mPreferredBackend,
+                        onPreferredBackendChange = { mPreferredBackend = it },
+
+                        isNewInstance = arguments?.getBoolean(ARG_IS_NEW_INSTANCE, false) ?: false
                     )
                 }
             }
+        }
+    }
+
+    private fun openInstanceFolder(folderName: String) {
+        mInstance?.let { instance ->
+            val gameDir = instance.gameDirectory
+            val folder = File(gameDir, folderName)
+            if (!folder.exists()) folder.mkdirs()
+            Tools.openPath(requireContext(), folder, false)
         }
     }
 
@@ -210,6 +233,7 @@ class InstanceEditorFragment : Fragment(), CropperUtils.CropperReceiver {
             instance.jvmArgs = mJvmArgs.ifEmpty { null }
             instance.argsMode = mArgsMode
             instance.sharedData = mSharedData
+            instance.preferredBackend = mPreferredBackend
 
             instance.selectedRuntime = if (mSelectedRuntime?.name == "<Default>" || mSelectedRuntime?.versionString == null)
                 null else mSelectedRuntime?.name

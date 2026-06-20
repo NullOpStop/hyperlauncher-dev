@@ -1,5 +1,8 @@
 package net.kdt.pojavlaunch.downloader;
 
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.utils.HashUtils;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,10 +33,24 @@ public class DownloadFileTask extends DownloaderTask implements BytesCopiedListe
                 mBytesDownloaded.set(alreadyDownloaded);
                 mDownloader.addSize(alreadyDownloaded);
                 rangeAllowed = mDownloader.tryContinueDownload(mMetadata.path, mMetadata.size, mMetadata.url, this);
-                if(!rangeAllowed) performRetry(attempt, false);
+                if(!rangeAllowed) {
+                    performRetry(attempt, false);
+                    return;
+                }
+            }
+
+            // Post-download validation to trigger retry on failure
+            if (mMetadata.size != -1 && mMetadata.path.length() != mMetadata.size) {
+                throw new IOException("Download truncated: " + mMetadata.path.length() + "/" + mMetadata.size);
+            }
+
+            if (LauncherPreferences.PREF_VERIFY_FILES && mMetadata.sha1Hash != null) {
+                if (!HashUtils.compareSHA1(mMetadata.path, mMetadata.sha1Hash)) {
+                    throw new IOException("Hash verification failed after download for " + mMetadata.path.getName());
+                }
             }
         }catch (IOException e) {
-            if(attempt == 5) throw e;
+            if(attempt >= 5) throw e;
             performRetry(attempt, rangeAllowed);
         }
     }

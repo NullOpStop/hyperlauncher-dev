@@ -97,7 +97,6 @@ public class GameRunner {
         GLInfoUtils.GLInfo info = GLInfoUtils.getGlInfo();
         return info.isAdreno() &&
                 info.glesMajorVersion >= 3 &&
-
                 DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2025, 2, 25);
     }
 
@@ -276,6 +275,7 @@ public class GameRunner {
 
         javaArgList.addAll(JREUtils.parseJavaArguments(instance.getLaunchArgs()));
 
+        Tools.LOCAL_RENDERER = rendererName;
         JREUtils.setEnviroimentForGame(activity, rendererName);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 
@@ -283,6 +283,7 @@ public class GameRunner {
         if(rendererLibrary == null) {
             Log.i("GameRunner", "Falling back to GL4ES 1.1.4");
             rendererName = "opengles2";
+            Tools.LOCAL_RENDERER = rendererName;
             rendererLibrary = JREUtils.loadGraphicsLibrary(rendererName);
         }
         if(rendererLibrary == null) {
@@ -291,6 +292,9 @@ public class GameRunner {
         }
         javaArgList.add("-Dorg.lwjgl.opengl.libname=libGLMojo.so");
         javaArgList.add("-Dorg.lwjgl.freetype.libname="+ Tools.NATIVE_LIB_DIR+"/libfreetype.so");
+        javaArgList.add("-XX:+UseG1GC");
+        javaArgList.add("-XX:MaxGCPauseMillis=50");
+        javaArgList.add("-XX:+UnlockExperimentalVMOptions");
 
         activity.runOnUiThread(() -> Toast.makeText(activity, activity.getString(R.string.autoram_info_msg,LauncherPreferences.PREF_RAM_ALLOCATION), Toast.LENGTH_SHORT).show());
 
@@ -301,6 +305,11 @@ public class GameRunner {
             LibraryPlugin mobileGlues = LibraryPlugin.discoverPlugin(activity, LibraryPlugin.ID_MOBILEGLUES_PLUGIN);
             if (mobileGlues != null) {
                 extraLdPaths = Collections.singletonList(mobileGlues.getLibraryPath());
+            }
+        } else if (rendererName.equals("krypton")) {
+            LibraryPlugin krypton = LibraryPlugin.discoverPlugin(activity, LibraryPlugin.ID_KRYPTON_PLUGIN);
+            if (krypton != null) {
+                extraLdPaths = Collections.singletonList(krypton.getLibraryPath());
             }
         }
 

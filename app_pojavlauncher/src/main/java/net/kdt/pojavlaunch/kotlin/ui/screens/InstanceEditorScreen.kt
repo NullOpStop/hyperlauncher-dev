@@ -1,49 +1,51 @@
-package net.kdt.pojavlaunch.ui.screens
+package net.kdt.pojavlaunch.kotlin.ui.screens
 
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
+import net.kdt.pojavlaunch.modloaders.ComparableVersionString
 import net.kdt.pojavlaunch.multirt.Runtime
-import net.kdt.pojavlaunch.ui.theme.PojavTheme
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
+import net.kdt.pojavlaunch.ui.components.*
+
+enum class InstanceEditorPage(val title: String, val iconRes: Int) {
+    GENERAL("General", R.drawable.ic_px_settings),
+    JAVA("Java Settings", R.drawable.ic_px_java),
+    RENDERING("Rendering", R.drawable.ic_px_image_renderer),
+    FOLDERS("Instance Folders", R.drawable.ic_px_folder),
+    DANGER("Danger Zone", R.drawable.ic_px_trash)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +57,11 @@ fun InstanceEditorScreen(
     onVersionClick: () -> Unit,
     onControlClick: () -> Unit,
     onCustomDirectoryClick: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenConfig: () -> Unit,
+    onOpenMods: () -> Unit,
+    onOpenShaderPacks: () -> Unit,
+    onOpenResourcePacks: () -> Unit,
 
     instanceIcon: Drawable?,
     name: String,
@@ -75,15 +82,669 @@ fun InstanceEditorScreen(
 
     rendererDisplayNames: List<String>,
     selectedRendererIndex: Int,
-    onRendererSelected: (Int) -> Unit
+    onRendererSelected: (Int) -> Unit,
+
+    preferredBackend: String,
+    onPreferredBackendChange: (String) -> Unit,
+
+    isNewInstance: Boolean = false
 ) {
-    val scrollState = rememberScrollState()
     val isPreview = LocalInspectionMode.current
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var currentPage by rememberSaveable { mutableStateOf(InstanceEditorPage.GENERAL) }
+    var isMainPage by rememberSaveable { mutableStateOf(false) }
+    val railScrollState = rememberScrollState()
+
+    // Animation settings from LauncherPreferences
+    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
+    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
+
+    val transitionSpec: AnimatedContentTransitionScope<Boolean>.() -> ContentTransform = {
+        when (animPreset) {
+            "fade" -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+            "bounce" -> {
+                slideInVertically(
+                    initialOffsetY = { -(it * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                ) + fadeIn() togetherWith slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            }
+            else -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+        }
+    }
+
+    // Dirty state tracking for the floating save button
+    val initialName = remember { name }
+    val initialVersionId = remember { versionId }
+    val initialControlLayout = remember { controlLayout }
+    val initialJvmArgs = remember { jvmArgs }
+    val initialArgsMode = remember { argsMode }
+    val initialSharedData = remember { sharedData }
+    val initialCustomDirectory = remember { customDirectory }
+    val initialRuntimeName = remember { selectedRuntime?.name }
+    val initialRendererIndex = remember { selectedRendererIndex }
+    val initialPreferredBackend = remember { preferredBackend }
+
+    val isDirty = name != initialName ||
+            versionId != initialVersionId ||
+            controlLayout != initialControlLayout ||
+            jvmArgs != initialJvmArgs ||
+            argsMode != initialArgsMode ||
+            sharedData != initialSharedData ||
+            customDirectory != initialCustomDirectory ||
+            selectedRuntime?.name != initialRuntimeName ||
+            selectedRendererIndex != initialRendererIndex ||
+            preferredBackend != initialPreferredBackend
 
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
     val hasBackground = backgroundBitmap != null
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isPreview) {
+            if (backgroundBitmap != null) {
+                Image(
+                    bitmap = backgroundBitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+            }
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f)))
+        }
+
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isWide = maxWidth > 600.dp
+
+            if (isWide) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    NavigationRail(
+                        modifier = Modifier.fillMaxHeight().width(80.dp),
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        windowInsets = WindowInsets(0, 0, 0, 0)
+                    ) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .verticalScroll(railScrollState),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            InstanceEditorPage.entries.forEach { page ->
+                                NavigationRailItem(
+                                    selected = currentPage == page && !isMainPage,
+                                    onClick = {
+                                        currentPage = page
+                                        isMainPage = false
+                                    },
+                                    icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                                    label = { Text(page.title.substringBefore(" "), fontSize = 10.sp) },
+                                    alwaysShowLabel = false,
+                                    colors = NavigationRailItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    Scaffold(
+                        containerColor = Color.Transparent,
+                        floatingActionButton = {
+                            AnimatedVisibility(
+                                visible = isNewInstance || isDirty,
+                                enter = scaleIn() + fadeIn(),
+                                exit = scaleOut() + fadeOut()
+                            ) {
+                                FloatingActionButton(
+                                    onClick = onSave,
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    shape = CircleShape
+                                ) {
+                                    Icon(Icons.Default.Done, contentDescription = "Save")
+                                }
+                            }
+                        }
+                    ) { padding ->
+                        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                            AnimatedContent(
+                                targetState = currentPage,
+                                transitionSpec = {
+                                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+                                },
+                                label = "instance_editor_content_anim"
+                            ) { page ->
+                                InstanceEditorContent(
+                                    page = page,
+                                    instanceIcon = instanceIcon,
+                                    name = name,
+                                    onNameChange = onNameChange,
+                                    versionId = versionId,
+                                    controlLayout = controlLayout,
+                                    jvmArgs = jvmArgs,
+                                    onJvmArgsChange = onJvmArgsChange,
+                                    argsMode = argsMode,
+                                    onArgsModeChange = onArgsModeChange,
+                                    sharedData = sharedData,
+                                    onSharedDataChange = onSharedDataChange,
+                                    customDirectory = customDirectory,
+                                    availableRuntimes = availableRuntimes,
+                                    selectedRuntime = selectedRuntime,
+                                    onRuntimeSelected = onRuntimeSelected,
+                                    rendererDisplayNames = rendererDisplayNames,
+                                    selectedRendererIndex = selectedRendererIndex,
+                                    onRendererSelected = onRendererSelected,
+                                    preferredBackend = preferredBackend,
+                                    onPreferredBackendChange = onPreferredBackendChange,
+                                    onIconClick = onIconClick,
+                                    onVersionClick = onVersionClick,
+                                    onControlClick = onControlClick,
+                                    onCustomDirectoryClick = onCustomDirectoryClick,
+                                    onDelete = onDelete,
+                                    onOpenLogs = onOpenLogs,
+                                    onOpenConfig = onOpenConfig,
+                                    onOpenMods = onOpenMods,
+                                    onOpenShaderPacks = onOpenShaderPacks,
+                                    onOpenResourcePacks = onOpenResourcePacks
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                AnimatedContent(
+                    targetState = isMainPage,
+                    transitionSpec = transitionSpec,
+                    label = "instance_editor_nav_anim"
+                ) { mainPage ->
+                    if (mainPage) {
+                        Scaffold(
+                            containerColor = Color.Transparent,
+                            topBar = {
+                                TopAppBar(
+                                    title = { Text("Edit Instance", fontWeight = FontWeight.Bold) },
+                                    navigationIcon = {
+                                        IconButton(onClick = onBack) {
+                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                )
+                            },
+                            floatingActionButton = {
+                                AnimatedVisibility(
+                                    visible = isNewInstance || isDirty,
+                                    enter = scaleIn() + fadeIn(),
+                                    exit = scaleOut() + fadeOut()
+                                ) {
+                                    FloatingActionButton(
+                                        onClick = onSave,
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        shape = CircleShape
+                                    ) {
+                                        Icon(Icons.Default.Done, contentDescription = "Save")
+                                    }
+                                }
+                            }
+                        ) { padding ->
+                            BackHandler { onBack() }
+                            LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+                                item {
+                                    PreferenceGroup(title = "Categories") {
+                                        InstanceEditorPage.entries.forEach { page ->
+                                            PreferenceItem(
+                                                title = page.title,
+                                                icon = painterResource(page.iconRes),
+                                                onClick = {
+                                                    currentPage = page
+                                                    isMainPage = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Scaffold(
+                            containerColor = Color.Transparent,
+                            topBar = {
+                                TopAppBar(
+                                    title = { Text(currentPage.title, fontWeight = FontWeight.Bold) },
+                                    navigationIcon = {
+                                        // Back button removed from category name as requested
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                )
+                            },
+                            floatingActionButton = {
+                                AnimatedVisibility(
+                                    visible = isNewInstance || isDirty,
+                                    enter = scaleIn() + fadeIn(),
+                                    exit = scaleOut() + fadeOut()
+                                ) {
+                                    FloatingActionButton(
+                                        onClick = onSave,
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        shape = CircleShape
+                                    ) {
+                                        Icon(Icons.Default.Done, contentDescription = "Save")
+                                    }
+                                }
+                            }
+                        ) { padding ->
+                            BackHandler { isMainPage = true }
+                            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                                InstanceEditorContent(
+                                    page = currentPage,
+                                    instanceIcon = instanceIcon,
+                                    name = name,
+                                    onNameChange = onNameChange,
+                                    versionId = versionId,
+                                    controlLayout = controlLayout,
+                                    jvmArgs = jvmArgs,
+                                    onJvmArgsChange = onJvmArgsChange,
+                                    argsMode = argsMode,
+                                    onArgsModeChange = onArgsModeChange,
+                                    sharedData = sharedData,
+                                    onSharedDataChange = onSharedDataChange,
+                                    customDirectory = customDirectory,
+                                    availableRuntimes = availableRuntimes,
+                                    selectedRuntime = selectedRuntime,
+                                    onRuntimeSelected = onRuntimeSelected,
+                                    rendererDisplayNames = rendererDisplayNames,
+                                    selectedRendererIndex = selectedRendererIndex,
+                                    onRendererSelected = onRendererSelected,
+                                    preferredBackend = preferredBackend,
+                                    onPreferredBackendChange = onPreferredBackendChange,
+                                    onIconClick = onIconClick,
+                                    onVersionClick = onVersionClick,
+                                    onControlClick = onControlClick,
+                                    onCustomDirectoryClick = onCustomDirectoryClick,
+                                    onDelete = onDelete,
+                                    onOpenLogs = onOpenLogs,
+                                    onOpenConfig = onOpenConfig,
+                                    onOpenMods = onOpenMods,
+                                    onOpenShaderPacks = onOpenShaderPacks,
+                                    onOpenResourcePacks = onOpenResourcePacks
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InstanceEditorContent(
+    page: InstanceEditorPage,
+    instanceIcon: Drawable?,
+    name: String,
+    onNameChange: (String) -> Unit,
+    versionId: String,
+    controlLayout: String,
+    jvmArgs: String,
+    onJvmArgsChange: (String) -> Unit,
+    argsMode: Int,
+    onArgsModeChange: (Int) -> Unit,
+    sharedData: Boolean,
+    onSharedDataChange: (Boolean) -> Unit,
+    customDirectory: String,
+    availableRuntimes: List<Runtime>,
+    selectedRuntime: Runtime?,
+    onRuntimeSelected: (Runtime) -> Unit,
+    rendererDisplayNames: List<String>,
+    selectedRendererIndex: Int,
+    onRendererSelected: (Int) -> Unit,
+    preferredBackend: String,
+    onPreferredBackendChange: (String) -> Unit,
+    onIconClick: () -> Unit,
+    onVersionClick: () -> Unit,
+    onControlClick: () -> Unit,
+    onCustomDirectoryClick: () -> Unit,
+    onDelete: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenConfig: () -> Unit,
+    onOpenMods: () -> Unit,
+    onOpenShaderPacks: () -> Unit,
+    onOpenResourcePacks: () -> Unit
+) {
+    when (page) {
+        InstanceEditorPage.GENERAL -> GeneralSettings(
+            instanceIcon = instanceIcon,
+            name = name,
+            onNameChange = onNameChange,
+            versionId = versionId,
+            onVersionClick = onVersionClick,
+            customDirectory = customDirectory,
+            onCustomDirectoryClick = onCustomDirectoryClick,
+            sharedData = sharedData,
+            onSharedDataChange = onSharedDataChange,
+            onIconClick = onIconClick
+        )
+        InstanceEditorPage.JAVA -> JavaSettings(
+            jvmArgs = jvmArgs,
+            onJvmArgsChange = onJvmArgsChange,
+            argsMode = argsMode,
+            onArgsModeChange = onArgsModeChange,
+            availableRuntimes = availableRuntimes,
+            selectedRuntime = selectedRuntime,
+            onRuntimeSelected = onRuntimeSelected
+        )
+        InstanceEditorPage.RENDERING -> RenderingSettings(
+            versionId = versionId,
+            rendererDisplayNames = rendererDisplayNames,
+            selectedRendererIndex = selectedRendererIndex,
+            onRendererSelected = onRendererSelected,
+            preferredBackend = preferredBackend,
+            onPreferredBackendChange = onPreferredBackendChange
+        )
+        InstanceEditorPage.FOLDERS -> FolderShortcuts(
+            onOpenLogs = onOpenLogs,
+            onOpenConfig = onOpenConfig,
+            onOpenMods = onOpenMods,
+            onOpenShaderPacks = onOpenShaderPacks,
+            onOpenResourcePacks = onOpenResourcePacks
+        )
+        InstanceEditorPage.DANGER -> DangerSettings(
+            controlLayout = controlLayout,
+            onControlClick = onControlClick,
+            onDelete = onDelete
+        )
+    }
+}
+
+@Composable
+fun FolderShortcuts(
+    onOpenLogs: () -> Unit,
+    onOpenConfig: () -> Unit,
+    onOpenMods: () -> Unit,
+    onOpenShaderPacks: () -> Unit,
+    onOpenResourcePacks: () -> Unit
+) {
+    LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        item {
+            PreferenceGroup(title = "Files and Folders") {
+                PreferenceItem(
+                    title = "Logs Folder",
+                    summary = "Open instance logs directory",
+                    icon = painterResource(id = R.drawable.ic_px_console),
+                    onClick = onOpenLogs
+                )
+                PreferenceItem(
+                    title = "Config Folder",
+                    summary = "Open configuration files directory",
+                    icon = painterResource(id = R.drawable.ic_px_settings),
+                    onClick = onOpenConfig
+                )
+                PreferenceItem(
+                    title = "Mods Folder",
+                    summary = "Open installed mods directory",
+                    icon = painterResource(id = R.drawable.ic_package),
+                    onClick = onOpenMods
+                )
+                PreferenceItem(
+                    title = "Resource Packs",
+                    summary = "Open resource packs directory",
+                    icon = painterResource(id = R.drawable.ic_px_file),
+                    onClick = onOpenResourcePacks
+                )
+                PreferenceItem(
+                    title = "Shader Packs",
+                    summary = "Open shader packs directory",
+                    icon = painterResource(id = R.drawable.ic_px_image),
+                    onClick = onOpenShaderPacks
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GeneralSettings(
+    instanceIcon: Drawable?,
+    name: String,
+    onNameChange: (String) -> Unit,
+    versionId: String,
+    onVersionClick: () -> Unit,
+    customDirectory: String,
+    onCustomDirectoryClick: () -> Unit,
+    sharedData: Boolean,
+    onSharedDataChange: (Boolean) -> Unit,
+    onIconClick: () -> Unit
+) {
+    var showNameDialog by remember { mutableStateOf(false) }
+    if (showNameDialog) {
+        var tempName by remember { mutableStateOf(name) }
+        AlertDialog(
+            onDismissRequest = { showNameDialog = false },
+            title = { Text("Instance Name") },
+            text = {
+                OutlinedTextField(
+                    value = tempName,
+                    onValueChange = { tempName = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onNameChange(tempName)
+                    showNameDialog = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        item {
+            PreferenceGroup(title = "Profile") {
+                val iconPainter = if (instanceIcon != null) {
+                    val bitmap = remember(instanceIcon) { instanceIcon.toBitmap().asImageBitmap() }
+                    BitmapPainter(bitmap)
+                } else {
+                    painterResource(id = R.drawable.ic_px_java)
+                }
+
+                PreferenceItem(
+                    title = "Change Icon",
+                    summary = "Select a custom image for this instance",
+                    icon = iconPainter,
+                    onClick = onIconClick
+                )
+
+                PreferenceItem(
+                    title = "Instance Name",
+                    summary = name.ifEmpty { stringResource(id = R.string.unnamed) },
+                    icon = painterResource(id = R.drawable.ic_px_edit),
+                    onClick = { showNameDialog = true }
+                )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Structure") {
+                PreferenceItem(
+                    title = "Version",
+                    summary = versionId.ifEmpty { stringResource(id = R.string.version_select_hint) },
+                    icon = painterResource(id = R.drawable.ic_px_file),
+                    onClick = onVersionClick
+                )
+
+                PreferenceItem(
+                    title = "Custom Directory",
+                    summary = customDirectory.ifEmpty { stringResource(id = R.string.use_global_default) },
+                    icon = painterResource(id = R.drawable.ic_px_folder),
+                    onClick = onCustomDirectoryClick
+                )
+
+                PreferenceSwitch(
+                    title = "Shared Data",
+                    summary = if (sharedData) stringResource(id = R.string.instance_shared_data_on) else stringResource(id = R.string.instance_shared_data_off),
+                    icon = painterResource(id = R.drawable.ic_px_settings),
+                    checked = sharedData,
+                    onCheckedChange = onSharedDataChange
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun JavaSettings(
+    jvmArgs: String,
+    onJvmArgsChange: (String) -> Unit,
+    argsMode: Int,
+    onArgsModeChange: (Int) -> Unit,
+    availableRuntimes: List<Runtime>,
+    selectedRuntime: Runtime?,
+    onRuntimeSelected: (Runtime) -> Unit
+) {
+    var showJvmArgsDialog by remember { mutableStateOf(false) }
+    if (showJvmArgsDialog) {
+        var tempJvmArgs by remember { mutableStateOf(jvmArgs) }
+        AlertDialog(
+            onDismissRequest = { showJvmArgsDialog = false },
+            title = { Text("JVM Arguments") },
+            text = {
+                OutlinedTextField(
+                    value = tempJvmArgs,
+                    onValueChange = { tempJvmArgs = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onJvmArgsChange(tempJvmArgs)
+                    showJvmArgsDialog = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showJvmArgsDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        item {
+            PreferenceGroup(title = "Launch Arguments") {
+                PreferenceList(
+                    title = "Launch Arguments Mode",
+                    entries = arrayOf("Replace Global", "Merge (Global First)", "Merge (Instance First)"),
+                    entryValues = arrayOf("0", "1", "2"),
+                    selectedValue = argsMode.toString(),
+                    onValueChange = { onArgsModeChange(it.toInt()) },
+                    icon = painterResource(id = R.drawable.ic_px_alt_sliders)
+                )
+
+                PreferenceItem(
+                    title = "JVM Arguments",
+                    summary = jvmArgs.ifEmpty { stringResource(id = R.string.use_global_default) },
+                    icon = painterResource(id = R.drawable.ic_px_console),
+                    onClick = { showJvmArgsDialog = true }
+                )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Runtime") {
+                PreferenceList(
+                    title = "Java Runtime",
+                    entries = availableRuntimes.map { it.name }.toTypedArray(),
+                    entryValues = availableRuntimes.map { it.name }.toTypedArray(),
+                    selectedValue = selectedRuntime?.name ?: "<Default>",
+                    onValueChange = { name ->
+                        availableRuntimes.find { it.name == name }?.let { onRuntimeSelected(it) }
+                    },
+                    icon = painterResource(id = R.drawable.ic_px_runtime_mgr)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderingSettings(
+    versionId: String,
+    rendererDisplayNames: List<String>,
+    selectedRendererIndex: Int,
+    onRendererSelected: (Int) -> Unit,
+    preferredBackend: String,
+    onPreferredBackendChange: (String) -> Unit
+) {
+    LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        item {
+            PreferenceGroup(title = "Display") {
+                PreferenceList(
+                    title = "Renderer",
+                    entries = rendererDisplayNames.toTypedArray(),
+                    entryValues = rendererDisplayNames.indices.map { it.toString() }.toTypedArray(),
+                    selectedValue = if (selectedRendererIndex in rendererDisplayNames.indices) selectedRendererIndex.toString() else "-1",
+                    onValueChange = { onRendererSelected(it.toInt()) },
+                    icon = painterResource(id = R.drawable.ic_px_image_renderer)
+                )
+
+                if (isBackendSupported(versionId)) {
+                    PreferenceList(
+                        title = stringResource(R.string.mcl_setting_title_preferred_graphics_backend),
+                        summary = stringResource(R.string.mcl_setting_subtitle_preferred_graphics_backend),
+                        entries = stringArrayResource(R.array.graphics_backend_names),
+                        entryValues = stringArrayResource(R.array.graphics_backend_values),
+                        selectedValue = preferredBackend,
+                        onValueChange = onPreferredBackendChange,
+                        icon = painterResource(R.drawable.ic_px_image_renderer)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun isBackendSupported(versionId: String): Boolean {
+    if (versionId.isEmpty() || versionId == "latest_release" || versionId == "latest_snapshot") return true
+
+    val match = Regex("""(\d+\.\d+(\.\d+)?)""").find(versionId)
+    if (match != null) {
+        val version = match.value
+        val cvs = ComparableVersionString.parse(version)
+        if (cvs.isValid) {
+            // Threshold set to 1.20.2 as it's the logical match for backend features
+            return cvs.compareTo(ComparableVersionString.parse("1.20.2")) >= 0
+        }
+    }
+    return true
+}
+
+@Composable
+fun DangerSettings(
+    controlLayout: String,
+    onControlClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -107,179 +768,27 @@ fun InstanceEditorScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+    LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        item {
+            PreferenceGroup(title = "Controls") {
+                PreferenceItem(
+                    title = "Control Layout",
+                    summary = controlLayout.ifEmpty { stringResource(id = R.string.use_global_default) },
+                    icon = painterResource(id = R.drawable.ic_px_gamepad),
+                    onClick = onControlClick
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-            }
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f)))
-        }
-
-        Row(
-            modifier = Modifier.fillMaxSize().padding(8.dp)
-        ) {
-            Surface(
-                modifier = Modifier.weight(0.75f).fillMaxHeight().padding(end = 8.dp),
-                color = Color.Transparent
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(4.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                .clickable { onIconClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (instanceIcon != null) {
-                                val bitmap = remember(instanceIcon) { instanceIcon.toBitmap().asImageBitmap() }
-                                Image(bitmap = bitmap, contentDescription = "Instance Icon", modifier = Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
-                            } else {
-                                Icon(painter = painterResource(id = R.drawable.ic_px_java), contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                            }
-                            Box(modifier = Modifier.align(Alignment.BottomEnd).size(24.dp).background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f), RoundedCornerShape(topStart = 8.dp))) {
-                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp).align(Alignment.Center), tint = Color.White)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = onNameChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Instance Name", fontSize = 12.sp) },
-                        placeholder = { Text(stringResource(id = R.string.unnamed)) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = "Version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp))
-                        EditorSelectorButton(text = versionId.ifEmpty { stringResource(id = R.string.version_select_hint) }, onClick = onVersionClick)
-                        Text(text = "Control Layout", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp))
-                        EditorSelectorButton(text = controlLayout.ifEmpty { stringResource(id = R.string.use_global_default) }, onClick = onControlClick)
-                        Text(text = "Custom Directory", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp))
-                        EditorSelectorButton(text = customDirectory.ifEmpty { stringResource(id = R.string.use_global_default) }, onClick = onCustomDirectoryClick)
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(text = "Launch Arguments Mode", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-                    EditorDropdown(
-                        options = listOf("Replace Global", "Merge (Global First)", "Merge (Instance First)"),
-                        selectedOption = when(argsMode) {
-                            0 -> "Replace Global"
-                            1 -> "Merge (Global First)"
-                            else -> "Merge (Instance First)"
-                        },
-                        onOptionSelected = { name ->
-                            onArgsModeChange(when(name) {
-                                "Replace Global" -> 0
-                                "Merge (Global First)" -> 1
-                                else -> 2
-                            })
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = jvmArgs,
-                        onValueChange = onJvmArgsChange,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
-                        label = { Text("JVM Arguments", fontSize = 12.sp) },
-                        placeholder = { Text(stringResource(id = R.string.use_global_default)) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(text = "Java Runtime", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-                    EditorDropdown(options = availableRuntimes.map { it.name }, selectedOption = selectedRuntime?.name ?: "<Default>", onOptionSelected = { name -> availableRuntimes.find { it.name == name }?.let { onRuntimeSelected(it) } })
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Renderer", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-                    EditorDropdown(options = rendererDisplayNames, selectedOption = if (selectedRendererIndex in rendererDisplayNames.indices) rendererDisplayNames[selectedRendererIndex] else "Default", onOptionSelected = { name -> onRendererSelected(rendererDisplayNames.indexOf(name)) })
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Surface(onClick = { onSharedDataChange(!sharedData) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))) {
-                        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = sharedData, onCheckedChange = onSharedDataChange, colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary, uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = if (sharedData) stringResource(id = R.string.instance_shared_data_on) else stringResource(id = R.string.instance_shared_data_off), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                    }
-                }
-            }
-
-            Surface(
-                modifier = Modifier.weight(0.25f).fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                Column(modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Button(onClick = { showDeleteConfirm = true }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError), elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete", fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onSave, modifier = Modifier.fillMaxWidth().height(48.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary), elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)) {
-                        Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save", fontWeight = FontWeight.Bold)
-                    }
-                }
             }
         }
-    }
-}
 
-@Composable
-fun EditorSelectorButton(text: String, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))) {
-        Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-@Composable
-fun EditorDropdown(options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        Surface(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().height(44.dp), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))) {
-            Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(text = selectedOption, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                Icon(painter = painterResource(id = R.drawable.spinner_arrow), contentDescription = null, modifier = Modifier.size(12.dp).alpha(0.6f), tint = MaterialTheme.colorScheme.onSurface)
+        item {
+            PreferenceGroup(title = "Danger Zone") {
+                PreferenceItem(
+                    title = "Delete Instance",
+                    summary = "Permanently remove this instance and all its files",
+                    icon = painterResource(id = R.drawable.ic_px_trash),
+                    onClick = { showDeleteConfirm = true }
+                )
             }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(MaterialTheme.colorScheme.surface).width(240.dp)) {
-            options.forEach { option -> DropdownMenuItem(text = { Text(option, color = MaterialTheme.colorScheme.onSurface) }, onClick = { onOptionSelected(option); expanded = false }) }
         }
     }
 }

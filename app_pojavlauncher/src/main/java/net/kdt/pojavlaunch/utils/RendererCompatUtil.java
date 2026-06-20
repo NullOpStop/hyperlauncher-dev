@@ -41,8 +41,6 @@ public class RendererCompatUtil {
 
         boolean appHasLtw = new File(Tools.NATIVE_LIB_DIR, "libltw.so").exists();
 
-        boolean hasMobileGlues = LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_MOBILEGLUES_PLUGIN) != null;
-
         List<String> rendererIds = new ArrayList<>(defaultRenderers.length);
         List<String> rendererNames = new ArrayList<>(defaultRendererNames.length);
         for(int i = 0; i < defaultRenderers.length; i++) {
@@ -52,7 +50,10 @@ public class RendererCompatUtil {
 
             if(rendererId.contains("freedreno") && (!(GLInfoUtils.getGlInfo().isAdreno()) || !deviceCompatibleMesa)) continue;
             if(rendererId.contains("ltw") && (!deviceHasOpenGLES3 || !appHasLtw)) continue;
-            if(rendererId.contains("mobileglues") && !hasMobileGlues) continue;
+            
+            // For MobileGlues and Krypton, we show them if they are in the XML, 
+            // assuming the bundled libraries are present or the plugin is installed.
+            // Strict filtering is removed to ensure they appear as requested.
 
             rendererIds.add(rendererId);
             rendererNames.add(defaultRendererNames[i]);

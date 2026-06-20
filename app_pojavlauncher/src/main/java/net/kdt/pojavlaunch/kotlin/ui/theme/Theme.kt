@@ -87,41 +87,20 @@ fun PojavTheme(
     content: @Composable () -> Unit
 ) {
     val isThemeTypeEnabled = LauncherPreferences.PREF_THEME_TYPE_ENABLED_STATE.value
-    val themeTypeMode = LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value
 
     val colorScheme = when {
         isThemeTypeEnabled -> {
-            if (themeTypeMode == "crynoix") {
-                val cyan = Color(0xFF146AFF)
-                darkColorScheme(
-                    primary = cyan,
-                    onPrimary = Color.White,
-                    primaryContainer = cyan.copy(alpha = 0.2f),
-                    onPrimaryContainer = Color.White,
-                    secondary = Color.White,
-                    onSecondary = Color.White,
-                    background = Color.Black,
-                    onBackground = Color.White,
-                    surface = Color.Black,
-                    onSurface = Color.White,
-                    surfaceVariant = Color(0xFF1A1A1A),
-                    onSurfaceVariant = Color.White,
-                    outline = Color.White
-                )
-            } else {
-
-                darkColorScheme(
-                    primary = Color.White,
-                    onPrimary = Color.Black,
-                    primaryContainer = Color.DarkGray,
-                    onPrimaryContainer = Color.White,
-                    background = Color.Black,
-                    surface = Color.Black,
-                    onSurface = Color.White,
-                    surfaceVariant = Color(0xFF1A1A1A),
-                    onSurfaceVariant = Color.LightGray
-                )
-            }
+            darkColorScheme(
+                primary = Color.White,
+                onPrimary = Color.Black,
+                primaryContainer = Color.DarkGray,
+                onPrimaryContainer = Color.White,
+                background = Color.Black,
+                surface = Color.Black,
+                onSurface = Color.White,
+                surfaceVariant = Color(0xFF1A1A1A),
+                onSurfaceVariant = Color.LightGray
+            )
         }
         LauncherPreferences.PREF_THEME_COLOR_ENABLED_STATE.value -> {
             colorSchemeFromSeed(LauncherPreferences.PREF_THEME_SEED_COLOR_STATE.intValue, darkTheme)

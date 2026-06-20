@@ -36,6 +36,8 @@ public class JREUtils {
         envMap.put("ANGLE_PLATFORM", "vulkan");
         envMap.put("ANGLE_VULKAN_IMAGE_DEFAULT_MAX_SAMPLES", "4");
         envMap.put("POJAV_ANGLE_PATH", angle.resolveAbsolutePath("libEGL_angle.so"));
+
+
     }
 
     public static void setupFfmpegEnv(Context ctx, Map<String, String> envMap) {
@@ -55,9 +57,24 @@ public class JREUtils {
         }
         String libPath = mobileGlues.getLibraryPath();
         envMap.put("MOBILEGLUES_LIB_PATH", libPath);
+        envMap.put("MG_DIR_PATH", Tools.DIR_DATA + "/MobileGlues");
+        envMap.put("POJAVEXEC_EGL", "libmobileglues.so");
 
         String existingLd = System.getenv("LD_LIBRARY_PATH");
         envMap.put("LD_LIBRARY_PATH", Tools.NATIVE_LIB_DIR + ":" + libPath + (existingLd != null ? ":" + existingLd : ""));
+        
+        envMap.put("POJAV_ORIENTATION", "landscape");
+        envMap.put("FCL_ORIENTATION", "landscape");
+        envMap.put("FCL_RENDER_ORIENTATION", "landscape");
+        envMap.put("MOBILEGLUES_GLES_VERSION", "32"); // Force GLES 3.2 on Adreno
+        envMap.put("MOBILEGLUES_SKIP_VALIDATION", "1");
+        envMap.put("MOBILEGLUES_ENABLE_CACHE", "1");
+        envMap.put("MOBILEGLUES_CACHE_DIR", Tools.DIR_CACHE + "/mg_shader_cache");
+
+        if (GLInfoUtils.getGlInfo().isAdreno()) {
+            envMap.put("MOBILEGLUES_ADRENO_QUIRKS", "1");
+            envMap.put("ADRENO_PIXELFLINGER_OPT", "1");
+        }
 
         try {
 
@@ -70,13 +87,52 @@ public class JREUtils {
         }
     }
 
+    public static void setupKryptonEnv(Context ctx, Map<String, String> envMap) {
+        LibraryPlugin krypton = LibraryPlugin.discoverPlugin(ctx, LibraryPlugin.ID_KRYPTON_PLUGIN);
+        if (krypton == null) return;
+
+        String[] kLibs = {"libkrypton.so"};
+        if (!krypton.checkLibraries(kLibs)) {
+            Log.e("KryptonEnvSetup", "Krypton plugin exists, but the libraries are not present.");
+            return;
+        }
+        String libPath = krypton.getLibraryPath();
+        envMap.put("KRYPTON_LIB_PATH", libPath);
+        envMap.put("POJAVEXEC_EGL", "libkrypton.so");
+
+        String existingLd = System.getenv("LD_LIBRARY_PATH");
+        envMap.put("LD_LIBRARY_PATH", Tools.NATIVE_LIB_DIR + ":" + libPath + (existingLd != null ? ":" + existingLd : ""));
+        
+        envMap.put("POJAV_ORIENTATION", "landscape");
+        envMap.put("FCL_ORIENTATION", "landscape");
+        envMap.put("FCL_RENDER_ORIENTATION", "landscape");
+        envMap.put("FCL_FORCE_LANDSCAPE", "1");
+        envMap.put("POJAV_RENDERER", "krypton");
+        
+        envMap.put("KRYPTON_FORCE_LANDSCAPE", "1");
+
+        try {
+            System.load(krypton.resolveAbsolutePath("libkrypton.so"));
+            Log.i("KryptonEnvSetup", "Successfully preloaded Krypton library");
+        } catch (Throwable e) {
+            Log.e("KryptonEnvSetup", "Failed to preload Krypton: " + e.getMessage());
+        }
+    }
+
     public static void setupRendererEnv(Map<String, String> envMap, String renderer) {
+        if (renderer != null) {
+            envMap.put("AMETHYST_RENDERER", renderer);
+        }
+
         switch(renderer) {
             case "vulkan_zink":
                 envMap.put("GALLIUM_DRIVER", "zink");
                 envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "zink");
-
+                envMap.put("MESA_GL_VERSION_OVERRIDE", "4.6COMPAT");
                 envMap.put("MESA_GLSL_VERSION_OVERRIDE", "460");
+                if (Tools.isAndroid8OrHigher()) { // Rough check for modern devices
+                     envMap.put("FD_DEV_FEATURES", "enable_tp_ubwc_flag_hint=1");
+                }
                 break;
             case "freedreno_kgsl":
                 if(GLInfoUtils.getGlInfo().isAdreno()) {
@@ -105,6 +161,7 @@ public class JREUtils {
         if(PREF_VSYNC_IN_ZINK)
             envMap.put("POJAV_VSYNC_IN_ZINK", "1");
 
+
         envMap.put("LIBGL_ES", (String) ExtraCore.getValue(ExtraConstants.OPEN_GL_VERSION));
 
         envMap.put("FORCE_VSYNC", String.valueOf(LauncherPreferences.PREF_FORCE_VSYNC));
@@ -125,6 +182,7 @@ public class JREUtils {
         }
         setupFfmpegEnv(context, envMap);
         setupMobileGluesEnv(context, envMap);
+        setupKryptonEnv(context, envMap);
         setupRendererEnv(envMap, renderer);
 
         String nativeDir = Tools.NATIVE_LIB_DIR;
@@ -133,9 +191,13 @@ public class JREUtils {
 
             nativeDir = nativeDir + ":" + mgLibPath;
         }
+        String kLibPath = envMap.get("KRYPTON_LIB_PATH");
+        if (kLibPath != null && !kLibPath.equals(mgLibPath)) {
+            nativeDir = nativeDir + ":" + kLibPath;
+        }
         envMap.put("POJAV_NATIVEDIR", nativeDir);
         envMap.put("EGL_PLATFORM", "android");
-
+        envMap.put("POJAV_RENDERER_THREAD_PRIORITY", "-10");
         if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
 
         if(GLInfoUtils.getGlInfo().isAdreno() && !PREF_ZINK_PREFER_SYSTEM_DRIVER) {
@@ -147,6 +209,11 @@ public class JREUtils {
             Logger.appendToLog("Will use sysmem rendering for Turnip/Freedreno");
             envMap.put("FD_MESA_DEBUG", "sysmem");
             envMap.put("TU_DEBUG", "sysmem");
+        }
+
+        if (GLInfoUtils.getGlInfo().isAdreno()) {
+            envMap.put("ADRENOTOOLS_FORCE_UBWC", "1"); // Unified Bandwidth Compression
+            envMap.put("MESA_SHADER_CACHE_MAX_SIZE", "512M");
         }
 
         overrideEnvVars(envMap);
@@ -256,6 +323,24 @@ public class JREUtils {
                     try {
                         System.loadLibrary("shaderconv");
                         System.loadLibrary("spirv-cross-c-shared");
+                        System.load(renderLibrary);
+                    } catch (Throwable ignored) {}
+
+                    break;
+                }
+
+            case "krypton":
+                LibraryPlugin krypton = LibraryPlugin.discoverPlugin(ContextExecutor.getContext(), LibraryPlugin.ID_KRYPTON_PLUGIN);
+                if (krypton != null) {
+                    renderLibrary = krypton.resolveAbsolutePath("libkrypton.so");
+                    useGles = true;
+                    glesVersion = 3;
+
+                    bypassNamespace = true;
+
+                    setLdLibraryPath(Tools.NATIVE_LIB_DIR + ":" + krypton.getLibraryPath());
+
+                    try {
                         System.load(renderLibrary);
                     } catch (Throwable ignored) {}
 

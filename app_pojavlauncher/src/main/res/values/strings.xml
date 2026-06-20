@@ -73,7 +73,8 @@
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions, mid</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno - all versions, fast, Adreno-only</string>
     <string name="mcl_setting_renderer_ltw">LTW (OpenGL ES 3) - 1.17+ only, fast</string>
-    <string name="mcl_setting_renderer_mobileglues">Mobile Glues - FCL Renderer</string>
+    <string name="mcl_setting_renderer_mobileglues">Mobile Glues - fast</string>
+    <string name="mcl_setting_renderer_krypton">Krypton Wrapper</string>
     <string name="mcl_setting_veroption_release">Release</string>
     <string name="mcl_setting_veroption_snapshot">Snapshot</string>
     <string name="mcl_setting_veroption_oldalpha">Old-alpha</string>
@@ -98,6 +99,7 @@
     <string name="global_retry">Retry</string>
     <string name="global_default">Default</string>
     <string name="global_install">Install</string>
+    <string name="global_refresh">Refresh</string>
 
     <!-- MainActivity: strings -->
     <string name="mcn_exit_title">Application/Game exited with code %d, check latestlog.txt for more details.</string>
@@ -293,6 +295,7 @@
     <string name="global_save_and_exit">Save and exit</string>
     <string name="global_yes">Yes</string>
     <string name="global_no">No</string>
+    <string name="continue_anyway">Continue anyway</string>
 
     <string name="preference_controller_map_wiped">The controller config has been wiped.</string>
     <string name="preference_category_controller_settings">Controller settings</string>

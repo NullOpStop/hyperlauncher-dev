@@ -130,6 +130,31 @@ class DirectoryManagerViewModel : ViewModel() {
         }
     }
 
+    fun toggleSelectedDisabled() {
+        val selected = selectedFile ?: return
+        if (selected.isDirectory || !isWithinRoot(selected)) return
+
+        val newName = if (selected.name.endsWith(".disabled")) {
+            selected.name.removeSuffix(".disabled")
+        } else {
+            "${selected.name}.disabled"
+        }
+        if (newName.isEmpty() || newName == selected.name) return
+
+        val target = File(selected.parentFile, newName)
+        if (!isWithinRoot(target)) return
+        if (target.exists()) {
+            statusText = "Name already taken"
+            return
+        }
+        if (selected.renameTo(target)) {
+            statusText = "Renamed to $newName"
+            refresh()
+        } else {
+            statusText = "Rename failed"
+        }
+    }
+
     fun deleteSelected() {
         val selected = selectedFile ?: return
         if (!isWithinRoot(selected)) return

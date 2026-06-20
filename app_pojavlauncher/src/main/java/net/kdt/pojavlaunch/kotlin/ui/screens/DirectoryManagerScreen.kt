@@ -64,6 +64,7 @@ fun DirectoryManagerScreen(
     onUploadClick: () -> Unit,
     onNewFolderClick: () -> Unit,
     onRenameClick: () -> Unit,
+    onToggleDisabledClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
     val leftScrollState = rememberScrollState()
@@ -73,6 +74,15 @@ fun DirectoryManagerScreen(
 
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
     val hasBackground = backgroundBitmap != null
+    val currentFolderName = breadcrumbs.lastOrNull()?.first?.lowercase()
+    val canToggleDisabled = currentFolderName in setOf("mods", "shaderpacks", "resourcepacks") &&
+        selectedFile != null &&
+        !selectedFile.isDirectory
+    val toggleDisabledText = if (selectedFile?.name?.endsWith(".disabled") == true) {
+        "Enable file"
+    } else {
+        "Disable file"
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -176,6 +186,14 @@ fun DirectoryManagerScreen(
                             onClick = onRenameClick,
                             enabled = selectedFile != null
                         )
+                        if (currentFolderName in setOf("mods", "shaderpacks", "resourcepacks")) {
+                            FileActionButton(
+                                text = toggleDisabledText,
+                                icon = R.drawable.ic_px_edit,
+                                onClick = onToggleDisabledClick,
+                                enabled = canToggleDisabled
+                            )
+                        }
                         FileActionButton(
                             text = "Delete",
                             icon = R.drawable.ic_px_trash,
@@ -213,19 +231,33 @@ fun DirectoryManagerScreen(
                     },
                     label = "fileSwitch"
                 ) { currentEntries ->
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 8.dp)
-                    ) {
-                        items(currentEntries, key = { it.absolutePath }) { entry ->
-                            FileEntryItem(
-                                file = entry,
-                                isSelected = selectedFile == entry,
-                                onClick = { onEntryClick(entry) },
-                                onLongClick = { onEntryLongClick(entry) }
+                    if (currentEntries.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "This folder is empty",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 8.dp)
+                        ) {
+                            items(currentEntries, key = { it.absolutePath }) { entry ->
+                                FileEntryItem(
+                                    file = entry,
+                                    isSelected = selectedFile == entry,
+                                    onClick = { onEntryClick(entry) },
+                                    onLongClick = { onEntryLongClick(entry) }
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
                         }
                     }
                 }

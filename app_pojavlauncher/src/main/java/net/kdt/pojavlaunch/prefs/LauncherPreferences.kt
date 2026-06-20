@@ -3,9 +3,7 @@ package net.kdt.pojavlaunch.prefs
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.Rect
 import android.os.Build
-import android.util.DisplayMetrics
 import android.util.Log
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
@@ -26,6 +24,9 @@ object LauncherPreferences {
     const val PREF_KEY_THEME_TYPE_ENABLED = "themeTypeEnabled"
     const val PREF_KEY_THEME_TYPE_MODE = "themeTypeMode"
     const val PREF_KEY_SKIP_UPDATE_CHECK = "skipUpdateCheck"
+    const val PREF_KEY_LATEST_ACKNOWLEDGED_VERSION = "latestAcknowledgedVersion"
+    const val PREF_KEY_DELETE_OLD_LOGS = "deleteOldLogs"
+    const val PREF_KEY_LOG_MAX_DAYS = "logMaxDays"
 
     @JvmField
     var DEFAULT_PREF: SharedPreferences? = null
@@ -34,7 +35,7 @@ object LauncherPreferences {
     var PREF_RENDERER = "ltw"
 
     @JvmField
-    var PREF_IGNORE_NOTCH = false
+    var PREF_IGNORE_NOTCH = true
 
     @JvmField
     var PREF_BUTTONSIZE = 100f
@@ -81,7 +82,7 @@ object LauncherPreferences {
     var PREF_ENABLE_PHYSICAL_MOUSE = false
 
     @JvmField
-    var PREF_USE_ALTERNATE_SURFACE = true
+    var PREF_USE_ALTERNATE_SURFACE = false
 
     @JvmField
     var PREF_JAVA_SANDBOX = true
@@ -132,6 +133,9 @@ object LauncherPreferences {
     var PREF_SKIP_UPDATE_CHECK = false
 
     @JvmField
+    var PREF_LATEST_ACKNOWLEDGED_VERSION: String? = null
+
+    @JvmField
     var PREF_VERIFY_MANIFEST = true
 
     @JvmField
@@ -141,7 +145,7 @@ object LauncherPreferences {
     var PREF_SKIP_NOTIFICATION_PERMISSION_CHECK = false
 
     @JvmField
-    var PREF_VSYNC_IN_ZINK = true
+    var PREF_VSYNC_IN_ZINK = false
 
     @JvmField
     var PREF_RAPID_START = true
@@ -213,6 +217,15 @@ object LauncherPreferences {
     var PREF_BACKGROUND_PATH: String? = null
 
     @JvmField
+    var PREF_BACKGROUND_VIDEO_PATH: String? = null
+
+    @JvmField
+    var PREF_BACKGROUND_VIDEO_LOOP = true
+
+    @JvmField
+    var PREF_BACKGROUND_VIDEO_VOLUME = 0f
+
+    @JvmField
     var PREF_BACKGROUND_TRANSPARENCY = 0f
 
     @JvmField
@@ -230,6 +243,18 @@ object LauncherPreferences {
     @JvmField
     var PREF_TRANSITION_INTENSITY = 1f
 
+    @JvmField
+    var PREF_DELETE_OLD_LOGS = false
+
+    @JvmField
+    var PREF_LOG_MAX_DAYS = 5
+
+    @JvmField
+    var PREF_VOLUME_UP_KEYBIND = 0
+
+    @JvmField
+    var PREF_VOLUME_DOWN_KEYBIND = 0
+
     val prefAppThemeState: MutableState<String> = mutableStateOf("system")
     val PREF_THEME_SEED_COLOR_STATE: MutableIntState = mutableIntStateOf(-0x98581)
     val PREF_THEME_COLOR_ENABLED_STATE: MutableState<Boolean> = mutableStateOf(false)
@@ -239,15 +264,16 @@ object LauncherPreferences {
     val PREF_MOUSE_ICON_PATH_STATE: MutableState<String?> = mutableStateOf(null)
 
     val PREF_BACKGROUND_PATH_STATE: MutableState<String?> = mutableStateOf(null)
+    val PREF_BACKGROUND_VIDEO_PATH_STATE: MutableState<String?> = mutableStateOf(null)
+    val PREF_BACKGROUND_VIDEO_LOOP_STATE: MutableState<Boolean> = mutableStateOf(true)
+    val PREF_BACKGROUND_VIDEO_VOLUME_STATE: MutableState<Float> = mutableStateOf(0f)
     val PREF_BACKGROUND_TRANSPARENCY_STATE: MutableState<Float> = mutableStateOf(0f)
     val PREF_BACKGROUND_BLUR_STATE: MutableState<Float> = mutableStateOf(0f)
     val PREF_BACKGROUND_BLUR_ENABLED_STATE: MutableState<Boolean> = mutableStateOf(false)
 
     val PREF_TRANSITION_ANIMATION_STATE: MutableState<String> = mutableStateOf("default")
-    val PREF_TRANSITION_DURATION_STATE: MutableState<Int> = mutableStateOf(300)
+    val PREF_TRANSITION_DURATION_STATE: MutableIntState = mutableIntStateOf(300)
     val PREF_TRANSITION_INTENSITY_STATE: MutableState<Float> = mutableStateOf(1f)
-
-    val PREF_SHOW_CRYNOIX_LOADING: MutableState<Boolean> = mutableStateOf(false)
 
     @JvmStatic
     fun applyTheme() {
@@ -329,6 +355,12 @@ object LauncherPreferences {
 
         PREF_BACKGROUND_PATH = prefs.getString("backgroundPath", null)
         PREF_BACKGROUND_PATH_STATE.value = PREF_BACKGROUND_PATH
+        PREF_BACKGROUND_VIDEO_PATH = prefs.getString("backgroundVideoPath", null)
+        PREF_BACKGROUND_VIDEO_PATH_STATE.value = PREF_BACKGROUND_VIDEO_PATH
+        PREF_BACKGROUND_VIDEO_LOOP = prefs.getBoolean("backgroundVideoLoop", true)
+        PREF_BACKGROUND_VIDEO_LOOP_STATE.value = PREF_BACKGROUND_VIDEO_LOOP
+        PREF_BACKGROUND_VIDEO_VOLUME = prefs.getFloat("backgroundVideoVolume", 0f)
+        PREF_BACKGROUND_VIDEO_VOLUME_STATE.value = PREF_BACKGROUND_VIDEO_VOLUME
         PREF_BACKGROUND_TRANSPARENCY = prefs.getFloat("backgroundTransparency", 0f)
         PREF_BACKGROUND_TRANSPARENCY_STATE.value = PREF_BACKGROUND_TRANSPARENCY
         PREF_BACKGROUND_BLUR = prefs.getFloat("backgroundBlur", 0f)
@@ -339,13 +371,20 @@ object LauncherPreferences {
         PREF_TRANSITION_ANIMATION = prefs.getString("transitionAnimation", "default") ?: "default"
         PREF_TRANSITION_ANIMATION_STATE.value = PREF_TRANSITION_ANIMATION
         PREF_TRANSITION_DURATION = prefs.getInt("transitionDuration", 300)
-        PREF_TRANSITION_DURATION_STATE.value = PREF_TRANSITION_DURATION
+        PREF_TRANSITION_DURATION_STATE.intValue = PREF_TRANSITION_DURATION
         PREF_TRANSITION_INTENSITY = prefs.getFloat("transitionIntensity", 1f)
         PREF_TRANSITION_INTENSITY_STATE.value = PREF_TRANSITION_INTENSITY
 
+        PREF_DELETE_OLD_LOGS = prefs.getBoolean(PREF_KEY_DELETE_OLD_LOGS, false)
+        PREF_LOG_MAX_DAYS = prefs.getInt(PREF_KEY_LOG_MAX_DAYS, 5)
+
         PREF_SKIP_UPDATE_CHECK = prefs.getBoolean(PREF_KEY_SKIP_UPDATE_CHECK, false)
+        PREF_LATEST_ACKNOWLEDGED_VERSION = prefs.getString(PREF_KEY_LATEST_ACKNOWLEDGED_VERSION, null)
 
         PREF_CUSTOM_ENV_VARS = prefs.getString("customEnvVars", "")
+
+        PREF_VOLUME_UP_KEYBIND = prefs.getInt("volumeUpKeybind", 0)
+        PREF_VOLUME_DOWN_KEYBIND = prefs.getInt("volumeDownKeybind", 0)
 
         val argLwjglLibname = "-Dorg.lwjgl.opengl.libname="
         val customArgs = PREF_CUSTOM_JAVA_ARGS

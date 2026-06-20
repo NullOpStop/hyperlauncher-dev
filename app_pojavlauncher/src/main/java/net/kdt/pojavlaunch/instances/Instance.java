@@ -23,6 +23,7 @@ public class Instance extends DisplayInstance {
 
     public InstanceInstaller installer;
     public String renderer;
+    public String preferredBackend;
     public String jvmArgs;
     public int argsMode;
     public String selectedRuntime;

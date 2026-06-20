@@ -1,7 +1,6 @@
 package net.kdt.pojavlaunch;
 
 import static net.kdt.pojavlaunch.MainActivity.touchCharInput;
-import static net.kdt.pojavlaunch.utils.MCOptionUtils.getMcScale;
 import static net.kdt.pojavlaunch.CallbackBridge.sendMouseButton;
 import static net.kdt.pojavlaunch.CallbackBridge.windowHeight;
 import static net.kdt.pojavlaunch.CallbackBridge.windowWidth;
@@ -12,6 +11,7 @@ import android.content.Context;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Display;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -68,7 +68,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     /* Sensitivity, adjusted according to screen size */
     private final double mSensitivityFactor = (1.4 * (1080f/ Tools.getDisplayMetrics((Activity) getContext()).heightPixels));
 
-    private final SurfaceProvider mSurfaceProvider = LauncherPreferences.PREF_USE_ALTERNATE_SURFACE ? new SurfaceViewSurfaceProvider() : new TextureViewSurfaceProvider();
+    private SurfaceProvider mSurfaceProvider;
     private boolean mRefreshOnly = true;
     /* Surface ready listener, used by the activity to launch minecraft */
     SurfaceReadyListener mSurfaceReadyListener = null;
@@ -112,6 +112,15 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         if (Tools.isAndroid8OrHigher()) setUpPointerCapture();
         mInGUIProcessor.setAbstractTouchpad(touchpad);
         mRefreshOnly = isAlreadyRunning;
+
+        boolean useSurfaceView = LauncherPreferences.PREF_USE_ALTERNATE_SURFACE;
+        // Fix for Zink/Krypton: force TextureView if orientation bugs are expected
+        if (useSurfaceView && Tools.LOCAL_RENDERER != null && 
+            (Tools.LOCAL_RENDERER.contains("zink") || Tools.LOCAL_RENDERER.contains("krypton"))) {
+            useSurfaceView = false;
+        }
+
+        mSurfaceProvider = useSurfaceView ? new SurfaceViewSurfaceProvider() : new TextureViewSurfaceProvider();
         mSurface = mSurfaceProvider.create(getContext(), this);
 
         ((ViewGroup) getParent()).addView(mSurface, 0);
@@ -210,6 +219,16 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
         int eventKeycode = event.getKeyCode();
         if(eventKeycode == KeyEvent.KEYCODE_UNKNOWN) return true;
+
+        if (eventKeycode == KeyEvent.KEYCODE_VOLUME_UP && LauncherPreferences.PREF_VOLUME_UP_KEYBIND != 0) {
+            GLFW.sendKeyEvent(LauncherPreferences.PREF_VOLUME_UP_KEYBIND, event.getAction() == KeyEvent.ACTION_DOWN ? 1 : 0, CallbackBridge.getCurrentMods());
+            return true;
+        }
+        if (eventKeycode == KeyEvent.KEYCODE_VOLUME_DOWN && LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND != 0) {
+            GLFW.sendKeyEvent(LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND, event.getAction() == KeyEvent.ACTION_DOWN ? 1 : 0, CallbackBridge.getCurrentMods());
+            return true;
+        }
+
         if(eventKeycode == KeyEvent.KEYCODE_VOLUME_DOWN) return false;
         if(eventKeycode == KeyEvent.KEYCODE_VOLUME_UP) return false;
         if(event.getRepeatCount() != 0) return true;
@@ -282,8 +301,19 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
             return;
         }
 
-        int newWidth = Tools.getDisplayFriendlyRes(getWidth(), LauncherPreferences.PREF_SCALE_FACTOR);
-        int newHeight = Tools.getDisplayFriendlyRes(getHeight(), LauncherPreferences.PREF_SCALE_FACTOR);
+        int currentWidth = getWidth();
+        int currentHeight = getHeight();
+
+        // Fix for stretching: Ensure we use the larger dimension as width for landscape.
+        // Sometimes getWidth/getHeight return portrait values during startup rotation.
+        if (currentWidth < currentHeight && currentWidth > 0) {
+            int temp = currentWidth;
+            currentWidth = currentHeight;
+            currentHeight = temp;
+        }
+
+        int newWidth = Tools.getDisplayFriendlyRes(currentWidth, LauncherPreferences.PREF_SCALE_FACTOR);
+        int newHeight = Tools.getDisplayFriendlyRes(currentHeight, LauncherPreferences.PREF_SCALE_FACTOR);
         if (newHeight < 1 || newWidth < 1) {
             Log.e("MGLSurface", String.format("Impossible resolution : %dx%d", newWidth, newHeight));
             return;
@@ -297,15 +327,29 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         mSurfaceProvider.updateSize();
     }
 
-    private void realStart(){
-
+    private void realStart(Surface surface){
+        // Initial size set. Request immediate refresh.
         refreshSize(true);
+        
+        // Fix: Set high frame rate for the surface on Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                Display display = getDisplay();
+                if (display != null) {
+                    float maxHz = 60f;
+                    for (Display.Mode mode : display.getSupportedModes()) {
+                        if (mode.getRefreshRate() > maxHz) maxHz = mode.getRefreshRate();
+                    }
+                    surface.setFrameRate(maxHz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT, Surface.CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS);
+                }
+            } catch (Throwable ignored) {}
+        }
 
         MCOptionUtils.set("fullscreen", "off");
         MCOptionUtils.set("overrideWidth", String.valueOf(windowWidth));
         MCOptionUtils.set("overrideHeight", String.valueOf(windowHeight));
         MCOptionUtils.save();
-        getMcScale();
+        MCOptionUtils.getMcScale();
 
         new Thread(() -> {
             try {
@@ -342,7 +386,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     public void onSurfaceAvailable(Surface surface) {
         GLFW.nativeSurfaceCreated(surface);
         if(mRefreshOnly) return;
-        realStart();
+        realStart(surface);
         mRefreshOnly = true;
     }
 

@@ -46,7 +46,6 @@ import net.kdt.pojavlaunch.instances.InstanceIconProvider
 fun ProfileSelectionScreen(
     onImportClick: () -> Unit,
     onCreateClick: () -> Unit,
-    onSelectDirClick: () -> Unit,
     onEditClick: (Instance) -> Unit,
     onDeleteClick: (Instance) -> Unit,
     onSelect: (Instance) -> Unit,
@@ -153,11 +152,6 @@ fun ProfileSelectionScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         ProfileActionButton(
-                            text = stringResource(id = R.string.main_select_instance_directory),
-                            icon = R.drawable.ic_px_folder,
-                            onClick = onSelectDirClick
-                        )
-                        ProfileActionButton(
                             text = "Search ModPacks",
                             icon = R.drawable.ic_px_download,
                             onClick = onSearchModClick
@@ -253,6 +247,7 @@ fun ProfileActionButton(text: String, icon: Int, onClick: () -> Unit) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Icon(painter = painterResource(id = icon), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimary)
             Spacer(modifier = Modifier.width(12.dp))
+            @Suppress("DEPRECATION")
             Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }

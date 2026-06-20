@@ -6,6 +6,7 @@
         <item name="3">@string/mcl_setting_renderer_freedreno_kgsl</item>
         <item name="4">@string/mcl_setting_renderer_ltw</item>
         <item name="5">@string/mcl_setting_renderer_mobileglues</item>
+        <item name="6">@string/mcl_setting_renderer_krypton</item>
     </string-array>
 
     <string-array name="menu_customcontrol">
@@ -42,6 +43,7 @@
         <item>freedreno_kgsl</item> <!-- freedreno gallium driver with OpenGL 4.6 -->
         <item>opengles3_ltw</item> <!-- GL Core on GLES wrapper with GL3/4 -->
         <item>mobileglues</item> <!-- FCL mobile glues renderer -->
+        <item>krypton</item> <!-- FCL krypton renderer -->
     </string-array>
     <string-array name="download_source_names">
         <item>@string/global_default</item>

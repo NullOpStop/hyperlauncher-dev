@@ -19,6 +19,9 @@ import androidx.fragment.app.FragmentManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import net.kdt.pojavlaunch.authenticator.AuthType;
+import net.kdt.pojavlaunch.authenticator.listener.LoginListener;
+import net.kdt.pojavlaunch.authenticator.accounts.MinecraftAccount;
 import net.kdt.pojavlaunch.authenticator.accounts.Accounts;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
@@ -90,11 +93,50 @@ public class LauncherActivity extends BaseActivity {
             return false;
         }
 
-        if(Accounts.getCurrent() == null){
+        MinecraftAccount currentAccount = Accounts.getCurrent();
+        if(currentAccount == null){
             Toast.makeText(this, R.string.no_saved_accounts, Toast.LENGTH_LONG).show();
             ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD, true);
             return false;
         }
+
+        if (currentAccount.authType == AuthType.MICROSOFT) {
+            refreshAndLaunch(currentAccount, selectedInstance);
+        } else {
+            performGameLaunch(selectedInstance);
+        }
+        return false;
+    };
+
+    private void refreshAndLaunch(MinecraftAccount account, Instance selectedInstance) {
+        account.authType.createAuth().refreshAccount(new LoginListener() {
+            @Override
+            public void onLoginDone(MinecraftAccount refreshedAccount) {
+                performGameLaunch(selectedInstance);
+            }
+
+            @Override
+            public void onLoginError(Throwable errorMessage) {
+                Tools.runOnUiThread(() -> {
+                    new MaterialAlertDialogBuilder(LauncherActivity.this)
+                            .setTitle(R.string.global_error)
+                            .setMessage(errorMessage.getMessage())
+                            .setPositiveButton(R.string.continue_anyway, (d, w) -> performGameLaunch(selectedInstance))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .setNeutralButton(R.string.global_refresh, (d, w) -> refreshAndLaunch(account, selectedInstance))
+                            .show();
+                });
+            }
+
+            @Override
+            public void onLoginProgress(int step) {}
+
+            @Override
+            public void setMaxLoginProgress(int max) {}
+        }, account);
+    }
+
+    private void performGameLaunch(Instance selectedInstance) {
         String normalizedVersionId = AsyncMinecraftDownloader.normalizeVersionId(selectedInstance.versionId);
         JMinecraftVersionList.Version mcVersion = AsyncMinecraftDownloader.getListedVersion(normalizedVersionId);
         new MinecraftDownloader().start(
@@ -103,8 +145,7 @@ public class LauncherActivity extends BaseActivity {
                 normalizedVersionId,
                 new ContextAwareDoneListener(this, normalizedVersionId)
         );
-        return false;
-    };
+    }
 
     private final TaskCountListener mDoubleLaunchPreventionListener = taskCount -> {
 

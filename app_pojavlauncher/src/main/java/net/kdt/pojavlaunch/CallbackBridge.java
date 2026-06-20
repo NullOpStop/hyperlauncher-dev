@@ -2,12 +2,14 @@ package net.kdt.pojavlaunch;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.util.DisplayMetrics;
 import android.view.Choreographer;
 import android.view.KeyEvent;
 
 import androidx.annotation.Keep;
 
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 import java.io.File;
 
@@ -123,6 +125,14 @@ public class CallbackBridge {
                 Tools.showError(ctx, th);
             }
         });
+    }
+
+    @Keep // Used to implement glfwGetWindowContentScale
+    private static float getAndroidDPI(){
+        DisplayMetrics metrics = new DisplayMetrics();
+        metrics.setToDefaults();
+        // Multiply by scale factor because we scale the resolution on this, so we also scale DPI on it
+        return metrics.density * LauncherPreferences.PREF_SCALE_FACTOR;
     }
 
     public static native void minibridgeInit();

@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.utils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.Tools;
@@ -12,11 +13,12 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 
 public class DateUtils {
+
     /**
-     * Parse the release date of a game version from the JMinecraftVersionList.Version time or releaseTime fields
-     * @param releaseTime the time or releaseTime string from JMinecraftVersionList.Version
-     * @return the date object
-     * @throws ParseException if date parsing fails
+     * Parses the date string from the Minecraft version list.
+     * @param releaseTime the date string in ISO 8601 format or yyyy-MM-dd
+     * @return a Date object representing the release time
+     * @throws ParseException if the date string is not in a recognized format
      */
     public static Date parseReleaseDate(String releaseTime) throws ParseException {
         if(releaseTime == null) return null;
@@ -34,7 +36,8 @@ public class DateUtils {
      * @param dayOfMonth the day of the month
      * @return true if the Date is before year, month, dayOfMonth, false otherwise
      */
-    public static boolean dateBefore(@NonNull Date date, int year, int month, int dayOfMonth) {
+    public static boolean dateBefore(@Nullable Date date, int year, int month, int dayOfMonth) {
+        if (date == null) return false;
         return date.before(new Date(new GregorianCalendar(year, month, dayOfMonth).getTimeInMillis()));
     }
 
@@ -47,7 +50,6 @@ public class DateUtils {
         if(Tools.isValidString(gameVersion.inheritsFrom)) {
             gameVersion = Tools.getVersionInfo(gameVersion.inheritsFrom, true);
         }else {
-
             gameVersion = Tools.getVersionInfo(gameVersion.id, true);
         }
         return parseReleaseDate(gameVersion.releaseTime);

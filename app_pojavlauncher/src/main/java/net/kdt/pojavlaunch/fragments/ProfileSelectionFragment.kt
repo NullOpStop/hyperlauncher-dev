@@ -82,9 +82,6 @@ class ProfileSelectionFragment : Fragment() {
                         onCreateClick = {
                             Tools.swapFragment(requireActivity(), ProfileTypeSelectFragment::class.java, ProfileTypeSelectFragment.TAG, null)
                         },
-                        onSelectDirClick = {
-
-                        },
                         onEditClick = { instance ->
 
                             viewModel.selectInstance(instance)

@@ -22,6 +22,7 @@ public class LibraryPlugin {
     public static final String ID_ANGLE_PLUGIN = "git.mojo.angle";
     public static final String ID_FFMPEG_PLUGIN = "git.mojo.ffmpeg";
     public static final String ID_MOBILEGLUES_PLUGIN = "git.fcl.mobileglues";
+    public static final String ID_KRYPTON_PLUGIN = "git.fcl.krypton";
 
     private static final String[] MOBILEGLUES_PACKAGES = {
             ID_MOBILEGLUES_PLUGIN,
@@ -38,6 +39,16 @@ public class LibraryPlugin {
     }
 
     public static LibraryPlugin discoverPlugin(Context ctx, String appId){
+        // Try bundled first
+        if (ID_MOBILEGLUES_PLUGIN.equals(appId)) {
+            if (new File(ctx.getApplicationInfo().nativeLibraryDir, "libmobileglues.so").exists()) {
+                return new LibraryPlugin(ctx.getPackageName(), ctx.getApplicationInfo().nativeLibraryDir);
+            }
+        } else if (ID_KRYPTON_PLUGIN.equals(appId)) {
+            if (new File(ctx.getApplicationInfo().nativeLibraryDir, "libkrypton.so").exists()) {
+                return new LibraryPlugin(ctx.getPackageName(), ctx.getApplicationInfo().nativeLibraryDir);
+            }
+        }
 
         LibraryPlugin directPlugin = discoverDirect(ctx, appId);
         if (directPlugin != null) return directPlugin;

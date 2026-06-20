@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapRegionDecoder;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.util.Log;
 import android.view.View;
@@ -54,7 +55,7 @@ public class CropperUtils {
         });
     }
 
-    private static void openCropperDialog(Context context, Uri selectedUri,
+    public static void openCropperDialog(Context context, Uri selectedUri,
                                           final CropperReceiver cropperReceiver) {
         ContentResolver contentResolver = context.getContentResolver();
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
@@ -70,13 +71,20 @@ public class CropperUtils {
         bindViews(dialog, cropImageView);
         cropImageView.setAspectRatio(cropperReceiver.getAspectRatio());
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            dialog.dismiss();
-            cropperReceiver.onCropped(cropImageView.crop(cropperReceiver.getTargetMaxSide()));
+            try {
+                Bitmap cropped = cropImageView.crop(cropperReceiver.getTargetMaxSide());
+                dialog.dismiss();
+                cropperReceiver.onCropped(cropped);
+            } catch (Exception e) {
+                Log.e("CropperUtils", "Failed to crop image", e);
+                cropperReceiver.onFailed(e);
+                dialog.dismiss();
+            }
         });
         PojavApplication.sExecutorService.execute(()->{
             CropperBehaviour cropperBehaviour = null;
             try {
-                 cropperBehaviour = createBehaviour(cropImageView, contentResolver, selectedUri);
+                 cropperBehaviour = createBehaviour(context, cropImageView, contentResolver, selectedUri);
             }catch (Exception e) {
                 cropperReceiver.onFailed(e);
             }
@@ -109,9 +117,33 @@ public class CropperUtils {
         });
     }
 
-    private static CropperBehaviour createBehaviour(CropperView cropImageView,
+    private static CropperBehaviour createBehaviour(Context context,
+                                      CropperView cropImageView,
                                       ContentResolver contentResolver,
                                       Uri selectedUri) throws Exception {
+        // Try video first
+        String type = contentResolver.getType(selectedUri);
+        if (type != null && type.startsWith("video/")) {
+            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+            try {
+                retriever.setDataSource(context, selectedUri);
+                Bitmap frame = retriever.getFrameAtTime(0);
+                if (frame != null) {
+                    BitmapCropBehaviour cropBehaviour = new BitmapCropBehaviour(cropImageView);
+                    cropBehaviour.setBitmap(frame);
+                    return cropBehaviour;
+                }
+            } catch (Exception e) {
+                Log.w("CropperUtils", "Failed to get video frame", e);
+            } finally {
+                try {
+                    retriever.release();
+                } catch (IOException e) {
+                    Log.w("CropperUtils", "Failed to release MediaMetadataRetriever", e);
+                }
+            }
+        }
+
         try (InputStream inputStream = contentResolver.openInputStream(selectedUri)) {
             if(inputStream == null) return null;
             try {

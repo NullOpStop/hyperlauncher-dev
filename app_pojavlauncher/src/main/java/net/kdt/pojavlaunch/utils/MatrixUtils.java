@@ -131,23 +131,25 @@ public class MatrixUtils {
      * can't be inverted, and in that case the method inverts the matrix by hand.
      * @param source Source matrix
      * @param destination The inverse of the source matrix
-     * @throws IllegalArgumentException when the matrix is not invertible
      */
-    public static void inverse(Matrix source, Matrix destination) throws IllegalArgumentException {
+    public static void inverse(Matrix source, Matrix destination) {
         if(source.invert(destination)) return;
         float[] matrix = new float[9];
         source.getValues(matrix);
-        inverseMatrix(matrix);
-        destination.setValues(matrix);
+        if (inverseMatrix(matrix)) {
+            destination.setValues(matrix);
+        } else {
+            destination.reset();
+        }
     }
 
-    private static void inverseMatrix(float[] matrix) {
+    private static boolean inverseMatrix(float[] matrix) {
         float determinant = matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7])
                 - matrix[1] * (matrix[3] * matrix[8] - matrix[5] * matrix[6])
                 + matrix[2] * (matrix[3] * matrix[7] - matrix[4] * matrix[6]);
 
         if (determinant == 0) {
-            throw new IllegalArgumentException("Matrix is not invertible");
+            return false;
         }
 
         float invDet = 1 / determinant;
@@ -170,5 +172,6 @@ public class MatrixUtils {
         matrix[6] = temp6 * invDet;
         matrix[7] = temp7 * invDet;
         matrix[8] = temp8 * invDet;
+        return true;
     }
 }

@@ -9,7 +9,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import net.kdt.pojavlaunch.Tools
 import net.kdt.pojavlaunch.instances.Instances
-import net.kdt.pojavlaunch.ui.screens.ProfileTypeSelectScreen
+import net.kdt.pojavlaunch.kotlin.ui.screens.ProfileTypeSelectScreen
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import java.io.IOException
 

@@ -1,47 +1,52 @@
 package net.kdt.pojavlaunch.ui.screens
 
 import android.graphics.Bitmap
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.collect
-import androidx.compose.runtime.snapshotFlow
 import net.ashmeet.hyperlauncher.R
+import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ModIconCache
 import net.kdt.pojavlaunch.modloaders.modpacks.models.Constants
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModDetail
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModItem
+import net.kdt.pojavlaunch.ui.theme.PojavTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModSearchScreen(
     searchQuery: String,
@@ -66,270 +71,314 @@ fun ModSearchScreen(
     onInstallClick: (ModItem) -> Unit
 ) {
     val listState = rememberLazyListState()
+    val leftScrollState = rememberScrollState()
+    val isPreview = LocalInspectionMode.current
 
-    LaunchedEffect(Unit) {
-        if (items.isEmpty() && searchQuery.isEmpty() && !isLoading) {
-            onSearchSubmit()
-        }
-    }
+    val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
+    val hasBackground = backgroundBitmap != null
 
     LaunchedEffect(listState, items.size, lastPage, isLoading) {
-        snapshotFlow {
-            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-        }.collect { lastVisibleIndex ->
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }.collect { lastVisibleIndex ->
             if (!lastPage && !isLoading && items.isNotEmpty() && lastVisibleIndex >= items.lastIndex - 1) {
                 onLoadMore()
             }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-            tonalElevation = 1.dp,
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = {
-                            onSearchQueryChange(it)
-                            if (it.isEmpty()) {
-                                onSearchSubmit()
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Search modpacks") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
-                        colors = OutlinedTextFieldDefaults.colors()
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = onFilterClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_filter),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                if (isLoading) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                    }
-                }
-
-                if (statusVisible) {
-                    Text(
-                        text = statusText,
-                        color = statusColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 12.dp)
-        ) {
-            itemsIndexed(
-                items = items,
-                key = { _, item -> item.iconCacheTag }
-            ) { _, item ->
-                val isExpanded = item.id != null && item.id == expandedItemId
-                ModSearchItemCard(
-                    item = item,
-                    expanded = isExpanded,
-                    detail = if (isExpanded) expandedDetail else null,
-                    detailLoading = isExpanded && detailLoading,
-                    selectedVersionIndex = selectedVersionIndex,
-                    tasksRunning = tasksRunning,
-                    onClick = { onItemClick(item) },
-                    onVersionSelected = onVersionSelected,
-                    onInstallClick = { onInstallClick(item) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isPreview) {
+            if (backgroundBitmap != null) {
+                Image(
+                    bitmap = backgroundBitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
+            } else {
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            if (!lastPage && items.isNotEmpty()) {
-                item(key = "load_more_footer") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-                }
-            }
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+        ) {
 
-        Button(onClick = onImportClick, modifier = Modifier.fillMaxWidth()) {
-            Text("Import Local Modpack")
-        }
-    }
-}
-
-@Composable
-private fun ModSearchItemCard(
-    item: ModItem,
-    expanded: Boolean,
-    detail: ModDetail?,
-    detailLoading: Boolean,
-    selectedVersionIndex: Int,
-    tasksRunning: Boolean,
-    onClick: () -> Unit,
-    onVersionSelected: (Int) -> Unit,
-    onInstallClick: () -> Unit
-) {
-    val versionNames = detail?.versionNames?.filterNotNull().orEmpty()
-    val versionIndex = when {
-        versionNames.isEmpty() -> 0
-        selectedVersionIndex < 0 -> 0
-        selectedVersionIndex > versionNames.lastIndex -> versionNames.lastIndex
-        else -> selectedVersionIndex
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
+            Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick),
-                verticalAlignment = Alignment.Top
+                    .weight(0.9f)
+                    .fillMaxHeight()
+                    .padding(end = 8.dp),
+                color = Color.Transparent
             ) {
-                ModIcon(item = item)
+                val selectedItem = remember(expandedItemId, items) { items.find { it.id == expandedItemId } }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                if (selectedItem == null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(leftScrollState)
+                            .padding(4.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = {
+                                onSearchQueryChange(it)
+                                if (it.isEmpty()) onSearchSubmit()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            placeholder = { Text("Search modpacks", fontSize = 13.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            trailingIcon = {
+                                IconButton(onClick = onFilterClick) {
+                                    Icon(painter = painterResource(id = R.drawable.ic_filter), contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() })
+                        )
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.title.orEmpty(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = item.description.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = if (expanded) 12 else 3,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (item.isModpack) {
-                            Surface(
-                                shape = RoundedCornerShape(999.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f)
-                            ) {
-                                Text(
-                                    text = "Modpack",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-                        ) {
+                        if (statusVisible) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = when (item.apiSource) {
-                                    Constants.SOURCE_CURSEFORGE -> "CurseForge"
-                                    Constants.SOURCE_MODRINTH -> "Modrinth"
-                                    else -> "Source"
-                                },
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                text = statusText,
+                                color = statusColor,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Button(
+                            onClick = onImportClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            Text("Import Local Modpack", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
-                }
-            }
+                } else {
 
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(modifier = Modifier.padding(top = 14.dp)) {
-                    when {
-                        detailLoading -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                            }
-                        }
+                    Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(leftScrollState)
+                                .padding(bottom = 60.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            ModIcon(item = selectedItem, size = 64.dp)
 
-                        detail == null -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+
                             Text(
-                                text = "Unable to load version details.",
-                                color = MaterialTheme.colorScheme.error,
-                                fontSize = 13.sp
+                                text = selectedItem.title.orEmpty(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                        }
 
-                        else -> {
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             Text(
-                                text = "Version",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            VersionDropdown(
-                                options = versionNames,
-                                selectedIndex = versionIndex,
-                                enabled = versionNames.isNotEmpty(),
-                                onSelectedIndex = onVersionSelected
+                                text = selectedItem.description.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            Button(
-                                onClick = onInstallClick,
-                                enabled = versionNames.isNotEmpty() && !tasksRunning,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp)
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
                             ) {
-                                Text("Install")
+                                Text(
+                                    text = when (selectedItem.apiSource) {
+                                        Constants.SOURCE_CURSEFORGE -> "CurseForge"
+                                        Constants.SOURCE_MODRINTH -> "Modrinth"
+                                        else -> "Source"
+                                    },
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { onItemClick(selectedItem) }, 
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .height(40.dp)
+                                .fillMaxWidth(0.9f),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Back", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(1.1f)
+                    .fillMaxHeight(),
+                color = Color.Transparent
+            ) {
+                AnimatedContent(
+                    targetState = expandedItemId != null,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
+                         slideInHorizontally(initialOffsetX = { it / 4 }))
+                        .togetherWith(fadeOut(animationSpec = tween(90)) +
+                         slideOutHorizontally(targetOffsetX = { -it / 4 }))
+                    },
+                    label = "resultsTransition"
+                ) { isDetail ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (isDetail) {
+                            val selectedItem = items.find { it.id == expandedItemId }
+                            if (detailLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp).align(Alignment.Center),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else if (expandedDetail != null && selectedItem != null) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        "Select Version",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    val versionNames = expandedDetail.versionNames?.filterNotNull().orEmpty()
+                                    VersionDropdown(
+                                        options = versionNames,
+                                        selectedIndex = if (selectedVersionIndex in versionNames.indices) selectedVersionIndex else 0,
+                                        enabled = versionNames.isNotEmpty(),
+                                        onSelectedIndex = onVersionSelected
+                                    )
+
+                                    Spacer(modifier = Modifier.height(24.dp))
+
+                                    Button(
+                                        onClick = { onInstallClick(selectedItem) },
+                                        enabled = versionNames.isNotEmpty() && !tasksRunning,
+                                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_px_download),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Install Modpack", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    "Unable to load details.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                        } else {
+                            if (isLoading && items.isEmpty()) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp).align(Alignment.Center),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else if (items.isEmpty()) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Search for modpacks to see results",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 8.dp)
+                                ) {
+                                    items(items, key = { it.iconCacheTag }) { item ->
+                                        ModItemView(
+                                            item = item,
+                                            onClick = { onItemClick(item) }
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
+
+                                    if (!lastPage && items.isNotEmpty()) {
+                                        item {
+                                            Box(
+                                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -340,7 +389,48 @@ private fun ModSearchItemCard(
 }
 
 @Composable
-private fun ModIcon(item: ModItem) {
+fun ModItemView(
+    item: ModItem,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ModIcon(item = item, size = 48.dp)
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title.orEmpty(),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = item.description.orEmpty(),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModIcon(item: ModItem, size: androidx.compose.ui.unit.Dp = 44.dp) {
     var bitmap by remember(item.id) { mutableStateOf<Bitmap?>(null) }
     val iconCache = remember { ModIconCache() }
 
@@ -351,9 +441,9 @@ private fun ModIcon(item: ModItem) {
     }
 
     Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-        modifier = Modifier.size(44.dp)
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        modifier = Modifier.size(size)
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (bitmap != null) {
@@ -365,10 +455,14 @@ private fun ModIcon(item: ModItem) {
                 )
             } else {
                 Icon(
-                    painter = painterResource(id = sourceDrawable(item.apiSource)),
+                    painter = painterResource(id = when (item.apiSource) {
+                        Constants.SOURCE_CURSEFORGE -> R.drawable.ic_curseforge
+                        Constants.SOURCE_MODRINTH -> R.drawable.ic_modrinth
+                        else -> R.drawable.ic_px_java
+                    }),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(22.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.size(size * 0.6f)
                 )
             }
         }
@@ -415,7 +509,7 @@ private fun VersionDropdown(
             expanded = expanded && enabled && options.isNotEmpty(),
             onDismissRequest = { expanded = false },
             modifier = Modifier
-                .fillMaxWidth(0.98f)
+                .fillMaxWidth(0.6f)
                 .background(MaterialTheme.colorScheme.surface)
         ) {
             options.forEachIndexed { index, option ->
@@ -437,10 +531,34 @@ private fun VersionDropdown(
     }
 }
 
-private fun sourceDrawable(apiSource: Int): Int {
-    return when (apiSource) {
-        Constants.SOURCE_CURSEFORGE -> R.drawable.ic_curseforge
-        Constants.SOURCE_MODRINTH -> R.drawable.ic_modrinth
-        else -> R.drawable.ic_filter
+@Preview(showBackground = true, widthDp = 800, heightDp = 400)
+@Composable
+fun ModSearchScreenPreview() {
+    PojavTheme(dynamicColor = true) {
+        ModSearchScreen(
+            searchQuery = "",
+            isLoading = false,
+            statusVisible = true,
+            statusText = "Found 2 results",
+            statusColor = Color.Gray,
+            items = listOf(
+                ModItem(Constants.SOURCE_CURSEFORGE, true, "1", "RLCraft", "A very hard modpack", null),
+                ModItem(Constants.SOURCE_MODRINTH, true, "2", "Fabulously Optimized", "Better performance", null)
+            ),
+            expandedItemId = null,
+            expandedDetail = null,
+            detailLoading = false,
+            selectedVersionIndex = 0,
+            lastPage = true,
+            tasksRunning = false,
+            onSearchQueryChange = {},
+            onSearchSubmit = {},
+            onFilterClick = {},
+            onImportClick = {},
+            onItemClick = {},
+            onLoadMore = {},
+            onVersionSelected = {},
+            onInstallClick = {}
+        )
     }
 }

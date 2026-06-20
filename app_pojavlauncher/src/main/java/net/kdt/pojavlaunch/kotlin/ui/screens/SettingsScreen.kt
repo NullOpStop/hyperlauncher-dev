@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color as AndroidColor
 import android.net.Uri
@@ -30,7 +31,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,6 +51,7 @@ import androidx.core.content.edit
 import kotlinx.coroutines.launch
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.CustomControlsActivity
+import net.kdt.pojavlaunch.EfficientAndroidLWJGLKeycode
 import net.kdt.pojavlaunch.Tools
 import net.kdt.pojavlaunch.contracts.OpenDocumentWithExtension
 import net.kdt.pojavlaunch.multirt.MultiRTConfigDialog
@@ -59,11 +60,13 @@ import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import net.kdt.pojavlaunch.utils.RendererCompatUtil
 import net.kdt.pojavlaunch.ui.components.*
+import net.kdt.pojavlaunch.utils.CropperUtils
 import net.kdt.pojavlaunch.utils.UpdateUtils
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.roundToInt
 
+@Suppress("unused")
 enum class SettingsPage(val titleRes: Int, val iconRes: Int) {
     APPEARANCE(R.string.preference_appearance_title, R.drawable.ic_px_theme),
     VIDEO(R.string.preference_video_title, R.drawable.ic_px_image),
@@ -84,14 +87,13 @@ fun SettingsScreen(
     val railScrollState = rememberScrollState()
 
     val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
     val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
     val transitionSpec: AnimatedContentTransitionScope<Boolean>.() -> ContentTransform = {
-        val duration = animDuration
         when (animPreset) {
             "fade" -> {
-                fadeIn(animationSpec = tween(duration)) togetherWith fadeOut(animationSpec = tween(duration))
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
             }
             "bounce" -> {
                 slideInVertically(
@@ -100,7 +102,7 @@ fun SettingsScreen(
                 ) + fadeIn() togetherWith slideOutVertically(targetOffsetY = { it }) + fadeOut()
             }
             else -> {
-                fadeIn(animationSpec = tween(duration)) togetherWith fadeOut(animationSpec = tween(duration))
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
             }
         }
     }
@@ -352,7 +354,7 @@ fun AppearanceSettings() {
                     LauncherPreferences.PREF_DRAWER_BUTTON_ICON_PATH = file.absolutePath
                     LauncherPreferences.DEFAULT_PREF?.edit { putString("drawerButtonIconPath", file.absolutePath) }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Toast.makeText(context, "Failed to load icon", Toast.LENGTH_SHORT).show()
             }
         }
@@ -365,6 +367,7 @@ fun AppearanceSettings() {
             title = { Text("Reset Logo") },
             text = { Text("Are you sure you want to reset the drawer button logo to default?") },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = {
                     LauncherPreferences.PREF_DRAWER_BUTTON_ICON_PATH = null
                     LauncherPreferences.DEFAULT_PREF?.edit { remove("drawerButtonIconPath") }
@@ -372,6 +375,8 @@ fun AppearanceSettings() {
                 }) { Text("Reset") }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
             }
         )
@@ -392,6 +397,7 @@ fun AppearanceSettings() {
             onDismissRequest = { showThemeColorDialog = false },
             title = { Text("Custom Theme Color") },
             text = {
+                @Suppress("DEPRECATION")
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
@@ -414,6 +420,8 @@ fun AppearanceSettings() {
                 }
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showThemeColorDialog = false }) { Text("Done") }
             }
         )
@@ -421,7 +429,34 @@ fun AppearanceSettings() {
 
     var transparency by remember { mutableFloatStateOf(LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value * 100f) }
     var blurEnabled by remember { mutableStateOf(LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value) }
+    var videoLoop by remember { mutableStateOf(LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP_STATE.value) }
     var showResetBackgroundDialog by remember { mutableStateOf(false) }
+
+    fun resetBackground() {
+        LauncherPreferences.PREF_BACKGROUND_PATH = null
+        LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
+        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = null
+        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
+        LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP = true
+        LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP_STATE.value = true
+        videoLoop = true
+
+        LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED = false
+        LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value = false
+        blurEnabled = false
+
+        LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY = 0f
+        LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value = 0f
+        transparency = 0f
+
+        LauncherPreferences.DEFAULT_PREF?.edit {
+            remove("backgroundPath")
+            remove("backgroundVideoPath")
+            putBoolean("backgroundVideoLoop", true)
+            putBoolean("backgroundBlurEnabled", false)
+            putFloat("backgroundTransparency", 0f)
+        }
+    }
 
     if (showResetBackgroundDialog) {
         AlertDialog(
@@ -429,28 +464,15 @@ fun AppearanceSettings() {
             title = { Text("Reset Background") },
             text = { Text("Are you sure you want to reset the background and its settings?") },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = {
-                    LauncherPreferences.PREF_BACKGROUND_PATH = null
-                    LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
-
-                    LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED = false
-                    LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value = false
-                    blurEnabled = false
-
-                    LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY = 0f
-                    LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value = 0f
-                    transparency = 0f
-
-                    LauncherPreferences.DEFAULT_PREF?.edit {
-                        remove("backgroundPath")
-                        putBoolean("backgroundBlurEnabled", false)
-                        putFloat("backgroundTransparency", 0f)
-                    }
+                    resetBackground()
                     showResetBackgroundDialog = false
                 }) { Text("Reset") }
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showResetBackgroundDialog = false }) { Text("Cancel") }
             }
         )
@@ -476,13 +498,10 @@ fun AppearanceSettings() {
                     var themeTypeMode by remember { mutableStateOf(LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value) }
                     PreferenceList(
                         title = "Theme Selection",
-                        entries = arrayOf("Hyper Launcher (default)", "Crynoix Launcher(Collab)"),
-                        entryValues = arrayOf("monochrome", "crynoix"),
+                        entries = arrayOf("Hyper Launcher"),
+                        entryValues = arrayOf("monochrome"),
                         selectedValue = themeTypeMode,
                         onValueChange = {
-                            if (it == "crynoix" && themeTypeMode != "crynoix") {
-                                LauncherPreferences.PREF_SHOW_CRYNOIX_LOADING.value = true
-                            }
                             themeTypeMode = it
                             LauncherPreferences.PREF_THEME_TYPE_MODE = it
                             LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value = it
@@ -530,7 +549,7 @@ fun AppearanceSettings() {
                     PreferenceItem(
                         title = "Pick Seed Color",
                         summary = "Current: #${Integer.toHexString(currentSeedColor).uppercase()}",
-                        onClick = { showThemeColorDialog = true }
+                        onClick = { @Suppress("DEPRECATION") showThemeColorDialog = true }
                     )
                 }
             }
@@ -552,7 +571,7 @@ fun AppearanceSettings() {
                     }
                 )
 
-                var duration by remember { mutableFloatStateOf(LauncherPreferences.PREF_TRANSITION_DURATION_STATE.value.toFloat()) }
+                var duration by remember { mutableFloatStateOf(LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue.toFloat()) }
                 PreferenceSlider(
                     title = "Duration (ms)",
                     value = duration,
@@ -560,7 +579,7 @@ fun AppearanceSettings() {
                         duration = it
                         val d = it.toInt()
                         LauncherPreferences.PREF_TRANSITION_DURATION = d
-                        LauncherPreferences.PREF_TRANSITION_DURATION_STATE.value = d
+                        LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue = d
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("transitionDuration", d) }
                     },
                     valueRange = 100f..1000f
@@ -584,39 +603,146 @@ fun AppearanceSettings() {
 
         item {
             PreferenceGroup(title = "Background Settings") {
-                val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null
-                val pickBackgroundLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-                    if (uri != null) {
+                val hasImageBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null
+                val hasVideoBackground = LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null
+                val hasBackground = hasImageBackground || hasVideoBackground
+                
+                val backgroundCropperReceiver = object : CropperUtils.CropperReceiver {
+                    override fun getAspectRatio() = context.resources.displayMetrics.let { it.widthPixels.toFloat() / it.heightPixels }
+                    override fun getTargetMaxSide() = 2048
+                    override fun onCropped(bitmap: Bitmap) {
                         try {
-                            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                                val file = File(context.filesDir, "launcher_background.png")
-                                file.outputStream().use { outputStream ->
-                                    inputStream.copyTo(outputStream)
+                            // Check for transparent areas/empty space
+                            if (bitmap.hasAlpha()) {
+                                val pixels = IntArray(bitmap.width * bitmap.height)
+                                bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                                for (pixel in pixels) {
+                                    if (android.graphics.Color.alpha(pixel) < 255) {
+                                        Toast.makeText(context, "Invalid crop: Image must fill the entire background (no empty/transparent areas)", Toast.LENGTH_LONG).show()
+                                        resetBackground()
+                                        return
+                                    }
                                 }
-                                val path = file.absolutePath
-                                LauncherPreferences.PREF_BACKGROUND_PATH = path
-                                LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = path
-                                LauncherPreferences.DEFAULT_PREF?.edit { putString("backgroundPath", path) }
+                            }
+
+                            val file = File(context.filesDir, "launcher_background.png")
+                            FileOutputStream(file).use {
+                                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            }
+                            val path = file.absolutePath
+                            LauncherPreferences.PREF_BACKGROUND_PATH = path
+                            LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
+                            LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = path
+                            LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = null
+                            LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
+                            LauncherPreferences.DEFAULT_PREF?.edit {
+                                putString("backgroundPath", path)
+                                remove("backgroundVideoPath")
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Failed to load background", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Failed to save background", Toast.LENGTH_SHORT).show()
                         }
+                    }
+
+                    override fun onFailed(exception: Exception) {
+                        Toast.makeText(context, "Cropping failed: ${exception.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                val pickBackgroundLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                    if (uri != null) {
+                        CropperUtils.openCropperDialog(context, uri, backgroundCropperReceiver)
+                    }
+                }
+                
+                val pickBackgroundVideoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                    if (uri != null) {
+                        val videoCropperReceiver = object : CropperUtils.CropperReceiver {
+                            override fun getAspectRatio() = context.resources.displayMetrics.let { it.widthPixels.toFloat() / it.heightPixels }
+                            override fun getTargetMaxSide() = 2048
+                            override fun onCropped(bitmap: Bitmap) {
+                                try {
+                                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                                        val file = File(context.filesDir, "launcher_background_video.mp4")
+                                        file.outputStream().use { outputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
+                                        val path = file.absolutePath
+                                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = path
+                                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
+                                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = path
+                                        LauncherPreferences.PREF_BACKGROUND_PATH = null
+                                        LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
+                                        LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED = false
+                                        LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value = false
+                                        blurEnabled = false
+                                        LauncherPreferences.DEFAULT_PREF?.edit {
+                                            putString("backgroundVideoPath", path)
+                                            remove("backgroundPath")
+                                            putBoolean("backgroundBlurEnabled", false)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to load background video", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+
+                            override fun onFailed(exception: Exception) {
+                                Toast.makeText(context, "Video preview failed: ${exception.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        CropperUtils.openCropperDialog(context, uri, videoCropperReceiver)
                     }
                 }
 
                 PreferenceItem(
-                    title = "Change Background",
+                    title = "Change Background Image",
                     summary = "Select an image for the launcher background",
                     icon = painterResource(R.drawable.ic_px_image),
                     onClick = { pickBackgroundLauncher.launch("image/*") }
                 )
 
                 PreferenceItem(
+                    title = "Add Video Background",
+                    summary = "Select a video for the launcher background",
+                    icon = painterResource(R.drawable.ic_px_image),
+                    onClick = { pickBackgroundVideoLauncher.launch("video/*") }
+                )
+
+                PreferenceSwitch(
+                    title = "Loop Background Video",
+                    summary = "Restart the background video when it reaches the end",
+                    enabled = hasVideoBackground,
+                    checked = videoLoop,
+                    onCheckedChange = {
+                        videoLoop = it
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP = it
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP_STATE.value = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("backgroundVideoLoop", it) }
+                    }
+                )
+
+                if (hasVideoBackground) {
+                    var videoVolume by remember { mutableFloatStateOf(LauncherPreferences.PREF_BACKGROUND_VIDEO_VOLUME_STATE.value * 100f) }
+                    PreferenceSlider(
+                        title = "Video Volume",
+                        value = videoVolume,
+                        onValueChange = {
+                            videoVolume = it
+                            val vol = it / 100f
+                            LauncherPreferences.PREF_BACKGROUND_VIDEO_VOLUME = vol
+                            LauncherPreferences.PREF_BACKGROUND_VIDEO_VOLUME_STATE.value = vol
+                            LauncherPreferences.DEFAULT_PREF?.edit { putFloat("backgroundVideoVolume", vol) }
+                        },
+                        valueRange = 0f..100f)
+                }
+
+                PreferenceItem(
                     title = "Reset Background",
                     summary = "Restore default background",
                     icon = painterResource(R.drawable.ic_px_trash),
                     onClick = {
-                        showResetBackgroundDialog = true
+                        @Suppress("DEPRECATION") showResetBackgroundDialog = true
                     }
                 )
 
@@ -637,7 +763,7 @@ fun AppearanceSettings() {
                 PreferenceSwitch(
                     title = "Blur Effect",
                     summary = "Apply blur to the background image",
-                    enabled = hasBackground,
+                    enabled = hasImageBackground,
                     checked = blurEnabled,
                     onCheckedChange = {
                         blurEnabled = it
@@ -647,12 +773,12 @@ fun AppearanceSettings() {
                     }
                 )
 
-                if (blurEnabled) {
+                if (blurEnabled && hasImageBackground) {
                     var blurIntensity by remember { mutableFloatStateOf(LauncherPreferences.PREF_BACKGROUND_BLUR_STATE.value * 100f) }
                     PreferenceSlider(
                         title = "Blur Intensity",
                         value = blurIntensity,
-                        enabled = hasBackground,
+                        enabled = hasImageBackground,
                         onValueChange = {
                             blurIntensity = it
                             val intensity = it / 100f
@@ -679,7 +805,7 @@ fun AppearanceSettings() {
                     title = "Reset Button Logo",
                     summary = "Restore the default settings icon",
                     icon = painterResource(R.drawable.ic_px_trash),
-                    onClick = { showResetDialog = true }
+                    onClick = { @Suppress("DEPRECATION") showResetDialog = true }
                 )
 
                 var preset by remember { mutableStateOf(LauncherPreferences.PREF_DRAWER_BUTTON_PRESET) }
@@ -807,16 +933,6 @@ fun VideoSettings() {
     val rendererNames = remember { compatibleRenderers.rendererDisplayNames?.filterNotNull()?.toTypedArray() ?: emptyArray() }
     val rendererValues = remember { compatibleRenderers.rendererIds.filterNotNull().toTypedArray() }
 
-    val supportsSustainedPerf = remember { Build.VERSION.SDK_INT >= Build.VERSION_CODES.N }
-
-    val allPlugins = remember {
-        listOfNotNull(
-            LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_ANGLE_PLUGIN),
-            LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_FFMPEG_PLUGIN)
-        )
-    }
-    val hasAnglePlugin = remember { allPlugins.any { it.id == LibraryPlugin.ID_ANGLE_PLUGIN } }
-
     LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
         item {
             PreferenceGroup(title = stringResource(R.string.preference_category_video)) {
@@ -876,19 +992,17 @@ fun VideoSettings() {
                     icon = painterResource(R.drawable.ic_px_resolution)
                 )
 
-                if (supportsSustainedPerf) {
-                    var sustainedPerf by remember { mutableStateOf(LauncherPreferences.PREF_SUSTAINED_PERFORMANCE) }
-                    PreferenceSwitch(
-                        title = stringResource(R.string.preference_sustained_performance_title),
-                        summary = stringResource(R.string.preference_sustained_performance_description),
-                        checked = sustainedPerf,
-                        onCheckedChange = {
-                            sustainedPerf = it
-                            LauncherPreferences.PREF_SUSTAINED_PERFORMANCE = it
-                            LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("sustainedPerformance", it) }
-                        }
-                    )
-                }
+                var sustainedPerf by remember { mutableStateOf(LauncherPreferences.PREF_SUSTAINED_PERFORMANCE) }
+                PreferenceSwitch(
+                    title = stringResource(R.string.preference_sustained_performance_title),
+                    summary = stringResource(R.string.preference_sustained_performance_description),
+                    checked = sustainedPerf,
+                    onCheckedChange = {
+                        sustainedPerf = it
+                        LauncherPreferences.PREF_SUSTAINED_PERFORMANCE = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("sustainedPerformance", it) }
+                    }
+                )
 
                 var altSurface by remember { mutableStateOf(LauncherPreferences.PREF_USE_ALTERNATE_SURFACE) }
                 PreferenceSwitch(
@@ -914,7 +1028,8 @@ fun VideoSettings() {
                     }
                 )
 
-                if (hasAnglePlugin) {
+                val anglePlugin = remember { LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_ANGLE_PLUGIN) }
+                if (anglePlugin != null) {
                     var useAngle by remember { mutableStateOf(LauncherPreferences.PREF_USE_ANGLE) }
                     PreferenceSwitch(
                         title = stringResource(R.string.preference_use_angle_title),
@@ -961,7 +1076,7 @@ fun ControlSettings() {
                     LauncherPreferences.PREF_MOUSE_ICON_PATH_STATE.value = file.absolutePath
                     LauncherPreferences.DEFAULT_PREF?.edit { putString("mouseIconPath", file.absolutePath) }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Toast.makeText(context, "Failed to load mouse icon", Toast.LENGTH_SHORT).show()
             }
         }
@@ -974,6 +1089,7 @@ fun ControlSettings() {
             title = { Text("Reset Mouse Cursor") },
             text = { Text("Are you sure you want to reset the mouse cursor to default?") },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = {
                     LauncherPreferences.PREF_MOUSE_ICON_PATH = null
                     LauncherPreferences.PREF_MOUSE_ICON_PATH_STATE.value = null
@@ -988,6 +1104,8 @@ fun ControlSettings() {
                 }) { Text("Reset") }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showResetMouseDialog = false }) { Text("Cancel") }
             }
         )
@@ -1010,6 +1128,47 @@ fun ControlSettings() {
                     onClick = {
                         context.startActivity(Intent(context, CustomControlsActivity::class.java))
                     }
+                )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Physical Keybindings") {
+                val keyNames = remember { EfficientAndroidLWJGLKeycode.generateKeyName() }
+                val keyValues = remember {
+                    Array(keyNames.size) { i -> EfficientAndroidLWJGLKeycode.getValueByIndex(i).toString() }
+                }
+
+                var volumeUpBind by remember { mutableIntStateOf(LauncherPreferences.PREF_VOLUME_UP_KEYBIND) }
+                PreferenceList(
+                    title = "Volume Up",
+                    summary = if (volumeUpBind == 0) "Default (Volume Control)" else "Bound to ${keyNames[EfficientAndroidLWJGLKeycode.getIndexByValue(volumeUpBind)]}",
+                    entries = arrayOf("Default") + keyNames,
+                    entryValues = arrayOf("0") + keyValues,
+                    selectedValue = volumeUpBind.toString(),
+                    onValueChange = {
+                        val newValue = it.toInt()
+                        volumeUpBind = newValue
+                        LauncherPreferences.PREF_VOLUME_UP_KEYBIND = newValue
+                        LauncherPreferences.DEFAULT_PREF?.edit { putInt("volumeUpKeybind", newValue) }
+                    },
+                    icon = painterResource(R.drawable.ic_px_gamepad)
+                )
+
+                var volumeDownBind by remember { mutableIntStateOf(LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND) }
+                PreferenceList(
+                    title = "Volume Down",
+                    summary = if (volumeDownBind == 0) "Default (Volume Control)" else "Bound to ${keyNames[EfficientAndroidLWJGLKeycode.getIndexByValue(volumeDownBind)]}",
+                    entries = arrayOf("Default") + keyNames,
+                    entryValues = arrayOf("0") + keyValues,
+                    selectedValue = volumeDownBind.toString(),
+                    onValueChange = {
+                        val newValue = it.toInt()
+                        volumeDownBind = newValue
+                        LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND = newValue
+                        LauncherPreferences.DEFAULT_PREF?.edit { putInt("volumeDownKeybind", newValue) }
+                    },
+                    icon = painterResource(R.drawable.ic_px_gamepad)
                 )
             }
         }
@@ -1116,14 +1275,14 @@ fun ControlSettings() {
                     title = "Set Mouse Hotspot",
                     summary = "Adjust the point where the mouse clicks",
                     icon = painterResource(R.drawable.ic_px_virtual_mouse),
-                    onClick = { showHotspotDialog = true }
+                    onClick = { @Suppress("DEPRECATION") showHotspotDialog = true }
                 )
 
                 PreferenceItem(
                     title = "Reset Mouse Cursor",
                     summary = "Restore default mouse cursor",
                     icon = painterResource(R.drawable.ic_px_trash),
-                    onClick = { showResetMouseDialog = true }
+                    onClick = { @Suppress("DEPRECATION") showResetMouseDialog = true }
                 )
             }
         }
@@ -1295,6 +1454,8 @@ fun MouseHotspotDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text("Adjust Mouse Hotspot") },
         text = {
+            @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Drag the knob to set the click point", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1357,6 +1518,8 @@ fun MouseHotspotDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
+            @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             TextButton(onClick = {
                 LauncherPreferences.PREF_MOUSE_HOTSPOT_X = hotspotX
                 LauncherPreferences.PREF_MOUSE_HOTSPOT_Y = hotspotY
@@ -1368,6 +1531,8 @@ fun MouseHotspotDialog(onDismiss: () -> Unit) {
             }) { Text("Save") }
         },
         dismissButton = {
+            @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
@@ -1398,6 +1563,7 @@ fun JavaSettings() {
             onDismissRequest = { showJvmArgsDialog = false },
             title = { Text(stringResource(R.string.mcl_setting_title_javaargs)) },
             text = {
+                @Suppress("DEPRECATION")
                 OutlinedTextField(
                     value = jvmArgs,
                     onValueChange = { jvmArgs = it },
@@ -1406,16 +1572,24 @@ fun JavaSettings() {
                 )
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = {
                     LauncherPreferences.PREF_CUSTOM_JAVA_ARGS = jvmArgs
                     LauncherPreferences.DEFAULT_PREF?.edit { putString("javaArgs", jvmArgs) }
                     showJvmArgsDialog = false
                 }) {
+                    @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(stringResource(R.string.global_save))
                 }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showJvmArgsDialog = false }) {
+                    @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(stringResource(android.R.string.cancel))
                 }
             }
@@ -1515,10 +1689,11 @@ fun MiscSettings() {
             onDismissRequest = { showUpdateDialog = false },
             title = { Text("Update Available", fontWeight = FontWeight.Bold) },
             text = {
+                @Suppress("DEPRECATION")
                 Column {
                     Text("A new version (${info.latestVersion}) is available!", style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(8.dp))
-                    Text("Changelog:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                    Text("Changelog:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
                     Box(modifier = Modifier
                         .heightIn(max = 120.dp)
                         .verticalScroll(rememberScrollState())
@@ -1528,7 +1703,10 @@ fun MiscSettings() {
                 }
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 Button(onClick = {
+                    LauncherPreferences.PREF_LATEST_ACKNOWLEDGED_VERSION = info.latestVersion
+                    LauncherPreferences.DEFAULT_PREF?.edit()?.putString(LauncherPreferences.PREF_KEY_LATEST_ACKNOWLEDGED_VERSION, info.latestVersion)?.apply()
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.updateUrl))
                     context.startActivity(intent)
                     showUpdateDialog = false
@@ -1538,6 +1716,7 @@ fun MiscSettings() {
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showUpdateDialog = false }) {
                     @Suppress("DEPRECATION")
                     Text(stringResource(id = android.R.string.cancel).uppercase())
@@ -1609,6 +1788,39 @@ fun MiscSettings() {
                         LauncherPreferences.DEFAULT_PREF?.edit()?.putBoolean(LauncherPreferences.PREF_KEY_SKIP_UPDATE_CHECK, newValue)?.apply()
                     }
                 )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Log Management") {
+                var deleteOldLogs by remember { mutableStateOf(LauncherPreferences.PREF_DELETE_OLD_LOGS) }
+                PreferenceSwitch(
+                    title = "Auto-delete Old Logs",
+                    summary = "Automatically clean up old log files to save space",
+                    icon = painterResource(R.drawable.ic_px_trash),
+                    checked = deleteOldLogs,
+                    onCheckedChange = {
+                        deleteOldLogs = it
+                        LauncherPreferences.PREF_DELETE_OLD_LOGS = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean(LauncherPreferences.PREF_KEY_DELETE_OLD_LOGS, it) }
+                    }
+                )
+
+                if (deleteOldLogs) {
+                    var maxDays by remember { mutableFloatStateOf(LauncherPreferences.PREF_LOG_MAX_DAYS.toFloat()) }
+                    PreferenceSlider(
+                        title = "Log Retention (Days)",
+                        summary = "Keep logs for ${maxDays.toInt()} days",
+                        value = maxDays,
+                        onValueChange = {
+                            maxDays = it
+                            LauncherPreferences.PREF_LOG_MAX_DAYS = it.toInt()
+                            LauncherPreferences.DEFAULT_PREF?.edit { putInt(LauncherPreferences.PREF_KEY_LOG_MAX_DAYS, it.toInt()) }
+                        },
+                        valueRange = 1f..30f,
+                        icon = painterResource(R.drawable.ic_px_alt_sliders)
+                    )
+                }
             }
         }
 

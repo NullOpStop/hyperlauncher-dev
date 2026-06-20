@@ -1,9 +1,17 @@
 package net.kdt.pojavlaunch.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
+import android.os.Build
+import android.view.View
+import android.widget.VideoView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,6 +38,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -47,7 +57,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdt.mcgui.ProgressLayout
-import kotlinx.coroutines.delay
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.authenticator.AuthType
@@ -73,6 +82,7 @@ import net.kdt.pojavlaunch.skin.SkinModelType
 import net.kdt.pojavlaunch.skin.SkinUtils
 import net.kdt.pojavlaunch.utils.UpdateUtils
 import java.io.File
+import java.lang.reflect.Field
 
 private val m3MotionSpec = spring<Float>(
     dampingRatio = 0.8f,
@@ -87,41 +97,80 @@ private val m3SizeSpec = spring<IntSize>(
 @Composable
 fun getTransitionSpec(): AnimatedContentTransitionScope<*>.() -> ContentTransform {
     val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
     val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
-    return {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                (slideInVertically(
-                    initialOffsetY = { -(it * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                ) + fadeIn(animationSpec = tween(animDuration))).togetherWith(
-                    slideOutVertically(targetOffsetY = { (it * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration))
-                )
-            }
-            else -> {
-                (fadeIn(m3MotionSpec) + scaleIn(initialScale = 0.92f, animationSpec = m3MotionSpec))
-                    .togetherWith(fadeOut(m3MotionSpec) + scaleOut(targetScale = 0.92f, animationSpec = m3MotionSpec))
+    return remember(animPreset, animDuration, animIntensity) {
+        {
+            when (animPreset) {
+                "fade" -> {
+                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+                }
+                "bounce" -> {
+                    (slideInVertically(
+                        initialOffsetY = { h -> -(h * animIntensity).toInt() },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                    ) + fadeIn(animationSpec = tween(animDuration))).togetherWith(
+                        slideOutVertically(targetOffsetY = { h -> (h * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration))
+                    )
+                }
+                else -> {
+                    (fadeIn(m3MotionSpec) + scaleIn(initialScale = 0.92f, animationSpec = m3MotionSpec))
+                        .togetherWith(fadeOut(m3MotionSpec) + scaleOut(targetScale = 0.92f, animationSpec = m3MotionSpec))
+                }
             }
         }
     }
 }
 
+/** A VideoView that crops to fill its container instead of fitting inside */
+class CropVideoView(context: Context) : VideoView(context) {
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val width = getDefaultSize(0, widthMeasureSpec)
+        val height = getDefaultSize(0, heightMeasureSpec)
+        
+        // Use reflection to get protected video dimensions if needed, 
+        // but VideoView has mVideoWidth/Height fields that are protected.
+        // In Kotlin we can access them if we are a subclass.
+        try {
+            val vWidthField = VideoView::class.java.getDeclaredField("mVideoWidth")
+            val vHeightField = VideoView::class.java.getDeclaredField("mVideoHeight")
+            vWidthField.isAccessible = true
+            vHeightField.isAccessible = true
+            val vWidth = vWidthField.getInt(this)
+            val vHeight = vHeightField.getInt(this)
+
+            if (vWidth > 0 && vHeight > 0) {
+                val videoAspectRatio = vWidth.toFloat() / vHeight.toFloat()
+                val viewAspectRatio = width.toFloat() / height.toFloat()
+                if (videoAspectRatio > viewAspectRatio) {
+                    setMeasuredDimension((height * videoAspectRatio).toInt(), height)
+                } else {
+                    setMeasuredDimension(width, (width / videoAspectRatio).toInt())
+                }
+                return
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        setMeasuredDimension(width, height)
+    }
+}
+
 @Composable
-fun LauncherBackground() {
+fun LauncherBackground(isPaused: Boolean = false) {
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
     val backgroundPath = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value
+    val backgroundVideoPath = LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value
+    val backgroundVideoLoop = LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP_STATE.value
+    val backgroundVideoVolume = LauncherPreferences.PREF_BACKGROUND_VIDEO_VOLUME_STATE.value
     val backgroundTransparency = LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value
     val backgroundBlurEnabled = LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value
     val backgroundBlurIntensity = LauncherPreferences.PREF_BACKGROUND_BLUR_STATE.value
 
-    val backgroundImage = remember(backgroundPath) {
-        if (backgroundPath != null) {
+    val backgroundImage = remember(backgroundPath, backgroundVideoPath) {
+        if (backgroundPath != null && backgroundVideoPath == null) {
             try {
                 if (backgroundPath.startsWith("content://")) {
                     context.contentResolver.openInputStream(Uri.parse(backgroundPath))?.use {
@@ -138,14 +187,61 @@ fun LauncherBackground() {
 
     val previewBackgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (backgroundImage != null) {
+    Box(modifier = Modifier.fillMaxSize().graphicsLayer { clip = true }, contentAlignment = Alignment.Center) {
+        if (backgroundVideoPath != null && !isPreview) {
+            if (!isPaused) {
+                AndroidView(
+                    factory = { ctx ->
+                        CropVideoView(ctx).apply {
+                            // Use setVideoURI with file scheme to avoid ContentResolver errors on raw paths
+                            setVideoURI(Uri.fromFile(File(backgroundVideoPath)))
+                            setOnPreparedListener { player ->
+                                player.isLooping = backgroundVideoLoop
+                                player.setVolume(backgroundVideoVolume, backgroundVideoVolume)
+                                start()
+                            }
+                            setOnCompletionListener {
+                                if (backgroundVideoLoop) start()
+                            }
+                        }
+                    },
+                    update = { view ->
+                        val tag = Triple(backgroundVideoPath, backgroundVideoLoop, backgroundVideoVolume)
+                        if (view.tag != tag) {
+                            view.tag = tag
+                            view.setVideoURI(Uri.fromFile(File(backgroundVideoPath)))
+                            view.setOnPreparedListener { player ->
+                                player.isLooping = backgroundVideoLoop
+                                player.setVolume(backgroundVideoVolume, backgroundVideoVolume)
+                                view.start()
+                            }
+                            view.setOnCompletionListener {
+                                if (backgroundVideoLoop) view.start()
+                            }
+                        }
+                    },
+                    modifier = Modifier.wrapContentSize()
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+            }
+        } else if (backgroundImage != null) {
             Image(
                 bitmap = backgroundImage,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(if (backgroundBlurEnabled) Modifier.blur((backgroundBlurIntensity * 40).dp) else Modifier),
+                    .graphicsLayer {
+                        if (backgroundBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val blurPx = (backgroundBlurIntensity * 40).dp.toPx()
+                            if (blurPx > 0.1f) {
+                                renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                    blurPx, blurPx, android.graphics.Shader.TileMode.CLAMP
+                                ).asComposeRenderEffect()
+                            }
+                        }
+                    }
+                    .then(if (backgroundBlurEnabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) Modifier.blur((backgroundBlurIntensity * 40).dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
         } else if (isPreview && previewBackgroundBitmap != null) {
@@ -172,7 +268,6 @@ class TaskProgress(
     var text by mutableStateOf(initialText)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskProgressItem(task: TaskProgress) {
     Column(
@@ -185,8 +280,7 @@ fun TaskProgressItem(task: TaskProgress) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = task.text,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -311,10 +405,22 @@ fun ProgressCard(
                     .clickable { isExpanded = !isExpanded }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
+
+                val infiniteTransition = rememberInfiniteTransition(label = "rotation")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(2000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "rotation"
+                )
+
                 Icon(
                     painter = painterResource(id = R.drawable.ic_px_progress),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = rotation },
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -367,7 +473,8 @@ fun AccountSelector(
     onAccountSelect: (MinecraftAccount) -> Unit,
     onAccountDelete: (MinecraftAccount) -> Unit,
     topBarHeight: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    ignoreNotch: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
     var accountToDelete by remember { mutableStateOf<MinecraftAccount?>(null) }
@@ -376,6 +483,7 @@ fun AccountSelector(
         AlertDialog(
             onDismissRequest = { accountToDelete = null },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 Button(
                     onClick = {
                         accountToDelete?.let { onAccountDelete(it) }
@@ -392,7 +500,9 @@ fun AccountSelector(
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { accountToDelete = null }) {
+                    @Suppress("DEPRECATION")
                     Text(stringResource(id = android.R.string.cancel))
                 }
             },
@@ -409,13 +519,12 @@ fun AccountSelector(
             modifier = Modifier
                 .height(topBarHeight - 8.dp)
                 .wrapContentWidth()
-                .padding(horizontal = 4.dp),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                .padding(start = if (ignoreNotch) 8.dp else 4.dp, end = 4.dp),
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                 contentColor = MaterialTheme.colorScheme.onSurface
             ),
+            shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             if (currentHead != null) {
@@ -435,6 +544,7 @@ fun AccountSelector(
             Spacer(Modifier.width(10.dp))
 
             @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             Text(
                 text = currentAccount?.username ?: "Steve",
                 fontSize = 15.sp,
@@ -442,12 +552,6 @@ fun AccountSelector(
             )
 
             Spacer(Modifier.width(6.dp))
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_px_alt_sliders),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp).alpha(0.5f)
-            )
         }
 
         DropdownMenu(
@@ -462,6 +566,7 @@ fun AccountSelector(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     text = {
                         @Suppress("DEPRECATION")
+                        @SuppressLint("LocalContextGetResourceValueCall")
                         Text(
                             account.username,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -541,20 +646,38 @@ fun TopBarButton(
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     isSpecialActive: Boolean = false,
-    badgeCount: Int = 0
+    isRotating: Boolean = false,
+    badgeCount: Int = 0,
+    ignoreNotch: Boolean = false,
+    isLeftmost: Boolean = false,
+    isRightmost: Boolean = false
 ) {
-    val defaultContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+    val defaultContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0f)
     val activeColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.90f)
 
     val finalContainerColor = if (isSelected || isSpecialActive) activeColor else defaultContainerColor
+
+    val infiniteTransition = rememberInfiniteTransition(label = "rotation")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
 
     Box(modifier = modifier) {
         FilledTonalButton(
             onClick = onClick,
             modifier = Modifier
                 .height(topBarHeight - 16.dp)
-                .padding(horizontal = 4.dp),
-            shape = RoundedCornerShape(12.dp),
+                .padding(
+                    start = if (ignoreNotch && isLeftmost) 8.dp else 4.dp,
+                    end = if (ignoreNotch && isRightmost) 8.dp else 4.dp
+                ),
+            shape = if (isSelected) RoundedCornerShape(50) else RoundedCornerShape(12.dp),
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = finalContainerColor,
                 contentColor = if (isSelected || isSpecialActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
@@ -564,10 +687,13 @@ fun TopBarButton(
             Icon(
                 painter = painterResource(id = icon),
                 contentDescription = label,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp).graphicsLayer {
+                    if (isRotating) rotationZ = rotation
+                }
             )
 
             @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             AnimatedVisibility(
                 visible = isSelected,
                 enter = fadeIn(m3MotionSpec) + expandHorizontally(expandFrom = Alignment.Start, clip = false, animationSpec = m3SizeSpec),
@@ -576,6 +702,7 @@ fun TopBarButton(
                 Row {
                     Spacer(Modifier.width(8.dp))
                     @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(
                         text = label,
                         fontSize = 13.sp,
@@ -596,6 +723,7 @@ fun TopBarButton(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 Text(badgeCount.toString(), fontSize = 10.sp)
             }
         }
@@ -613,101 +741,117 @@ fun TopBar(
     selectedCategory: Int,
     accounts: List<MinecraftAccount>,
     currentAccount: MinecraftAccount?,
+    isOnline: Boolean,
     onAccountSelect: (MinecraftAccount) -> Unit,
     onAccountDelete: (MinecraftAccount) -> Unit,
     onHomeClick: () -> Unit,
     onProgressClick: () -> Unit,
     onCategoryClick: (Int) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(topBarHeight)
-            .background(
-                MaterialTheme.colorScheme.background.copy(
-                    alpha = if (hasBackground) 0.85f else 1f
-                )
-            )
-    ) {
-        Row(
+    Column {
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .run {
-                    if (ignoreNotch) this
-                    else windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-                },
-            verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.padding(start = 8.dp)) {
-                AnimatedContent(
-                    targetState = isAnyScreenOpen,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = m3MotionSpec))
-                        .togetherWith(fadeOut(animationSpec = m3MotionSpec))
-                    },
-                    label = "homeSwitch"
-                ) { targetAnyOpen ->
-                    if (targetAnyOpen) {
-                        TopBarButton(
-                            onClick = { onHomeClick() },
-                            icon = R.drawable.ic_px_home,
-                            label = "Home",
-                            topBarHeight = topBarHeight,
-                            isSelected = true
-                        )
-                    } else {
-                        AccountSelector(
-                            accounts = accounts,
-                            currentAccount = currentAccount,
-                            onAccountSelect = onAccountSelect,
-                            onAccountDelete = onAccountDelete,
-                            topBarHeight = topBarHeight
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
+                .fillMaxWidth()
+                .height(topBarHeight)
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(
+                        alpha = if (hasBackground) 0.6f else 1f
+                    )
+                )
+        ) {
             Row(
                 modifier = Modifier
-                    .padding(end = 8.dp)
-                    .animateContentSize(animationSpec = m3SizeSpec),
+                    .fillMaxSize()
+                    .run {
+                        if (ignoreNotch) this
+                        else windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                    },
                 verticalAlignment = Alignment.CenterVertically) {
-                TopBarButton(
-                    onClick = onProgressClick,
-                    isSelected = isProgressVisible,
-                    isSpecialActive = taskCount > 0 && !isProgressVisible,
-                    badgeCount = taskCount,
-                    icon = R.drawable.ic_px_progress,
-                    label = "Tasks",
-                    topBarHeight = topBarHeight
-                )
+                Box(modifier = Modifier.padding(start = if (ignoreNotch) 8.dp else 8.dp)) {
+                    AnimatedContent(
+                        targetState = isAnyScreenOpen,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = m3MotionSpec))
+                            .togetherWith(fadeOut(animationSpec = m3MotionSpec))
+                        },
+                        label = "homeSwitch"
+                    ) { targetAnyOpen ->
+                        if (targetAnyOpen) {
+                            TopBarButton(
+                                onClick = { onHomeClick() },
+                                icon = R.drawable.ic_px_home,
+                                label = "Home",
+                                topBarHeight = topBarHeight,
+                                isSelected = true,
+                                ignoreNotch = ignoreNotch,
+                                isLeftmost = true
+                            )
+                        } else {
+                            AccountSelector(
+                                accounts = accounts,
+                                currentAccount = currentAccount,
+                                onAccountSelect = onAccountSelect,
+                                onAccountDelete = onAccountDelete,
+                                topBarHeight = topBarHeight,
+                                ignoreNotch = ignoreNotch
+                            )
+                        }
+                    }
+                }
 
-                TopBarButton(
-                    onClick = { onCategoryClick(1) },
-                    isSelected = selectedCategory == 1,
-                    icon = R.drawable.ic_px_folder,
-                    label = "Files",
-                    topBarHeight = topBarHeight
-                )
+                Spacer(modifier = Modifier.weight(1f))
 
-                TopBarButton(
-                    onClick = { onCategoryClick(2) },
-                    isSelected = selectedCategory == 2,
-                    icon = R.drawable.ic_px_download,
-                    label = "Installer",
-                    topBarHeight = topBarHeight
-                )
+                Row(
+                    modifier = Modifier
+                        .padding(end = if (ignoreNotch) 8.dp else 8.dp)
+                        .animateContentSize(animationSpec = m3SizeSpec),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    TopBarButton(
+                        onClick = onProgressClick,
+                        isSelected = isProgressVisible,
+                        isSpecialActive = taskCount > 0 && !isProgressVisible,
+                        isRotating = taskCount > 0,
+                        badgeCount = taskCount,
+                        icon = R.drawable.ic_px_progress,
+                        label = "Tasks",
+                        topBarHeight = topBarHeight
+                    )
 
-                TopBarButton(
-                    onClick = { onCategoryClick(3) },
-                    isSelected = selectedCategory == 3,
-                    icon = R.drawable.ic_px_alt_sliders,
-                    label = "Settings",
-                    topBarHeight = topBarHeight
-                )
+                    TopBarButton(
+                        onClick = { onCategoryClick(1) },
+                        isSelected = selectedCategory == 1,
+                        icon = R.drawable.ic_px_folder,
+                        label = "Files",
+                        topBarHeight = topBarHeight
+                    )
+
+                    TopBarButton(
+                        onClick = { onCategoryClick(2) },
+                        isSelected = selectedCategory == 2,
+                        icon = R.drawable.ic_px_download,
+                        label = "Installer",
+                        topBarHeight = topBarHeight
+                    )
+
+                    TopBarButton(
+                        onClick = { onCategoryClick(3) },
+                        isSelected = selectedCategory == 3,
+                        icon = R.drawable.ic_px_alt_sliders,
+                        label = "Settings",
+                        topBarHeight = topBarHeight,
+                        ignoreNotch = ignoreNotch,
+                        isRightmost = true
+                    )
+                }
             }
         }
+        HorizontalDivider(
+            color = if (isOnline) {
+                MaterialTheme.colorScheme.primary.copy(alpha = if (hasBackground) 0.02f else 1f)
+            } else {
+                Color.Red
+            }
+        )
     }
 }
 
@@ -737,68 +881,47 @@ fun LauncherScreen(
     var currentAccount by remember { mutableStateOf(if (isPreview) null else Accounts.getCurrent()) }
 
     var updateInfo by remember { mutableStateOf<UpdateUtils.UpdateInfo?>(null) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by rememberSaveable { mutableStateOf(false) }
+    var isUpdateDismissed by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (!isPreview && !LauncherPreferences.PREF_SKIP_UPDATE_CHECK) {
-            val info = UpdateUtils.checkForUpdates()
-            if (info != null && info.hasUpdate) {
-                updateInfo = info
-                showUpdateDialog = true
+    var isGameLaunching by remember { mutableStateOf(false) }
+
+    val isOnline = remember { mutableStateOf(true) }
+
+    DisposableEffect(context) {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                isOnline.value = true
             }
+
+            override fun onLost(network: Network) {
+                isOnline.value = false
+            }
+        }
+
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(request, networkCallback)
+
+        // Initial check
+        val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        isOnline.value = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
         }
     }
 
-    if (showUpdateDialog && updateInfo != null) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            ElevatedCard(
-                modifier = Modifier.width(320.dp).animateContentSize(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Update Available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("A new version (${updateInfo!!.latestVersion}) is available!", style = MaterialTheme.typography.bodyLarge)
-
-                    Spacer(Modifier.height(12.dp))
-                    Text("Changelog:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                    Box(modifier = Modifier
-                        .heightIn(max = 120.dp)
-                        .verticalScroll(rememberScrollState())
-                    ) {
-                        Text(updateInfo!!.changelog, style = MaterialTheme.typography.bodySmall)
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = {
-                            LauncherPreferences.PREF_SKIP_UPDATE_CHECK = true
-                            LauncherPreferences.DEFAULT_PREF?.edit()?.putBoolean(LauncherPreferences.PREF_KEY_SKIP_UPDATE_CHECK, true)?.apply()
-                            showUpdateDialog = false
-                        }) {
-                            Text("NEVER")
-                        }
-                        Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { showUpdateDialog = false }) {
-                            Text("LATER")
-                        }
-                        Button(onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo!!.updateUrl))
-                            context.startActivity(intent)
-                            showUpdateDialog = false
-                        }) {
-                            Text("UPDATE")
-                        }
-                    }
+    LaunchedEffect(Unit) {
+        if (!isPreview && !isUpdateDismissed && !LauncherPreferences.PREF_SKIP_UPDATE_CHECK) {
+            val info = UpdateUtils.checkForUpdates()
+            if (info != null && info.hasUpdate) {
+                // Only show if this version hasn't been acknowledged/processed yet
+                if (info.latestVersion != LauncherPreferences.PREF_LATEST_ACKNOWLEDGED_VERSION) {
+                    updateInfo = info
+                    showUpdateDialog = true
                 }
             }
         }
@@ -851,7 +974,9 @@ fun LauncherScreen(
                 val skinPath = value.getOrNull(2)
                 val capePath = value.getOrNull(3)
 
-                val skinModel = if (skinPath != null) {
+                val skinModel = if (value.size > 4 && value[4] != null) {
+                    try { SkinModelType.valueOf(value[4]!!) } catch (_: Exception) { SkinModelType.STEVE }
+                } else if (skinPath != null) {
                     AndroidSkinAnalyzer.detectModel(File(skinPath).readBytes())
                 } else SkinModelType.STEVE
 
@@ -894,6 +1019,13 @@ fun LauncherScreen(
         }
     }
 
+    val launchGameListener = remember {
+        ExtraListener<Boolean> { _, value ->
+            if (value) isGameLaunching = true
+            false
+        }
+    }
+
     DisposableEffect(Unit) {
         if (!isPreview) {
             refreshAccountsList()
@@ -901,6 +1033,7 @@ fun LauncherScreen(
             ExtraCore.addExtraListener(ExtraConstants.MOJANG_LOGIN_TODO, mojangListener)
             ExtraCore.addExtraListener(ExtraConstants.MICROSOFT_LOGIN_TODO, microsoftListener)
             ExtraCore.addExtraListener(ExtraConstants.ELYBY_LOGIN_TODO, elyByListener)
+            ExtraCore.addExtraListener(ExtraConstants.LAUNCH_GAME, launchGameListener)
         }
 
         onDispose {
@@ -909,6 +1042,7 @@ fun LauncherScreen(
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.MOJANG_LOGIN_TODO, mojangListener)
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.MICROSOFT_LOGIN_TODO, microsoftListener)
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.ELYBY_LOGIN_TODO, elyByListener)
+                ExtraCore.removeExtraListenerFromValue(ExtraConstants.LAUNCH_GAME, launchGameListener)
             }
         }
     }
@@ -916,7 +1050,7 @@ fun LauncherScreen(
     val transitionSpec = getTransitionSpec()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LauncherBackground()
+        LauncherBackground(isPaused = isGameLaunching || taskCount > 0)
 
         Column(modifier = Modifier.fillMaxSize()) {
             TopBar(
@@ -929,6 +1063,7 @@ fun LauncherScreen(
                 selectedCategory = selectedCategory,
                 accounts = accounts,
                 currentAccount = currentAccount,
+                isOnline = isOnline.value,
                 onAccountSelect = { account ->
                     Accounts.setCurrent(account)
                     currentAccount = account
@@ -967,6 +1102,9 @@ fun LauncherScreen(
                             val activity = view.context as? FragmentActivity
                             val manager = activity?.supportFragmentManager ?: return@AndroidView
 
+                            // Use visibility instead of alpha for the fragment container to avoid SurfaceView overlap issues
+                            view.visibility = if (selectedCategory == -1) View.VISIBLE else View.INVISIBLE
+
                             if (manager.findFragmentByTag(MainMenuFragment.TAG) == null) {
                                 view.post {
                                     if (manager.findFragmentByTag(MainMenuFragment.TAG) == null && !manager.isStateSaved) {
@@ -978,10 +1116,11 @@ fun LauncherScreen(
                             }
                         },
                         modifier = Modifier.fillMaxSize()
-                            .alpha(if (selectedCategory == -1) 1f else 0f)
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
+                        @Suppress("DEPRECATION")
+                        @SuppressLint("LocalContextGetResourceValueCall")
                         Text("Fragment Container Placeholder")
                     }
                 }
@@ -989,18 +1128,22 @@ fun LauncherScreen(
                 AnimatedContent(
                     targetState = selectedCategory,
                     transitionSpec = transitionSpec,
+                    modifier = Modifier.graphicsLayer { clip = true },
                     label = "overlayTransition"
                 ) { category ->
-                    when (category) {
-                        1 -> DirectoryManagerOverlay(onBack = { selectedCategory = -1 })
-                        2 -> ContentInstallerOverlay(onBack = { selectedCategory = -1 })
-                        3 -> SettingsOverlay(onBack = { selectedCategory = -1 })
+                    Box(modifier = Modifier.fillMaxSize().graphicsLayer { }) {
+                        when (category) {
+                            1 -> DirectoryManagerOverlay(onBack = { selectedCategory = -1 })
+                            2 -> ContentInstallerOverlay(onBack = { selectedCategory = -1 })
+                            3 -> SettingsOverlay(onBack = { selectedCategory = -1 })
+                        }
                     }
                 }
             }
         }
 
         @Suppress("DEPRECATION")
+        @SuppressLint("LocalContextGetResourceValueCall")
         AnimatedVisibility(
             visible = isProgressVisible,
             enter = fadeIn(spring(stiffness = Spring.StiffnessLow)) + expandIn(expandFrom = Alignment.TopEnd, animationSpec = spring(stiffness = Spring.StiffnessLow)),
@@ -1018,47 +1161,82 @@ fun LauncherScreen(
         }
 
         AnimatedVisibility(
-            visible = LauncherPreferences.PREF_SHOW_CRYNOIX_LOADING.value,
-            enter = fadeIn(),
-            exit = fadeOut(animationSpec = tween(1000))
+            visible = showUpdateDialog && updateInfo != null,
+            enter = fadeIn() + scaleIn(initialScale = 0.9f),
+            exit = fadeOut() + scaleOut(targetScale = 0.9f),
+            modifier = Modifier.fillMaxSize()
         ) {
-            CrynoixLoadingOverlay()
-        }
-    }
-}
+            updateInfo?.let { info ->
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    ElevatedCard(
+                        modifier = Modifier.width(320.dp).animateContentSize(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        @Suppress("DEPRECATION")
+                        @SuppressLint("LocalContextGetResourceValueCall")
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text("Update Available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text("A new version (${info.latestVersion}) is available!", style = MaterialTheme.typography.bodyLarge)
 
-@Composable
-fun CrynoixLoadingOverlay() {
-    LaunchedEffect(Unit) {
-        delay(4000)
-        LauncherPreferences.PREF_SHOW_CRYNOIX_LOADING.value = false
-    }
+                            Spacer(Modifier.height(12.dp))
+                            @Suppress("DEPRECATION")
+                            Text("Changelog:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                            Box(modifier = Modifier
+                                .heightIn(max = 120.dp)
+                                .verticalScroll(rememberScrollState())
+                            ) {
+                                @Suppress("DEPRECATION")
+                                Text(info.changelog, style = MaterialTheme.typography.bodySmall)
+                            }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .clickable(enabled = false) {},
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                painter = painterResource(id = R.drawable.icon_hyper),
-                contentDescription = null,
-                modifier = Modifier.size(100.dp)
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            CircularProgressIndicator(
-                color = Color(0xFF0074FF),
-                strokeWidth = 4.dp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "Applying Crynoix Theme...",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
+                            Spacer(Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(onClick = {
+                                    LauncherPreferences.PREF_LATEST_ACKNOWLEDGED_VERSION = info.latestVersion
+                                    LauncherPreferences.DEFAULT_PREF?.edit()?.putString(LauncherPreferences.PREF_KEY_LATEST_ACKNOWLEDGED_VERSION, info.latestVersion)?.apply()
+                                    showUpdateDialog = false
+                                    isUpdateDismissed = true
+                                }) {
+                                    Text("NEVER")
+                                }
+                                Spacer(Modifier.weight(1f))
+                                TextButton(onClick = { 
+                                    showUpdateDialog = false
+                                    isUpdateDismissed = true
+                                }) {
+                                    @Suppress("DEPRECATION")
+                                    @SuppressLint("LocalContextGetResourceValueCall")
+                                    Text("LATER")
+                                }
+                                Button(onClick = {
+                                    LauncherPreferences.PREF_LATEST_ACKNOWLEDGED_VERSION = info.latestVersion
+                                    LauncherPreferences.DEFAULT_PREF?.edit()?.putString(LauncherPreferences.PREF_KEY_LATEST_ACKNOWLEDGED_VERSION, info.latestVersion)?.apply()
+                                    showUpdateDialog = false
+                                    isUpdateDismissed = true
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.updateUrl))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }) {
+                                    @Suppress("DEPRECATION")
+                                    Text("UPDATE")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1083,6 +1261,8 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
             onDismissRequest = { showNewFolderDialog = false },
             title = { Text("New Folder") },
             text = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 OutlinedTextField(
                     value = inputName,
                     onValueChange = { inputName = it },
@@ -1099,6 +1279,7 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showNewFolderDialog = false }) { Text("Cancel") }
             }
         )
@@ -1109,6 +1290,8 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
             onDismissRequest = { showRenameDialog = false },
             title = { Text("Rename") },
             text = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 OutlinedTextField(
                     value = inputName,
                     onValueChange = { inputName = it },
@@ -1125,6 +1308,7 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
             }
         )
@@ -1149,6 +1333,7 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
@@ -1180,6 +1365,7 @@ private fun DirectoryManagerOverlay(onBack: () -> Unit) {
                 inputName = viewModel.selectedFile?.name ?: ""
                 showRenameDialog = true
             },
+            onToggleDisabledClick = { viewModel.toggleSelectedDisabled() },
             onDeleteClick = { showDeleteConfirm = true }
         )
     }
@@ -1218,7 +1404,7 @@ private fun ContentInstallerOverlay(onBack: () -> Unit) {
             isLoading = viewModel.isLoading,
             statusText = viewModel.statusText,
             selectedVersion = viewModel.versionFilter ?: "",
-            selectedLoader = viewModel.loaderFilter ?: "",
+            selectedLoader = viewModel.loaderFilter ?: "" ,
             onVersionFilterChange = { viewModel.versionFilter = it },
             onLoaderFilterChange = { viewModel.loaderFilter = it },
             instanceVersion = viewModel.instanceVersion,

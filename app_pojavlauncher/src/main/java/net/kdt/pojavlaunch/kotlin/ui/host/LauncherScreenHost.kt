@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.FragmentManager
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.LauncherActivity
+import net.kdt.pojavlaunch.MainActivity
 import net.kdt.pojavlaunch.Tools
 import net.kdt.pojavlaunch.fragments.MainMenuFragment
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper
@@ -68,11 +69,14 @@ object LauncherScreenHost {
     }
 
     @JvmStatic
-    fun bindBackground(view: ComposeView) {
+    @JvmOverloads
+    fun bindBackground(view: ComposeView, isPaused: Boolean = false) {
         view.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         view.setContent {
             PojavTheme {
-                LauncherBackground()
+                // Pause if explicitly requested OR if we are in MainActivity (activity_basemain.xml)
+                val shouldPause = isPaused || view.context is MainActivity
+                LauncherBackground(isPaused = shouldPause)
             }
         }
     }

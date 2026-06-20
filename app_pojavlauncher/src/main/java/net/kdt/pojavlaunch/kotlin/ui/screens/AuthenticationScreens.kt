@@ -10,7 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -59,7 +60,7 @@ import java.util.UUID
 @Composable
 fun SelectAuthScreen(
     onMicrosoftClick: () -> Unit,
-    onLocalClick: (String, String?, String?) -> Unit,
+    onLocalClick: (String, String?, String?, SkinModelType) -> Unit,
     onElyByClick: () -> Unit
 ) {
     var showLocalDialog by remember { mutableStateOf(false) }
@@ -71,14 +72,21 @@ fun SelectAuthScreen(
     val isPreview = LocalInspectionMode.current
     val currentAccount = remember { if (isPreview) null else try { Accounts.getCurrent() } catch(_: Exception) { null } }
 
+    var selectedSkinModel by remember(currentAccount) {
+        mutableStateOf(currentAccount?.skinModel ?: SkinModelType.STEVE)
+    }
+
     val skinLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             val file = copyUriToInternal(context, it, "skin")
             if (file != null) {
-                if (AndroidSkinAnalyzer.validate(file.readBytes())) {
+                val bytes = file.readBytes()
+                if (AndroidSkinAnalyzer.validate(bytes)) {
                     selectedSkinPath = file.absolutePath
+                    selectedSkinModel = AndroidSkinAnalyzer.detectModel(bytes)
                     if (currentAccount?.authType == AuthType.LOCAL) {
                         currentAccount.skinPath = file.absolutePath
+                        currentAccount.skinModel = selectedSkinModel
                         currentAccount.updateSkinFace()
                         Toast.makeText(context, "Skin updated!", Toast.LENGTH_SHORT).show()
                     }
@@ -161,6 +169,7 @@ fun SelectAuthScreen(
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            @Suppress("DEPRECATION")
                             Text(
                                 text = "Select Login Method",
                                 fontSize = 14.sp,
@@ -185,7 +194,7 @@ fun SelectAuthScreen(
                         AuthActionButton(
                             text = stringResource(id = R.string.auth_select_elyby),
                             icon = R.drawable.ic_auth_elyby,
-                            onClick = onElyByClick,
+                            onClick = { onElyByClick() },
                             tint = Color.Unspecified
                         )
                         AuthActionButton(
@@ -194,6 +203,23 @@ fun SelectAuthScreen(
                             onClick = { showLocalDialog = true },
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
+
+                        @Suppress("DEPRECATION")
+                        AnimatedVisibility(
+                            visible = currentAccount?.authType == AuthType.LOCAL,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            SkinModelSelector(
+                                selectedModel = selectedSkinModel,
+                                onModelSelected = { model ->
+                                    currentAccount?.skinModel = model
+                                    currentAccount?.save()
+                                    selectedSkinModel = model
+                                },
+                                modifier = Modifier.padding(top = 4.dp).fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
@@ -238,10 +264,9 @@ fun SelectAuthScreen(
                             }
                         }
 
-                        val skinModel = remember(currentAccount, selectedSkinPath) {
+                        val skinModel = remember(currentAccount, selectedSkinPath, selectedSkinModel) {
                             if (selectedSkinPath != null) {
-                                val bytes = File(selectedSkinPath!!).readBytes()
-                                AndroidSkinAnalyzer.detectModel(bytes)
+                                selectedSkinModel
                             } else {
                                 currentAccount?.skinModel ?: SkinModelType.STEVE
                             }
@@ -278,6 +303,7 @@ fun SelectAuthScreen(
                                                 text = "Skin",
                                                 icon = R.drawable.ic_px_image
                                             )
+                                            @Suppress("DEPRECATION")
                                             VerticalMenuItem(
                                                 onClick = {
                                                     capeLauncher.launch("image/*")
@@ -289,7 +315,7 @@ fun SelectAuthScreen(
                                         }
                                     }
 
-                                    SplitButton(
+                                    MaterialSplitButton(
                                         onClick = { skinLauncher.launch("image/*") },
                                         onMenuClick = { menuExpanded = !menuExpanded },
                                         expanded = menuExpanded
@@ -310,6 +336,7 @@ fun SelectAuthScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(
                         text = stringResource(id = R.string.login_online_username_hint),
                         fontSize = 14.sp,
@@ -331,6 +358,7 @@ fun SelectAuthScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        @Suppress("DEPRECATION")
                         Button(
                             onClick = { skinLauncher.launch("image/*") },
                             modifier = Modifier.weight(1f),
@@ -340,6 +368,7 @@ fun SelectAuthScreen(
                         ) {
                             Text(if (selectedSkinPath == null) "Pick Skin" else "Skin Selected", fontSize = 11.sp)
                         }
+                        @Suppress("DEPRECATION")
                         Button(
                             onClick = { capeLauncher.launch("image/*") },
                             modifier = Modifier.weight(1f),
@@ -356,7 +385,7 @@ fun SelectAuthScreen(
                 Button(
                     onClick = {
                         if (localUsername.isNotBlank()) {
-                            onLocalClick(localUsername, selectedSkinPath, selectedCapePath)
+                            onLocalClick(localUsername, selectedSkinPath, selectedCapePath, selectedSkinModel)
                             showLocalDialog = false
                         }
                     },
@@ -400,10 +429,28 @@ fun Skin3DViewer(
     model: String = "default"
 ) {
     var isPageLoaded by remember { mutableStateOf(false) }
+    
+    val transitionAlpha by animateFloatAsState(
+        targetValue = if (isPageLoaded) 1f else 0f,
+        animationSpec = tween(600, easing = LinearOutSlowInEasing),
+        label = "skinAlpha"
+    )
+
+    val transitionScale by animateFloatAsState(
+        targetValue = if (isPageLoaded) 1f else 0.95f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "skinScale"
+    )
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = transitionAlpha
+                    scaleX = transitionScale
+                    scaleY = transitionScale
+                },
             factory = { context ->
                 WebView(context).apply {
                     settings.javaScriptEnabled = true
@@ -437,6 +484,7 @@ fun Skin3DViewer(
             }
         )
 
+        @Suppress("DEPRECATION")
         AnimatedVisibility(
             visible = !isPageLoaded,
             exit = fadeOut(tween(500))
@@ -495,13 +543,15 @@ fun AuthActionButton(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalLoginScreen(
-    onLoginClick: (String, String?, String?) -> Unit
+    onLoginClick: (String, String?, String?, SkinModelType) -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var selectedSkinPath by remember { mutableStateOf<String?>(null) }
     var selectedCapePath by remember { mutableStateOf<String?>(null) }
+    var selectedSkinModel by remember { mutableStateOf(SkinModelType.STEVE) }
 
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
@@ -510,8 +560,10 @@ fun LocalLoginScreen(
         uri?.let {
             val file = copyUriToInternal(context, it, "skin")
             if (file != null) {
-                if (AndroidSkinAnalyzer.validate(file.readBytes())) {
+                val bytes = file.readBytes()
+                if (AndroidSkinAnalyzer.validate(bytes)) {
                     selectedSkinPath = file.absolutePath
+                    selectedSkinModel = AndroidSkinAnalyzer.detectModel(bytes)
                 } else {
                     Toast.makeText(context, "Invalid skin dimensions!", Toast.LENGTH_SHORT).show()
                 }
@@ -593,42 +645,29 @@ fun LocalLoginScreen(
                         )
                     )
 
-                    Spacer(Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                         Button(
-                            onClick = { skinLauncher.launch("image/*") },
-                            modifier = Modifier.weight(1f),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(if (selectedSkinPath == null) "Change Skin" else "Skin Picked", fontSize = 11.sp)
-                        }
-                        Button(
-                            onClick = { capeLauncher.launch("image/*") },
-                            modifier = Modifier.weight(1f),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(if (selectedCapePath == null) "Change Cape" else "Cape Picked", fontSize = 11.sp)
-                        }
-                    }
-
                     Spacer(Modifier.height(32.dp))
 
                     Button(
-                        onClick = { onLoginClick(username, selectedSkinPath, selectedCapePath) },
+                        onClick = { onLoginClick(username, selectedSkinPath, selectedCapePath, selectedSkinModel) },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = CircleShape
                     ) {
+                        @Suppress("DEPRECATION")
+                        @SuppressLint("LocalContextGetResourceValueCall")
                         Text(
                             text = stringResource(id = R.string.login_online_login_label).uppercase(),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 16.sp
                         )
                     }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    SkinModelSelector(
+                        selectedModel = selectedSkinModel,
+                        onModelSelected = { selectedSkinModel = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -651,19 +690,96 @@ fun LocalLoginScreen(
                          else if (username.isNotBlank()) "https://minotar.net/skin/$username"
                          else "steve.png"
                     }
-                    val skinModel = remember(selectedSkinPath) {
+                    val skinModel = remember(selectedSkinPath, selectedSkinModel) {
                         if (selectedSkinPath != null) {
-                            val bytes = File(selectedSkinPath!!).readBytes()
-                            AndroidSkinAnalyzer.detectModel(bytes)
-                        } else SkinModelType.STEVE
+                            selectedSkinModel
+                        } else selectedSkinModel
                     }
                     Skin3DViewer(
                         modifier = Modifier.fillMaxSize(),
                         skinUrl = skinUrl,
                         model = if (skinModel == SkinModelType.ALEX) "slim" else "default"
                     )
+
+                    var menuExpanded by rememberSaveable { mutableStateOf(false) }
+                    BackHandler(menuExpanded) { menuExpanded = false }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            AnimatedVisibility(
+                                visible = menuExpanded,
+                                enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+                                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
+                            ) {
+                                VerticalMenu(modifier = Modifier.padding(bottom = 8.dp)) {
+                                    VerticalMenuItem(
+                                        onClick = {
+                                            skinLauncher.launch("image/*")
+                                            menuExpanded = false
+                                        },
+                                        text = "Skin",
+                                        icon = R.drawable.ic_px_image
+                                    )
+                                    @Suppress("DEPRECATION")
+                                    VerticalMenuItem(
+                                        onClick = {
+                                            capeLauncher.launch("image/*")
+                                            menuExpanded = false
+                                        },
+                                        text = "Cape",
+                                        icon = R.drawable.ic_px_theme
+                                    )
+                                }
+                            }
+
+                            MaterialSplitButton(
+                                onClick = { skinLauncher.launch("image/*") },
+                                onMenuClick = { menuExpanded = !menuExpanded },
+                                expanded = menuExpanded
+                            )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SkinModelSelector(
+    selectedModel: SkinModelType,
+    onModelSelected: (SkinModelType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val options = listOf("Wide", "Slim")
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .padding(2.dp)
+    ) {
+        options.forEachIndexed { index, label ->
+            val model = if (index == 0) SkinModelType.STEVE else SkinModelType.ALEX
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                onClick = { onModelSelected(model) },
+                selected = selectedModel == model,
+                label = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveContainerColor = Color.Transparent,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                ),
+                border = BorderStroke(0.dp, Color.Transparent),
+                icon = {}
+            )
         }
     }
 }
@@ -703,8 +819,7 @@ private fun VerticalMenuItem(
                 .fillMaxWidth()
                 .height(44.dp)
                 .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(id = icon),
                 contentDescription = null,
@@ -712,9 +827,10 @@ private fun VerticalMenuItem(
                 tint = contentColor.copy(alpha = 0.8f)
             )
             Spacer(Modifier.width(12.dp))
+            @Suppress("DEPRECATION")
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -722,7 +838,7 @@ private fun VerticalMenuItem(
 }
 
 @Composable
-private fun SplitButton(
+private fun MaterialSplitButton(
     onClick: () -> Unit,
     onMenuClick: () -> Unit,
     expanded: Boolean,
@@ -791,7 +907,7 @@ private fun SplitButton(
 @Composable
 fun SelectAuthScreenPreview() {
     PojavTheme(dynamicColor = true) {
-        SelectAuthScreen({}, { _, _, _ -> }, {})
+        SelectAuthScreen({}, { _, _, _, _ -> }, {})
     }
 }
 
@@ -799,6 +915,6 @@ fun SelectAuthScreenPreview() {
 @Composable
 fun LocalLoginScreenPreview() {
     PojavTheme(dynamicColor = true) {
-        LocalLoginScreen({ _, _, _ -> })
+        LocalLoginScreen({ _, _, _, _ -> })
     }
 }

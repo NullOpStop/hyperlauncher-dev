@@ -30,11 +30,11 @@ class SelectAuthFragment : Fragment() {
                 PojavTheme {
                     SelectAuthScreen(
                         onMicrosoftClick = { Tools.swapFragment(requireActivity(), MicrosoftLoginFragment::class.java, MicrosoftLoginFragment.TAG, null) },
-                        onLocalClick = { username, skinPath, capePath ->
+                        onLocalClick = { username, skinPath, capePath, skinModel ->
                             if (!checkUsername(username)) {
                                 Tools.dialog(requireContext(), getString(R.string.local_login_bad_username_title), getString(R.string.local_login_bad_username_text))
                             } else {
-                                ExtraCore.setValue(ExtraConstants.MOJANG_LOGIN_TODO, arrayOf(username, "", skinPath, capePath))
+                                ExtraCore.setValue(ExtraConstants.MOJANG_LOGIN_TODO, arrayOf(username, "", skinPath, capePath, skinModel.name))
                                 Tools.swapFragment(requireActivity(), MainMenuFragment::class.java, MainMenuFragment.TAG, null)
                             }
                         },

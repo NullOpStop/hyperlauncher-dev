@@ -1,12 +1,11 @@
 package net.kdt.pojavlaunch.kotlin.ui.screens
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -27,6 +26,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -56,6 +56,8 @@ import net.kdt.pojavlaunch.extra.ExtraListener
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
 import net.kdt.pojavlaunch.instances.Instances
+import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper
+import net.kdt.pojavlaunch.progresskeeper.TaskCountListener
 import net.kdt.pojavlaunch.skin.SkinUtils
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 
@@ -122,22 +124,41 @@ fun MainMenuRevamp(
         mutableStateOf<MinecraftAccount?>(if (isPreview) null else Accounts.getCurrent())
     }
 
+    var taskCount by remember { mutableIntStateOf(if (isPreview) 0 else ProgressKeeper.getTaskCount()) }
+    var isLaunching by remember { mutableStateOf(false) }
+
+    val isSomethingRunning by remember(taskCount, isLaunching) {
+        derivedStateOf { taskCount > 0 || isLaunching }
+    }
+
     DisposableEffect(Unit) {
         if (isPreview) return@DisposableEffect onDispose {}
 
-        val listener = ExtraListener<Boolean> { _, _ ->
+        val accountListener = ExtraListener<Boolean> { _, _ ->
             currentAccount = Accounts.getCurrent()
             false
         }
-        ExtraCore.addExtraListener(ExtraConstants.REFRESH_ACCOUNT_SPINNER, listener)
+        val launchListener = ExtraListener<Boolean> { _, value ->
+            isLaunching = value
+            false
+        }
+        val taskListener = TaskCountListener { count ->
+            taskCount = count
+            false
+        }
+
+        ExtraCore.addExtraListener(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountListener)
+        ExtraCore.addExtraListener(ExtraConstants.LAUNCH_GAME, launchListener)
+        ProgressKeeper.addTaskCountListener(taskListener)
+
         onDispose {
-            ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, listener)
+            ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountListener)
+            ExtraCore.removeExtraListenerFromValue(ExtraConstants.LAUNCH_GAME, launchListener)
+            ProgressKeeper.removeTaskCountListener(taskListener)
         }
     }
 
-    val skinHead by produceState<Bitmap?>(initialValue = null, currentAccount) {
-        value = SkinUtils.renderHead(context, currentAccount)
-    }
+    val skinHead by SkinUtils.rememberSkinHead2D(currentAccount)
 
     val instanceIcon = remember(selectedInstance) {
         if (!isPreview && selectedInstance != null)
@@ -169,6 +190,7 @@ fun MainMenuRevamp(
         AlertDialog(
             onDismissRequest = { showTerminateConfirm = false },
             title = {
+                @Suppress("DEPRECATION")
                 Text(
                     text = "Terminate Game",
                     style = MaterialTheme.typography.headlineSmall,
@@ -176,15 +198,19 @@ fun MainMenuRevamp(
                 )
             },
             text = {
+                @Suppress("DEPRECATION")
                 Text(
                     text = stringResource(id = R.string.mcn_exit_confirm),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 Button(
                     onClick = {
                         showTerminateConfirm = false
+                        isLaunching = false
                         onTerminateClick()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -193,16 +219,20 @@ fun MainMenuRevamp(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text("Terminate", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 @Suppress("DEPRECATION")
+                @SuppressLint("LocalContextGetResourceValueCall")
                 TextButton(
                     onClick = { showTerminateConfirm = false },
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(stringResource(id = android.R.string.cancel))
                 }
             },
@@ -231,31 +261,21 @@ fun MainMenuRevamp(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_tab_wiki),
-                        icon = Icons.Rounded.Info,
-                        onClick = onWikiClick
-                    )
-                    ActionCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_button_social_media),
-                        icon = Icons.Rounded.Share,
-                        onClick = onSocialMediaClick
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                ActionCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    title = stringResource(id = R.string.mcl_tab_wiki),
+                    icon = Icons.Rounded.Info,
+                    onClick = onWikiClick
+                )
+                ActionCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    title = stringResource(id = R.string.mcl_button_social_media),
+                    icon = Icons.Rounded.Share,
+                    onClick = onSocialMediaClick
                 )
 
                 ActionCard(
@@ -296,13 +316,9 @@ fun MainMenuRevamp(
                 modifier = Modifier
                     .weight(0.34f)
                     .fillMaxHeight(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-                ),
-                tonalElevation = 2.dp,
+                shape = RoundedCornerShape(32.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                tonalElevation = 0.dp,
             ) {
                 Column(
                     modifier = Modifier
@@ -334,7 +350,8 @@ fun MainMenuRevamp(
                                     bitmap = skinHead!!.asImageBitmap(),
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
+                                    contentScale = ContentScale.Fit,
+                                    filterQuality = FilterQuality.None
                                 )
                             } else {
                                 Icon(
@@ -347,87 +364,43 @@ fun MainMenuRevamp(
                                 )
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = currentAccount?.username ?: "Steve",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = "Minecraft Account",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 9.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        OutlinedButton(
-                            onClick = onEditProfileClick,
-                            shape = CircleShape,
-                            modifier = Modifier.height(32.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "Edit Profile",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
                     }
 
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    OutlinedButton(
-                        onClick = onInstanceSelect,
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
                         Row(
+                            modifier = Modifier
+                                .clickable(onClick = onInstanceSelect)
+                                .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (instanceIcon != null) {
-                                Image(
-                                    painter = rememberDrawablePainter(instanceIcon),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_px_home),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = Color.Unspecified
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (instanceIcon != null) {
+                                    Image(
+                                        painter = rememberDrawablePainter(instanceIcon),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_px_home),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = Color.White
+                                    )
+                                }
                             }
 
                             Column(modifier = Modifier.weight(1f)) {
@@ -455,24 +428,30 @@ fun MainMenuRevamp(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                              )
+
+                            IconButton(
+                                onClick = onEditProfileClick,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Edit Profile",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateContentSize(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Button(
                             onClick = onPlayClick,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp),
+                                .height(48.dp),
                             shape = CircleShape,
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                         ) {
@@ -480,43 +459,42 @@ fun MainMenuRevamp(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = stringResource(id = R.string.main_play).uppercase(),
+                                    text = "Launch",
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
                                 )
                             }
                         }
 
-                        Button(
-                            onClick = {
-                                terminateRotationAngle += 360f
-
-                                showTerminateConfirm = true
-                            },
-                            modifier = Modifier.size(44.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            ),
-                            contentPadding = PaddingValues(0.dp),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        AnimatedVisibility(
+                            visible = isSomethingRunning,
+                            enter = fadeIn() + scaleIn(initialScale = 0.5f),
+                            exit = fadeOut() + scaleOut(targetScale = 0.5f)
                         ) {
-                            Icon(
-                                Icons.Rounded.Clear,
-                                contentDescription = "Terminate",
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .rotate(animatedTerminateRotation)
-                            )
+                            Button(
+                                onClick = {
+                                    terminateRotationAngle += 360f
+                                    showTerminateConfirm = true
+                                },
+                                modifier = Modifier.size(48.dp),
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                contentPadding = PaddingValues(0.dp),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Clear,
+                                    contentDescription = "Terminate",
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .rotate(animatedTerminateRotation)
+                                )
+                            }
                         }
                     }
                 }
@@ -555,6 +533,8 @@ fun ActionCard(
                 modifier = Modifier.size(24.dp),
                 tint = Color.White
             )
+            @Suppress("DEPRECATION")
+            @SuppressLint("LocalContextGetResourceValueCall")
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,

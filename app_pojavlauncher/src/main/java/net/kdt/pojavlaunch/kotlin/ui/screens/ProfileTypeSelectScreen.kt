@@ -1,37 +1,31 @@
-package net.kdt.pojavlaunch.ui.screens
+package net.kdt.pojavlaunch.kotlin.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
+import net.kdt.pojavlaunch.ui.components.PreferenceGroup
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 
 @Composable
 fun ProfileTypeSelectScreen(
-    onBack: () -> Unit,
+    onBack: () -> Unit, // Still keeping the callback in case it's needed for system back handling
     onVanillaClick: () -> Unit,
     onOptifineClick: () -> Unit,
     onFabricClick: () -> Unit,
@@ -50,7 +44,6 @@ fun ProfileTypeSelectScreen(
     val hasBackground = backgroundBitmap != null
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         if (isPreview) {
             if (backgroundBitmap != null) {
                 Image(
@@ -69,104 +62,68 @@ fun ProfileTypeSelectScreen(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-
-            Row(
+        Scaffold(
+            containerColor = Color.Transparent
+        ) { padding ->
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Create New Profile",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-
-                item(span = { GridItemSpan(2) }) {
-                    CategoryHeader(title = stringResource(id = R.string.create_profile_vanilla_like_versions))
+                item {
+                    PreferenceGroup(title = stringResource(id = R.string.create_profile_vanilla_like_versions)) {
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.create_instance_vanilla),
+                            icon = painterResource(id = R.drawable.ic_px_java),
+                            onClick = onVanillaClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.mod_dl_install_optifine),
+                            icon = painterResource(id = R.drawable.ic_optifine),
+                            onClick = { onOptifineClick() }
+                        )
+                    }
                 }
 
                 item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.create_instance_vanilla),
-                        onClick = onVanillaClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.mod_dl_install_optifine),
-                        onClick = onOptifineClick
-                    )
-                }
-
-                item(span = { GridItemSpan(2) }) {
-                    CategoryHeader(title = stringResource(id = R.string.create_profile_modded_versions))
-                }
-
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modloader_dl_install_fabric_instance),
-                        onClick = onFabricClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modloader_dl_install_quilt_instance),
-                        onClick = onQuiltClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modloader_dl_install_legacy_fabric_instance),
-                        onClick = onLegacyFabricClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modloader_dl_install_forge_instance),
-                        onClick = onForgeClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modloader_dl_install_neoforge_instance),
-                        onClick = onNeoForgeClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.modpack_install_instance_button),
-                        onClick = onModpackClick
-                    )
-                }
-                item {
-                    ProfileTypeButton(
-                        text = stringResource(id = R.string.create_bta_instance),
-                        onClick = onBTAClick
-                    )
+                    PreferenceGroup(title = stringResource(id = R.string.create_profile_modded_versions)) {
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modloader_dl_install_fabric_instance),
+                            icon = painterResource(id = R.drawable.ic_fabric),
+                            onClick = onFabricClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modloader_dl_install_quilt_instance),
+                            icon = painterResource(id = R.drawable.ic_quilt),
+                            onClick = onQuiltClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modloader_dl_install_legacy_fabric_instance),
+                            icon = painterResource(id = R.drawable.ic_fabric),
+                            onClick = onLegacyFabricClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modloader_dl_install_forge_instance),
+                            icon = painterResource(id = R.drawable.ic_forge),
+                            onClick = onForgeClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modloader_dl_install_neoforge_instance),
+                            icon = painterResource(id = R.drawable.ic_neoforge),
+                            onClick = onNeoForgeClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.modpack_install_instance_button),
+                            icon = painterResource(id = R.drawable.ic_package),
+                            onClick = onModpackClick
+                        )
+                        ProfileTypeItem(
+                            title = stringResource(id = R.string.create_bta_instance),
+                            icon = painterResource(id = R.drawable.ic_px_java),
+                            onClick = onBTAClick
+                        )
+                    }
                 }
             }
         }
@@ -174,45 +131,26 @@ fun ProfileTypeSelectScreen(
 }
 
 @Composable
-fun CategoryHeader(title: String) {
-    Column(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-    }
-}
-
-@Composable
-fun ProfileTypeButton(
-    text: String,
+fun ProfileTypeItem(
+    title: String,
+    icon: Painter,
     onClick: () -> Unit
 ) {
-
-    Button(
-        onClick = onClick,
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+        leadingContent = { 
+            Icon(
+                painter = icon, 
+                contentDescription = null, 
+                modifier = Modifier.size(32.dp),
+                tint = Color.Unspecified
+            ) 
+        },
         modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+            .clickable { onClick() }
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
 
 @Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,orientation=landscape")

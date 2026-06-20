@@ -29,11 +29,11 @@ class LocalLoginFragment : Fragment() {
             setContent {
                 PojavTheme {
                     LocalLoginScreen(
-                        onLoginClick = { username, skinPath, capePath ->
+                        onLoginClick = { username, skinPath, capePath, skinModel ->
                             if (!checkUsername(username)) {
                                 Tools.dialog(requireContext(), getString(R.string.local_login_bad_username_title), getString(R.string.local_login_bad_username_text))
                             } else {
-                                ExtraCore.setValue(ExtraConstants.MOJANG_LOGIN_TODO, arrayOf(username, "", skinPath, capePath))
+                                ExtraCore.setValue(ExtraConstants.MOJANG_LOGIN_TODO, arrayOf(username, "", skinPath, capePath, skinModel.name))
                                 Tools.swapFragment(requireActivity(), MainMenuFragment::class.java, MainMenuFragment.TAG, null)
                             }
                         }

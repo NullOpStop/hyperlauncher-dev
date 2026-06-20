@@ -52,23 +52,11 @@ android {
     }
 
     signingConfigs {
-        customDebug {
-            storeFile file("debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
-        }
-        googlePlayBuild {
-            storeFile file("mojo_upload.jks")
-            storePassword System.getenv("UPLOAD_KEYSTORE_PASSWORD")
-            keyAlias "key0"
-            keyPassword System.getenv("UPLOAD_KEYSTORE_PASSWORD")
-        }
-        publicBuild {
-            storeFile file("mojo_pub.jks")
-            storePassword System.getenv("MOJOPUB_KEYSTORE_PASSWORD")
-            keyAlias "key0"
-            keyPassword System.getenv("MOJOPUB_KEYSTORE_PASSWORD")
+        release {
+            storeFile file("C:/Users/ASHMEET/hyperbar-release.jks")
+            storePassword "Ashmeetop10"
+            keyAlias "hyperbar"
+            keyPassword "Ashmeetop10"
         }
     }
 
@@ -101,7 +89,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.customDebug
+            signingConfig signingConfigs.release
             resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher.debug'
             resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.scoped.gamefolder.debug'
         }
@@ -109,19 +97,26 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
             resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.scoped.gamefolder'
             resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher'
         }
         gplay {
             initWith release
-            signingConfig signingConfigs.googlePlayBuild
+            signingConfig signingConfigs.release
         }
         pubRelease {
             initWith release
-            signingConfig signingConfigs.customDebug // WIP, changeme
+            signingConfig signingConfigs.release
             applicationIdSuffix '.pub'
             resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.pub.scoped.gamefolder'
             resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher.pub'
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "hyperX_launcher-${variant.name}-${variant.versionName}.apk"
         }
     }
 

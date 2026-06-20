@@ -20,13 +20,26 @@ public class CheckFileOnDiskTask extends DownloaderTask {
 
     @Override
     protected void performTask() throws IOException {
-        boolean checkResult = checkFile();
-        if(checkResult) {
-            if(!mAfterDownload) mDownloader.addSize(mMetadata.size);
+        boolean checkResult;
+        try {
+            checkResult = checkFile();
+        } catch (IOException e) {
+            if (mAfterDownload) throw e;
+            checkResult = false;
+        }
+
+        if (checkResult) {
+            if (!mAfterDownload) mDownloader.addSize(mMetadata.size);
             mDownloader.fileComplete();
-        }else {
-            if(!mAfterDownload) mDownloader.submitFileForDownload(mMetadata);
-            else throw new IOException("Failed to verify "+mMetadata.toString());
+        } else if (!mAfterDownload) {
+            mDownloader.submitFileForDownload(mMetadata);
+        } else {
+            // Detailed reason for final failure
+            String reason = "Final hash verification failed";
+            if (mMetadata.size != -1 && mMetadata.path.length() != mMetadata.size) {
+                reason = "Final size mismatch: expected " + mMetadata.size + ", got " + mMetadata.path.length();
+            }
+            throw new IOException(reason + " for " + mMetadata.path.getName() + "\n" + mMetadata.toString());
         }
     }
 

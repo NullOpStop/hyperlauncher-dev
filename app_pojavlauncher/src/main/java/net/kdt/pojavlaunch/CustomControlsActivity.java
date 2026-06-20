@@ -1,5 +1,6 @@
 package net.kdt.pojavlaunch;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -110,7 +111,8 @@ public class CustomControlsActivity extends BaseActivity implements EditorExitab
 		CropperUtils.startCropper(mCropperLauncher);
 	}
 
-	@Override
+	@SuppressLint("MissingSuperCall")
+    @Override
 	public void onBackPressed() {
 		mControlLayout.askToExit(this);
 	}
