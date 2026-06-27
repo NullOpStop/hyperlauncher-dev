@@ -26,7 +26,7 @@ import net.kdt.pojavlaunch.utils.FileUtils
 import com.kdt.mcgui.LauncherMenuButton
 import com.kdt.mcgui.MineButton
 import com.kdt.mcgui.mcVersionSpinner
-import net.kdt.pojavlaunch.kotlin.ui.screens.MainMenuRevamp
+import net.kdt.pojavlaunch.ui.screens.MainMenuRevamp
 
 class MainMenuFragment : Fragment() {
 

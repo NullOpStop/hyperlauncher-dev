@@ -1,4 +1,4 @@
-package net.kdt.pojavlaunch.kotlin.ui.screens
+package net.kdt.pojavlaunch.ui.screens
 
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
@@ -94,21 +94,20 @@ fun InstanceEditorScreen(
     var isMainPage by rememberSaveable { mutableStateOf(false) }
     val railScrollState = rememberScrollState()
 
-    // Animation settings from LauncherPreferences
     val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
     val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
     val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
-    val transitionSpec: AnimatedContentTransitionScope<Boolean>.() -> ContentTransform = {
+    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
         when (animPreset) {
             "fade" -> {
                 fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
             }
             "bounce" -> {
                 slideInVertically(
-                    initialOffsetY = { -(it * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                ) + fadeIn() togetherWith slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
             }
             else -> {
                 fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
@@ -139,198 +138,75 @@ fun InstanceEditorScreen(
             selectedRendererIndex != initialRendererIndex ||
             preferredBackend != initialPreferredBackend
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
-    val hasBackground = backgroundBitmap != null
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-            }
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f)))
-        }
-
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isWide = maxWidth > 600.dp
-
-            if (isWide) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    NavigationRail(
-                        modifier = Modifier.fillMaxHeight().width(80.dp),
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        windowInsets = WindowInsets(0, 0, 0, 0)
-                    ) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .verticalScroll(railScrollState),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            InstanceEditorPage.entries.forEach { page ->
-                                NavigationRailItem(
-                                    selected = currentPage == page && !isMainPage,
-                                    onClick = {
-                                        currentPage = page
-                                        isMainPage = false
-                                    },
-                                    icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
-                                    label = { Text(page.title.substringBefore(" "), fontSize = 10.sp) },
-                                    alwaysShowLabel = false,
-                                    colors = NavigationRailItemDefaults.colors(
-                                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                                        unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                )
-                            }
-                        }
-                    }
-
-                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                    Scaffold(
-                        containerColor = Color.Transparent,
-                        floatingActionButton = {
-                            AnimatedVisibility(
-                                visible = isNewInstance || isDirty,
-                                enter = scaleIn() + fadeIn(),
-                                exit = scaleOut() + fadeOut()
-                            ) {
-                                FloatingActionButton(
-                                    onClick = onSave,
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(Icons.Default.Done, contentDescription = "Save")
-                                }
-                            }
-                        }
-                    ) { padding ->
-                        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                            AnimatedContent(
-                                targetState = currentPage,
-                                transitionSpec = {
-                                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-                                },
-                                label = "instance_editor_content_anim"
-                            ) { page ->
-                                InstanceEditorContent(
-                                    page = page,
-                                    instanceIcon = instanceIcon,
-                                    name = name,
-                                    onNameChange = onNameChange,
-                                    versionId = versionId,
-                                    controlLayout = controlLayout,
-                                    jvmArgs = jvmArgs,
-                                    onJvmArgsChange = onJvmArgsChange,
-                                    argsMode = argsMode,
-                                    onArgsModeChange = onArgsModeChange,
-                                    sharedData = sharedData,
-                                    onSharedDataChange = onSharedDataChange,
-                                    customDirectory = customDirectory,
-                                    availableRuntimes = availableRuntimes,
-                                    selectedRuntime = selectedRuntime,
-                                    onRuntimeSelected = onRuntimeSelected,
-                                    rendererDisplayNames = rendererDisplayNames,
-                                    selectedRendererIndex = selectedRendererIndex,
-                                    onRendererSelected = onRendererSelected,
-                                    preferredBackend = preferredBackend,
-                                    onPreferredBackendChange = onPreferredBackendChange,
-                                    onIconClick = onIconClick,
-                                    onVersionClick = onVersionClick,
-                                    onControlClick = onControlClick,
-                                    onCustomDirectoryClick = onCustomDirectoryClick,
-                                    onDelete = onDelete,
-                                    onOpenLogs = onOpenLogs,
-                                    onOpenConfig = onOpenConfig,
-                                    onOpenMods = onOpenMods,
-                                    onOpenShaderPacks = onOpenShaderPacks,
-                                    onOpenResourcePacks = onOpenResourcePacks
-                                )
-                            }
-                        }
-                    }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isPreview) {
+                if (backgroundBitmap != null) {
+                    Image(
+                        bitmap = backgroundBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                 }
-            } else {
-                AnimatedContent(
-                    targetState = isMainPage,
-                    transitionSpec = transitionSpec,
-                    label = "instance_editor_nav_anim"
-                ) { mainPage ->
-                    if (mainPage) {
-                        Scaffold(
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f)))
+            }
+
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val isWide = maxWidth > 600.dp
+
+                if (isWide) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        NavigationRail(
+                            modifier = Modifier.fillMaxHeight().width(80.dp),
                             containerColor = Color.Transparent,
-                            topBar = {
-                                TopAppBar(
-                                    title = { Text("Edit Instance", fontWeight = FontWeight.Bold) },
-                                    navigationIcon = {
-                                        IconButton(onClick = onBack) {
-                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                                        }
-                                    },
-                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                                )
-                            },
-                            floatingActionButton = {
-                                AnimatedVisibility(
-                                    visible = isNewInstance || isDirty,
-                                    enter = scaleIn() + fadeIn(),
-                                    exit = scaleOut() + fadeOut()
-                                ) {
-                                    FloatingActionButton(
-                                        onClick = onSave,
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                        shape = CircleShape
-                                    ) {
-                                        Icon(Icons.Default.Done, contentDescription = "Save")
-                                    }
-                                }
-                            }
-                        ) { padding ->
-                            BackHandler { onBack() }
-                            LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
-                                item {
-                                    PreferenceGroup(title = "Categories") {
-                                        InstanceEditorPage.entries.forEach { page ->
-                                            PreferenceItem(
-                                                title = page.title,
-                                                icon = painterResource(page.iconRes),
-                                                onClick = {
-                                                    currentPage = page
-                                                    isMainPage = false
-                                                }
-                                            )
-                                        }
-                                    }
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            windowInsets = WindowInsets(0, 0, 0, 0)
+                        ) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .verticalScroll(railScrollState),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                InstanceEditorPage.entries.forEach { page ->
+                                    NavigationRailItem(
+                                        selected = currentPage == page && !isMainPage,
+                                        onClick = {
+                                            currentPage = page
+                                            isMainPage = false
+                                        },
+                                        icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                                        label = { Text(page.title.substringBefore(" "), fontSize = 10.sp) },
+                                        alwaysShowLabel = false,
+                                        colors = NavigationRailItemDefaults.colors(
+                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    )
                                 }
                             }
                         }
-                    } else {
+
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
                         Scaffold(
                             containerColor = Color.Transparent,
-                            topBar = {
-                                TopAppBar(
-                                    title = { Text(currentPage.title, fontWeight = FontWeight.Bold) },
-                                    navigationIcon = {
-                                        // Back button removed from category name as requested
-                                    },
-                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                                )
-                            },
                             floatingActionButton = {
                                 AnimatedVisibility(
                                     visible = isNewInstance || isDirty,
@@ -348,41 +224,172 @@ fun InstanceEditorScreen(
                                 }
                             }
                         ) { padding ->
-                            BackHandler { isMainPage = true }
                             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                                InstanceEditorContent(
-                                    page = currentPage,
-                                    instanceIcon = instanceIcon,
-                                    name = name,
-                                    onNameChange = onNameChange,
-                                    versionId = versionId,
-                                    controlLayout = controlLayout,
-                                    jvmArgs = jvmArgs,
-                                    onJvmArgsChange = onJvmArgsChange,
-                                    argsMode = argsMode,
-                                    onArgsModeChange = onArgsModeChange,
-                                    sharedData = sharedData,
-                                    onSharedDataChange = onSharedDataChange,
-                                    customDirectory = customDirectory,
-                                    availableRuntimes = availableRuntimes,
-                                    selectedRuntime = selectedRuntime,
-                                    onRuntimeSelected = onRuntimeSelected,
-                                    rendererDisplayNames = rendererDisplayNames,
-                                    selectedRendererIndex = selectedRendererIndex,
-                                    onRendererSelected = onRendererSelected,
-                                    preferredBackend = preferredBackend,
-                                    onPreferredBackendChange = onPreferredBackendChange,
-                                    onIconClick = onIconClick,
-                                    onVersionClick = onVersionClick,
-                                    onControlClick = onControlClick,
-                                    onCustomDirectoryClick = onCustomDirectoryClick,
-                                    onDelete = onDelete,
-                                    onOpenLogs = onOpenLogs,
-                                    onOpenConfig = onOpenConfig,
-                                    onOpenMods = onOpenMods,
-                                    onOpenShaderPacks = onOpenShaderPacks,
-                                    onOpenResourcePacks = onOpenResourcePacks
-                                )
+                                AnimatedContent(
+                                    targetState = currentPage,
+                                    transitionSpec = transitionSpec,
+                                    label = "instance_editor_content_anim"
+                                ) { page ->
+                                    InstanceEditorContent(
+                                        page = page,
+                                        instanceIcon = instanceIcon,
+                                        name = name,
+                                        onNameChange = onNameChange,
+                                        versionId = versionId,
+                                        controlLayout = controlLayout,
+                                        jvmArgs = jvmArgs,
+                                        onJvmArgsChange = onJvmArgsChange,
+                                        argsMode = argsMode,
+                                        onArgsModeChange = onArgsModeChange,
+                                        sharedData = sharedData,
+                                        onSharedDataChange = onSharedDataChange,
+                                        customDirectory = customDirectory,
+                                        availableRuntimes = availableRuntimes,
+                                        selectedRuntime = selectedRuntime,
+                                        onRuntimeSelected = onRuntimeSelected,
+                                        rendererDisplayNames = rendererDisplayNames,
+                                        selectedRendererIndex = selectedRendererIndex,
+                                        onRendererSelected = onRendererSelected,
+                                        preferredBackend = preferredBackend,
+                                        onPreferredBackendChange = onPreferredBackendChange,
+                                        onIconClick = onIconClick,
+                                        onVersionClick = onVersionClick,
+                                        onControlClick = onControlClick,
+                                        onCustomDirectoryClick = onCustomDirectoryClick,
+                                        onDelete = onDelete,
+                                        onOpenLogs = onOpenLogs,
+                                        onOpenConfig = onOpenConfig,
+                                        onOpenMods = onOpenMods,
+                                        onOpenShaderPacks = onOpenShaderPacks,
+                                        onOpenResourcePacks = onOpenResourcePacks
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    AnimatedContent(
+                        targetState = isMainPage,
+                        transitionSpec = transitionSpec,
+                        label = "instance_editor_nav_anim"
+                    ) { mainPage ->
+                        if (mainPage) {
+                            Scaffold(
+                                containerColor = Color.Transparent,
+                                topBar = {
+                                    @Suppress("DEPRECATION")
+                                    TopAppBar(
+                                        title = { Text("Edit Instance", fontWeight = FontWeight.Bold) },
+                                        navigationIcon = {
+                                            IconButton(onClick = onBack) {
+                                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                            }
+                                        },
+                                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                    )
+                                },
+                                floatingActionButton = {
+                                    AnimatedVisibility(
+                                        visible = isNewInstance || isDirty,
+                                        enter = scaleIn() + fadeIn(),
+                                        exit = scaleOut() + fadeOut()
+                                    ) {
+                                        FloatingActionButton(
+                                            onClick = onSave,
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            shape = CircleShape
+                                        ) {
+                                            Icon(Icons.Default.Done, contentDescription = "Save")
+                                        }
+                                    }
+                                }
+                            ) { padding ->
+                                BackHandler { onBack() }
+                                LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+                                    item {
+                                        PreferenceGroup(title = "Categories") {
+                                            InstanceEditorPage.entries.forEach { page ->
+                                                PreferenceItem(
+                                                    title = page.title,
+                                                    icon = painterResource(page.iconRes),
+                                                    onClick = {
+                                                        currentPage = page
+                                                        isMainPage = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            Scaffold(
+                                containerColor = Color.Transparent,
+                                topBar = {
+                                    @Suppress("DEPRECATION")
+                                    TopAppBar(
+                                        title = { Text(currentPage.title, fontWeight = FontWeight.Bold) },
+                                        navigationIcon = {
+                                            // Back button removed from category name as requested
+                                        },
+                                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                    )
+                                },
+                                floatingActionButton = {
+                                    AnimatedVisibility(
+                                        visible = isNewInstance || isDirty,
+                                        enter = scaleIn() + fadeIn(),
+                                        exit = scaleOut() + fadeOut()
+                                    ) {
+                                        FloatingActionButton(
+                                            onClick = onSave,
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            shape = CircleShape
+                                        ) {
+                                            Icon(Icons.Default.Done, contentDescription = "Save")
+                                        }
+                                    }
+                                }
+                            ) { padding ->
+                                BackHandler { isMainPage = true }
+                                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                                    InstanceEditorContent(
+                                        page = currentPage,
+                                        instanceIcon = instanceIcon,
+                                        name = name,
+                                        onNameChange = onNameChange,
+                                        versionId = versionId,
+                                        controlLayout = controlLayout,
+                                        jvmArgs = jvmArgs,
+                                        onJvmArgsChange = onJvmArgsChange,
+                                        argsMode = argsMode,
+                                        onArgsModeChange = onArgsModeChange,
+                                        sharedData = sharedData,
+                                        onSharedDataChange = onSharedDataChange,
+                                        customDirectory = customDirectory,
+                                        availableRuntimes = availableRuntimes,
+                                        selectedRuntime = selectedRuntime,
+                                        onRuntimeSelected = onRuntimeSelected,
+                                        rendererDisplayNames = rendererDisplayNames,
+                                        selectedRendererIndex = selectedRendererIndex,
+                                        onRendererSelected = onRendererSelected,
+                                        preferredBackend = preferredBackend,
+                                        onPreferredBackendChange = onPreferredBackendChange,
+                                        onIconClick = onIconClick,
+                                        onVersionClick = onVersionClick,
+                                        onControlClick = onControlClick,
+                                        onCustomDirectoryClick = onCustomDirectoryClick,
+                                        onDelete = onDelete,
+                                        onOpenLogs = onOpenLogs,
+                                        onOpenConfig = onOpenConfig,
+                                        onOpenMods = onOpenMods,
+                                        onOpenShaderPacks = onOpenShaderPacks,
+                                        onOpenResourcePacks = onOpenResourcePacks
+                                    )
+                                }
                             }
                         }
                     }
@@ -546,12 +553,14 @@ fun GeneralSettings(
                 )
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = {
                     onNameChange(tempName)
                     showNameDialog = false
                 }) { Text("OK") }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = { showNameDialog = false }) { Text("Cancel") }
             }
         )
@@ -637,12 +646,14 @@ fun JavaSettings(
                 )
             },
             confirmButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = {
                     onJvmArgsChange(tempJvmArgs)
                     showJvmArgsDialog = false
                 }) { Text("OK") }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = { showJvmArgsDialog = false }) { Text("Cancel") }
             }
         )
@@ -715,7 +726,7 @@ fun RenderingSettings(
                         entryValues = stringArrayResource(R.array.graphics_backend_values),
                         selectedValue = preferredBackend,
                         onValueChange = onPreferredBackendChange,
-                        icon = painterResource(R.drawable.ic_px_image_renderer)
+                        icon = painterResource(id = R.drawable.ic_px_image_renderer)
                     )
                 }
             }
@@ -763,6 +774,7 @@ fun DangerSettings(
                 ) { Text("Delete") }
             },
             dismissButton = {
+                @Suppress("DEPRECATION")
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )

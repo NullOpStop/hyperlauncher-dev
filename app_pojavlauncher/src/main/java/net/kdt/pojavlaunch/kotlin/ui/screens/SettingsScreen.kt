@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -85,21 +86,22 @@ fun SettingsScreen(
     var currentPage by rememberSaveable { mutableStateOf(SettingsPage.APPEARANCE) }
     var isMainPage by rememberSaveable { mutableStateOf(true) }
     val railScrollState = rememberScrollState()
+    val isPreview = LocalInspectionMode.current
 
     val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
     val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
     val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
-    val transitionSpec: AnimatedContentTransitionScope<Boolean>.() -> ContentTransform = {
+    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
         when (animPreset) {
             "fade" -> {
                 fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
             }
             "bounce" -> {
                 slideInVertically(
-                    initialOffsetY = { -(it * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                ) + fadeIn() togetherWith slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    initialOffsetY = { -(it * 0.12f * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { (it * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
             }
             else -> {
                 fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
@@ -107,119 +109,128 @@ fun SettingsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isWide = maxWidth > 600.dp
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
-            if (isWide) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    NavigationRail(
-                        modifier = Modifier.fillMaxHeight().width(80.dp),
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        windowInsets = WindowInsets(0, 0, 0, 0)
-                    ) {
-                        Spacer(modifier = Modifier.height(12.dp))
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val isWide = maxWidth > 600.dp
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .verticalScroll(railScrollState),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                if (isWide) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        NavigationRail(
+                            modifier = Modifier.fillMaxHeight().width(80.dp),
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            windowInsets = WindowInsets(0, 0, 0, 0)
                         ) {
-                            SettingsPage.entries.forEach { page ->
-                                NavigationRailItem(
-                                    selected = currentPage == page && !isMainPage,
-                                    onClick = {
-                                        currentPage = page
-                                        isMainPage = false
-                                    },
-                                    icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
-                                    label = { Text(stringResource(page.titleRes).substringBefore(" "), fontSize = 10.sp) },
-                                    alwaysShowLabel = false,
-                                    colors = NavigationRailItemDefaults.colors(
-                                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                                        unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .verticalScroll(railScrollState),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                SettingsPage.entries.forEach { page ->
+                                    NavigationRailItem(
+                                        selected = currentPage == page && !isMainPage,
+                                        onClick = {
+                                            currentPage = page
+                                            isMainPage = false
+                                        },
+                                        icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                                        label = { Text(stringResource(page.titleRes).substringBefore(" "), fontSize = 10.sp) },
+                                        alwaysShowLabel = false,
+                                        colors = NavigationRailItemDefaults.colors(
+                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
-                    }
 
-                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    Scaffold(
-                        containerColor = Color.Transparent,
-                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    ) { padding ->
-                        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                            AnimatedContent(
-                                targetState = currentPage,
-                                transitionSpec = {
-                                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-                                },
-                                label = "settings_content_anim"
-                            ) { page ->
-                                SettingsContent(page)
-                            }
-                        }
-                    }
-                }
-            } else {
-                AnimatedContent(
-                    targetState = isMainPage,
-                    transitionSpec = transitionSpec,
-                    label = "settings_nav_anim"
-                ) { mainPage ->
-                    if (mainPage) {
                         Scaffold(
                             containerColor = Color.Transparent,
                             contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                            topBar = {
-                                TopAppBar(
-                                    title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                                    navigationIcon = { },
-                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                                )
-                            }
                         ) { padding ->
-                            BackHandler { onBack() }
-                            Box(modifier = Modifier.padding(padding)) {
-                                MainSettings(onNavigate = {
-                                    currentPage = it
-                                    isMainPage = false
-                                })
+                            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                                AnimatedContent(
+                                    targetState = currentPage,
+                                    transitionSpec = transitionSpec,
+                                    label = "settings_content_anim"
+                                ) { page ->
+                                    SettingsContent(page)
+                                }
                             }
                         }
-                    } else {
-                        Scaffold(
-                            containerColor = Color.Transparent,
-                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                            topBar = {
-                                TopAppBar(
-                                    title = { Text(stringResource(currentPage.titleRes), fontWeight = FontWeight.Bold) },
-                                    navigationIcon = {
-                                        IconButton(onClick = {
-                                            isMainPage = true
-                                        }) {
-                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                                        }
-                                    },
-                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                                )
+                    }
+                } else {
+                    AnimatedContent(
+                        targetState = isMainPage,
+                        transitionSpec = transitionSpec,
+                        label = "settings_nav_anim"
+                    ) { mainPage ->
+                        if (mainPage) {
+                            Scaffold(
+                                containerColor = Color.Transparent,
+                                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                topBar = {
+                                    @Suppress("DEPRECATION")
+                                    TopAppBar(
+                                        title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                                        navigationIcon = { },
+                                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                    )
+                                }
+                            ) { padding ->
+                                BackHandler { onBack() }
+                                Box(modifier = Modifier.padding(padding)) {
+                                    MainSettings(onNavigate = {
+                                        currentPage = it
+                                        isMainPage = false
+                                    })
+                                }
                             }
-                        ) { padding ->
-                            BackHandler {
-                                isMainPage = true
-                            }
-                            Box(modifier = Modifier.padding(padding)) {
-                                SettingsContent(
-                                    currentPage
-                                )
+                        } else {
+                            Scaffold(
+                                containerColor = Color.Transparent,
+                                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                topBar = {
+                                    @Suppress("DEPRECATION")
+                                    TopAppBar(
+                                        title = { Text(stringResource(currentPage.titleRes), fontWeight = FontWeight.Bold) },
+                                        navigationIcon = {
+                                            IconButton(onClick = {
+                                                isMainPage = true
+                                            }) {
+                                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                            }
+                                        },
+                                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                    )
+                                }
+                            ) { padding ->
+                                BackHandler {
+                                    isMainPage = true
+                                }
+                                Box(modifier = Modifier.padding(padding)) {
+                                    SettingsContent(
+                                        currentPage
+                                    )
+                                }
                             }
                         }
                     }
@@ -405,6 +416,7 @@ fun AppearanceSettings() {
                             .background(Color(currentSeedColor), RoundedCornerShape(12.dp))
                     )
                     Spacer(modifier = Modifier.height(16.dp))
+                    @Suppress("DEPRECATION")
                     Text("Select Hue: ${hue.toInt()}")
                     Slider(
                         value = hue,
@@ -1457,6 +1469,7 @@ fun MouseHotspotDialog(onDismiss: () -> Unit) {
             @Suppress("DEPRECATION")
             @SuppressLint("LocalContextGetResourceValueCall")
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                @Suppress("DEPRECATION")
                 Text("Drag the knob to set the click point", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -1512,7 +1525,9 @@ fun MouseHotspotDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    @Suppress("DEPRECATION")
                     Text("X: ${hotspotX.roundToInt()}%", style = MaterialTheme.typography.labelMedium)
+                    @Suppress("DEPRECATION")
                     Text("Y: ${hotspotY.roundToInt()}%", style = MaterialTheme.typography.labelMedium)
                 }
             }
@@ -1691,13 +1706,16 @@ fun MiscSettings() {
             text = {
                 @Suppress("DEPRECATION")
                 Column {
+                    @Suppress("DEPRECATION")
                     Text("A new version (${info.latestVersion}) is available!", style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(8.dp))
+                    @Suppress("DEPRECATION")
                     Text("Changelog:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
                     Box(modifier = Modifier
                         .heightIn(max = 120.dp)
                         .verticalScroll(rememberScrollState())
                     ) {
+                        @Suppress("DEPRECATION")
                         Text(info.changelog, style = MaterialTheme.typography.bodySmall)
                     }
                 }

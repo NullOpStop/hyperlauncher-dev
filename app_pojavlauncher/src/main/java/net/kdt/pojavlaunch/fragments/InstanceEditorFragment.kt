@@ -20,10 +20,10 @@ import net.kdt.pojavlaunch.extra.ExtraCore
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
 import net.kdt.pojavlaunch.instances.Instances
-import net.kdt.pojavlaunch.kotlin.ui.screens.InstanceEditorScreen
 import net.kdt.pojavlaunch.multirt.MultiRTUtils
 import net.kdt.pojavlaunch.multirt.Runtime
 import net.kdt.pojavlaunch.profiles.VersionSelectorDialog
+import net.kdt.pojavlaunch.ui.screens.InstanceEditorScreen
 
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import net.kdt.pojavlaunch.utils.CropperUtils

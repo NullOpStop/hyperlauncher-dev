@@ -22,6 +22,7 @@
     <string name="installer_mods">Mods</string>
     <string name="installer_shaders">Shaders</string>
     <string name="installer_packs">Resource Packs</string>
+    <string name="installer_worlds">Worlds</string>
     <string name="installer_search_hint">Search projects</string>
 
     <!-- Error messages -->

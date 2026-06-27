@@ -47,6 +47,7 @@ import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.authenticator.accounts.Accounts
 import net.kdt.pojavlaunch.authenticator.AuthType
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.skin.AndroidSkinAnalyzer
 import net.kdt.pojavlaunch.skin.SkinModelType
 import net.kdt.pojavlaunch.skin.SkinUtils
@@ -115,211 +116,218 @@ fun SelectAuthScreen(
         }
     }
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) {
         try { BaseActivity.getBackgroundBitmap() } catch (_: Exception) { null }
     } else null
-    val hasBackground = backgroundBitmap != null
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            if (isPreview) {
+                if (backgroundBitmap != null) {
+                    Image(
+                        bitmap = backgroundBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                }
+
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-
-            Surface(
+            Row(
                 modifier = Modifier
-                    .weight(0.9f)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
-                color = Color.Transparent
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
-                @Suppress("DEPRECATION")
-                Column(
+
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
+                        .weight(0.9f)
+                        .fillMaxHeight()
+                        .padding(end = 8.dp),
+                    color = Color.Transparent
                 ) {
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            @Suppress("DEPRECATION")
-                            Text(
-                                text = "Select Login Method",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
+                    @Suppress("DEPRECATION")
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
                     ) {
-                        AuthActionButton(
-                            text = stringResource(id = R.string.auth_select_microsoft),
-                            icon = R.drawable.ic_auth_ms,
-                            onClick = onMicrosoftClick,
-                            tint = Color.Unspecified
-                        )
-                        AuthActionButton(
-                            text = stringResource(id = R.string.auth_select_elyby),
-                            icon = R.drawable.ic_auth_elyby,
-                            onClick = { onElyByClick() },
-                            tint = Color.Unspecified
-                        )
-                        AuthActionButton(
-                            text = stringResource(id = R.string.auth_select_local),
-                            icon = R.drawable.ic_px_home,
-                            onClick = { showLocalDialog = true },
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
 
-                        @Suppress("DEPRECATION")
-                        AnimatedVisibility(
-                            visible = currentAccount?.authType == AuthType.LOCAL,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            SkinModelSelector(
-                                selectedModel = selectedSkinModel,
-                                onModelSelected = { model ->
-                                    currentAccount?.skinModel = model
-                                    currentAccount?.save()
-                                    selectedSkinModel = model
-                                },
-                                modifier = Modifier.padding(top = 4.dp).fillMaxWidth()
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                @Suppress("DEPRECATION")
+                                Text(
+                                    text = "Select Login Method",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AuthActionButton(
+                                text = stringResource(id = R.string.auth_select_microsoft),
+                                icon = R.drawable.ic_auth_ms,
+                                onClick = onMicrosoftClick,
+                                tint = Color.Unspecified
                             )
+                            AuthActionButton(
+                                text = stringResource(id = R.string.auth_select_elyby),
+                                icon = R.drawable.ic_auth_elyby,
+                                onClick = { onElyByClick() },
+                                tint = Color.Unspecified
+                            )
+                            AuthActionButton(
+                                text = stringResource(id = R.string.auth_select_local),
+                                icon = R.drawable.ic_px_home,
+                                onClick = { showLocalDialog = true },
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+
+                            @Suppress("DEPRECATION")
+                            AnimatedVisibility(
+                                visible = currentAccount?.authType == AuthType.LOCAL,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                SkinModelSelector(
+                                    selectedModel = selectedSkinModel,
+                                    onModelSelected = { model ->
+                                        currentAccount?.skinModel = model
+                                        currentAccount?.save()
+                                        selectedSkinModel = model
+                                    },
+                                    modifier = Modifier.padding(top = 4.dp).fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            Surface(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                Box(
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
+                        .weight(1.1f)
+                        .fillMaxHeight(),
+                    color = Color.Transparent
                 ) {
-                    if (isPreview) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_px_image_renderer),
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            @Suppress("DEPRECATION")
-                            Text(
-                                text = "3D Skin Preview\n(skinview3d)",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    } else {
-                        val skinUrl = remember(currentAccount, selectedSkinPath) {
-                            if (selectedSkinPath != null) {
-                                "file://$selectedSkinPath"
-                            } else {
-                                SkinUtils.getSkinUrl(currentAccount)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isPreview) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_px_image_renderer),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                @Suppress("DEPRECATION")
+                                Text(
+                                    text = "3D Skin Preview\n(skinview3d)",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
                             }
-                        }
-
-                        val skinModel = remember(currentAccount, selectedSkinPath, selectedSkinModel) {
-                            if (selectedSkinPath != null) {
-                                selectedSkinModel
-                            } else {
-                                currentAccount?.skinModel ?: SkinModelType.STEVE
+                        } else {
+                            val skinUrl = remember(currentAccount, selectedSkinPath) {
+                                if (selectedSkinPath != null) {
+                                    "file://$selectedSkinPath"
+                                } else {
+                                    SkinUtils.getSkinUrl(currentAccount)
+                                }
                             }
-                        }
 
-                        Skin3DViewer(
-                            modifier = Modifier.fillMaxSize(),
-                            skinUrl = skinUrl,
-                            model = if (skinModel == SkinModelType.ALEX) "slim" else "default"
-                        )
+                            val skinModel = remember(currentAccount, selectedSkinPath, selectedSkinModel) {
+                                if (selectedSkinPath != null) {
+                                    selectedSkinModel
+                                } else {
+                                    currentAccount?.skinModel ?: SkinModelType.STEVE
+                                }
+                            }
 
-                        if (!isPreview && currentAccount?.authType == AuthType.LOCAL) {
-                            var menuExpanded by rememberSaveable { mutableStateOf(false) }
-                            BackHandler(menuExpanded) { menuExpanded = false }
+                            Skin3DViewer(
+                                modifier = Modifier.fillMaxSize(),
+                                skinUrl = skinUrl,
+                                model = if (skinModel == SkinModelType.ALEX) "slim" else "default"
+                            )
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.BottomEnd
-                            ) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    AnimatedVisibility(
-                                        visible = menuExpanded,
-                                        enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                                        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
-                                    ) {
-                                        VerticalMenu(modifier = Modifier.padding(bottom = 8.dp)) {
-                                            VerticalMenuItem(
-                                                onClick = {
-                                                    skinLauncher.launch("image/*")
-                                                    menuExpanded = false
-                                                },
-                                                text = "Skin",
-                                                icon = R.drawable.ic_px_image
-                                            )
-                                            @Suppress("DEPRECATION")
-                                            VerticalMenuItem(
-                                                onClick = {
-                                                    capeLauncher.launch("image/*")
-                                                    menuExpanded = false
-                                                },
-                                                text = "Cape",
-                                                icon = R.drawable.ic_px_theme
-                                            )
+                            if (!isPreview && currentAccount?.authType == AuthType.LOCAL) {
+                                var menuExpanded by rememberSaveable { mutableStateOf(false) }
+                                BackHandler(menuExpanded) { menuExpanded = false }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(12.dp),
+                                    contentAlignment = Alignment.BottomEnd
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        AnimatedVisibility(
+                                            visible = menuExpanded,
+                                            enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+                                            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
+                                        ) {
+                                            VerticalMenu(modifier = Modifier.padding(bottom = 8.dp)) {
+                                                VerticalMenuItem(
+                                                    onClick = {
+                                                        skinLauncher.launch("image/*")
+                                                        menuExpanded = false
+                                                    },
+                                                    text = "Skin",
+                                                    icon = R.drawable.ic_px_image
+                                                )
+                                                @Suppress("DEPRECATION")
+                                                VerticalMenuItem(
+                                                    onClick = {
+                                                        capeLauncher.launch("image/*")
+                                                        menuExpanded = false
+                                                    },
+                                                    text = "Cape",
+                                                    icon = R.drawable.ic_px_theme
+                                                )
+                                            }
                                         }
-                                    }
 
-                                    MaterialSplitButton(
-                                        onClick = { skinLauncher.launch("image/*") },
-                                        onMenuClick = { menuExpanded = !menuExpanded },
-                                        expanded = menuExpanded
-                                    )
+                                        MaterialSplitButton(
+                                            onClick = { skinLauncher.launch("image/*") },
+                                            onMenuClick = { menuExpanded = !menuExpanded },
+                                            expanded = menuExpanded
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -366,6 +374,7 @@ fun SelectAuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
                             contentPadding = PaddingValues(0.dp)
                         ) {
+                            @Suppress("DEPRECATION")
                             Text(if (selectedSkinPath == null) "Pick Skin" else "Skin Selected", fontSize = 11.sp)
                         }
                         @Suppress("DEPRECATION")
@@ -376,6 +385,7 @@ fun SelectAuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
                             contentPadding = PaddingValues(0.dp)
                         ) {
+                            @Suppress("DEPRECATION")
                             Text(if (selectedCapePath == null) "Pick Cape" else "Cape Selected", fontSize = 11.sp)
                         }
                     }
@@ -398,6 +408,8 @@ fun SelectAuthScreen(
             dismissButton = {
                 @Suppress("DEPRECATION")
                 TextButton(onClick = { showLocalDialog = false }) {
+                    @Suppress("DEPRECATION")
+                    @SuppressLint("LocalContextGetResourceValueCall")
                     Text(stringResource(id = android.R.string.cancel))
                 }
             },
@@ -481,6 +493,13 @@ fun Skin3DViewer(
                     val skin = if (!skinUrl.isNullOrEmpty()) skinUrl else "steve.png"
                     webView.evaluateJavascript("loadSkin('$skin', '$model');", null)
                 }
+            },
+            onRelease = { webView ->
+                webView.stopLoading()
+                webView.loadUrl("about:blank")
+                webView.clearHistory()
+                webView.removeAllViews()
+                webView.destroy()
             }
         )
 
@@ -530,6 +549,7 @@ fun AuthActionButton(
                 modifier = Modifier.size(18.dp),
                 tint = tint
             )
+            @Suppress("DEPRECATION")
             Spacer(modifier = Modifier.width(12.dp))
             @Suppress("DEPRECATION")
             Text(
@@ -578,170 +598,178 @@ fun LocalLoginScreen(
         }
     }
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) {
         try { BaseActivity.getBackgroundBitmap() } catch (_: Exception) { null }
     } else null
-    val hasBackground = backgroundBitmap != null
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            if (isPreview) {
+                if (backgroundBitmap != null) {
+                    Image(
+                        bitmap = backgroundBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                }
+
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            Surface(
+            Row(
                 modifier = Modifier
-                    .weight(0.9f)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
-                color = Color.Transparent
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
-                @Suppress("DEPRECATION")
-                Column(
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .weight(0.9f)
+                        .fillMaxHeight()
+                        .padding(end = 8.dp),
+                    color = Color.Transparent
                 ) {
-                    Text(
-                        text = stringResource(id = R.string.auth_select_local),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-
-                    Spacer(Modifier.height(32.dp))
-
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Username") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
-                    )
-
-                    Spacer(Modifier.height(32.dp))
-
-                    Button(
-                        onClick = { onLoginClick(username, selectedSkinPath, selectedCapePath, selectedSkinModel) },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = CircleShape
+                    @Suppress("DEPRECATION")
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         @Suppress("DEPRECATION")
-                        @SuppressLint("LocalContextGetResourceValueCall")
                         Text(
-                            text = stringResource(id = R.string.login_online_login_label).uppercase(),
+                            text = stringResource(id = R.string.auth_select_local),
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp
+                            color = Color.White
+                        )
+
+                        Spacer(Modifier.height(32.dp))
+
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = { username = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Username") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            )
+                        )
+
+                        Spacer(Modifier.height(32.dp))
+
+                        Button(
+                            onClick = { onLoginClick(username, selectedSkinPath, selectedCapePath, selectedSkinModel) },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = CircleShape
+                        ) {
+                            @Suppress("DEPRECATION")
+                            @SuppressLint("LocalContextGetResourceValueCall")
+                            Text(
+                                text = stringResource(id = R.string.login_online_login_label).uppercase(),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        SkinModelSelector(
+                            selectedModel = selectedSkinModel,
+                            onModelSelected = { selectedSkinModel = it },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    SkinModelSelector(
-                        selectedModel = selectedSkinModel,
-                        onModelSelected = { selectedSkinModel = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
-            }
 
-            Surface(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                Box(
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
+                        .weight(1.1f)
+                        .fillMaxHeight(),
+                    color = Color.Transparent
                 ) {
-                    val skinUrl = remember(username, selectedSkinPath) {
-                         if (selectedSkinPath != null) "file://$selectedSkinPath"
-                         else if (username.isNotBlank()) "https://minotar.net/skin/$username"
-                         else "steve.png"
-                    }
-                    val skinModel = remember(selectedSkinPath, selectedSkinModel) {
-                        if (selectedSkinPath != null) {
-                            selectedSkinModel
-                        } else selectedSkinModel
-                    }
-                    Skin3DViewer(
-                        modifier = Modifier.fillMaxSize(),
-                        skinUrl = skinUrl,
-                        model = if (skinModel == SkinModelType.ALEX) "slim" else "default"
-                    )
-
-                    var menuExpanded by rememberSaveable { mutableStateOf(false) }
-                    BackHandler(menuExpanded) { menuExpanded = false }
-
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(12.dp),
-                        contentAlignment = Alignment.BottomEnd
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            AnimatedVisibility(
-                                visible = menuExpanded,
-                                enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
-                            ) {
-                                VerticalMenu(modifier = Modifier.padding(bottom = 8.dp)) {
-                                    VerticalMenuItem(
-                                        onClick = {
-                                            skinLauncher.launch("image/*")
-                                            menuExpanded = false
-                                        },
-                                        text = "Skin",
-                                        icon = R.drawable.ic_px_image
-                                    )
-                                    @Suppress("DEPRECATION")
-                                    VerticalMenuItem(
-                                        onClick = {
-                                            capeLauncher.launch("image/*")
-                                            menuExpanded = false
-                                        },
-                                        text = "Cape",
-                                        icon = R.drawable.ic_px_theme
-                                    )
-                                }
-                            }
+                        val skinUrl = remember(username, selectedSkinPath) {
+                             if (selectedSkinPath != null) "file://$selectedSkinPath"
+                             else if (username.isNotBlank()) "https://minotar.net/skin/$username"
+                             else "steve.png"
+                        }
+                        val skinModel = remember(selectedSkinPath, selectedSkinModel) {
+                            if (selectedSkinPath != null) {
+                                selectedSkinModel
+                            } else selectedSkinModel
+                        }
+                        Skin3DViewer(
+                            modifier = Modifier.fillMaxSize(),
+                            skinUrl = skinUrl,
+                            model = if (skinModel == SkinModelType.ALEX) "slim" else "default"
+                        )
 
-                            MaterialSplitButton(
-                                onClick = { skinLauncher.launch("image/*") },
-                                onMenuClick = { menuExpanded = !menuExpanded },
-                                expanded = menuExpanded
-                            )
+                        var menuExpanded by rememberSaveable { mutableStateOf(false) }
+                        BackHandler(menuExpanded) { menuExpanded = false }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            contentAlignment = Alignment.BottomEnd
+                        ) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                AnimatedVisibility(
+                                    visible = menuExpanded,
+                                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+                                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
+                                ) {
+                                    VerticalMenu(modifier = Modifier.padding(bottom = 8.dp)) {
+                                        VerticalMenuItem(
+                                            onClick = {
+                                                skinLauncher.launch("image/*")
+                                                menuExpanded = false
+                                            },
+                                            text = "Skin",
+                                            icon = R.drawable.ic_px_image
+                                        )
+                                        @Suppress("DEPRECATION")
+                                        VerticalMenuItem(
+                                            onClick = {
+                                                capeLauncher.launch("image/*")
+                                                menuExpanded = false
+                                            },
+                                            text = "Cape",
+                                            icon = R.drawable.ic_px_theme
+                                        )
+                                    }
+                                }
+
+                                MaterialSplitButton(
+                                    onClick = { skinLauncher.launch("image/*") },
+                                    onMenuClick = { menuExpanded = !menuExpanded },
+                                    expanded = menuExpanded
+                                )
+                            }
                         }
                     }
                 }
@@ -826,6 +854,7 @@ private fun VerticalMenuItem(
                 modifier = Modifier.size(20.dp),
                 tint = contentColor.copy(alpha = 0.8f)
             )
+            @Suppress("DEPRECATION")
             Spacer(Modifier.width(12.dp))
             @Suppress("DEPRECATION")
             Text(
@@ -868,6 +897,7 @@ private fun MaterialSplitButton(
                         modifier = Modifier.size(18.dp),
                         tint = contentColor
                     )
+                    @Suppress("DEPRECATION")
                     Spacer(Modifier.width(8.dp))
                     @Suppress("DEPRECATION")
                     Text(

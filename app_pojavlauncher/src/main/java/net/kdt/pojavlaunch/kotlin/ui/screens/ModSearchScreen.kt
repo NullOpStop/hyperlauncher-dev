@@ -3,6 +3,8 @@ package net.kdt.pojavlaunch.ui.screens
 import android.graphics.Bitmap
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,6 +46,7 @@ import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ModIconCache
 import net.kdt.pojavlaunch.modloaders.modpacks.models.Constants
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModDetail
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModItem
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,8 +77,30 @@ fun ModSearchScreen(
     val leftScrollState = rememberScrollState()
     val isPreview = LocalInspectionMode.current
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
-    val hasBackground = backgroundBitmap != null
+
+    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
+    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
+
+    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
+        when (animPreset) {
+            "fade" -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+            "bounce" -> {
+                slideInVertically(
+                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
+            }
+            else -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+        }
+    }
 
     LaunchedEffect(listState, items.size, lastPage, isLoading) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }.collect { lastVisibleIndex ->
@@ -85,296 +110,307 @@ fun ModSearchScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isPreview) {
+                if (backgroundBitmap != null) {
+                    Image(
+                        bitmap = backgroundBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                }
+
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-
-            Surface(
+            Row(
                 modifier = Modifier
-                    .weight(0.9f)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
-                color = Color.Transparent
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
-                val selectedItem = remember(expandedItemId, items) { items.find { it.id == expandedItemId } }
 
-                if (selectedItem == null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(leftScrollState)
-                            .padding(4.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = {
-                                onSearchQueryChange(it)
-                                if (it.isEmpty()) onSearchSubmit()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            placeholder = { Text("Search modpacks", fontSize = 13.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            trailingIcon = {
-                                IconButton(onClick = onFilterClick) {
-                                    Icon(painter = painterResource(id = R.drawable.ic_filter), contentDescription = null, modifier = Modifier.size(18.dp))
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() })
-                        )
+                Surface(
+                    modifier = Modifier
+                        .weight(0.9f)
+                        .fillMaxHeight()
+                        .padding(end = 8.dp),
+                    color = Color.Transparent
+                ) {
+                    val selectedItem = remember(expandedItemId, items) { items.find { it.id == expandedItemId } }
 
-                        if (statusVisible) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = statusText,
-                                color = statusColor,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Button(
-                            onClick = onImportClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                        ) {
-                            Text("Import Local Modpack", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                    }
-                } else {
-
-                    Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                    if (selectedItem == null) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxSize()
                                 .verticalScroll(leftScrollState)
-                                .padding(bottom = 60.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(4.dp)
                         ) {
-                            ModIcon(item = selectedItem, size = 64.dp)
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Text(
-                                text = selectedItem.title.orEmpty(),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = {
+                                    onSearchQueryChange(it)
+                                    if (it.isEmpty()) onSearchSubmit()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                placeholder = { Text("Search modpacks", fontSize = 13.sp) },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                trailingIcon = {
+                                    IconButton(onClick = onFilterClick) {
+                                        Icon(painter = painterResource(id = R.drawable.ic_filter), contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() })
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = selectedItem.description.orEmpty(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Surface(
-                                shape = RoundedCornerShape(999.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-                            ) {
+                            if (statusVisible) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                @Suppress("DEPRECATION")
                                 Text(
-                                    text = when (selectedItem.apiSource) {
-                                        Constants.SOURCE_CURSEFORGE -> "CurseForge"
-                                        Constants.SOURCE_MODRINTH -> "Modrinth"
-                                        else -> "Source"
-                                    },
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                    fontSize = 11.sp,
+                                    text = statusText,
+                                    color = statusColor,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    modifier = Modifier.padding(horizontal = 4.dp)
                                 )
                             }
-                        }
 
-                        Button(
-                            onClick = { onItemClick(selectedItem) }, 
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .height(40.dp)
-                                .fillMaxWidth(0.9f),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Back", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Button(
+                                onClick = onImportClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                @Suppress("DEPRECATION")
+                                Text("Import Local Modpack", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+
+                        Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(leftScrollState)
+                                    .padding(bottom = 60.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                ModIcon(item = selectedItem, size = 64.dp)
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                @Suppress("DEPRECATION")
+                                Text(
+                                    text = selectedItem.title.orEmpty(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                @Suppress("DEPRECATION")
+                                Text(
+                                    text = selectedItem.description.orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                                ) {
+                                    @Suppress("DEPRECATION")
+                                    Text(
+                                        text = when (selectedItem.apiSource) {
+                                            Constants.SOURCE_CURSEFORGE -> "CurseForge"
+                                            Constants.SOURCE_MODRINTH -> "Modrinth"
+                                            else -> "Source"
+                                        },
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { onItemClick(selectedItem) }, 
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .height(40.dp)
+                                    .fillMaxWidth(0.9f),
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                @Suppress("DEPRECATION")
+                                Text("Back", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
-            }
 
-            Surface(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                AnimatedContent(
-                    targetState = expandedItemId != null,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                         slideInHorizontally(initialOffsetX = { it / 4 }))
-                        .togetherWith(fadeOut(animationSpec = tween(90)) +
-                         slideOutHorizontally(targetOffsetX = { -it / 4 }))
-                    },
-                    label = "resultsTransition"
-                ) { isDetail ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (isDetail) {
-                            val selectedItem = items.find { it.id == expandedItemId }
-                            if (detailLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp).align(Alignment.Center),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else if (expandedDetail != null && selectedItem != null) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                                    verticalArrangement = Arrangement.Center
-                                ) {
+                Surface(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .fillMaxHeight(),
+                    color = Color.Transparent
+                ) {
+                    AnimatedContent(
+                        targetState = expandedItemId != null,
+                        transitionSpec = transitionSpec,
+                        label = "resultsTransition"
+                    ) { isDetail ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (isDetail) {
+                                val selectedItem = items.find { it.id == expandedItemId }
+                                if (detailLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp).align(Alignment.Center),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else if (expandedDetail != null && selectedItem != null) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        @Suppress("DEPRECATION")
+                                        Text(
+                                            "Select Version",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        val versionNames = expandedDetail.versionNames?.filterNotNull().orEmpty()
+                                        VersionDropdown(
+                                            options = versionNames,
+                                            selectedIndex = if (selectedVersionIndex in versionNames.indices) selectedVersionIndex else 0,
+                                            enabled = versionNames.isNotEmpty(),
+                                            onSelectedIndex = onVersionSelected
+                                        )
+
+                                        Spacer(modifier = Modifier.height(24.dp))
+
+                                        Button(
+                                            onClick = { onInstallClick(selectedItem) },
+                                            enabled = versionNames.isNotEmpty() && !tasksRunning,
+                                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_px_download),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            @Suppress("DEPRECATION")
+                                            Text("Install Modpack", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                        }
+                                    }
+                                } else {
+                                    @Suppress("DEPRECATION")
                                     Text(
-                                        "Select Version",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        "Unable to load details.",
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.align(Alignment.Center)
                                     )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    val versionNames = expandedDetail.versionNames?.filterNotNull().orEmpty()
-                                    VersionDropdown(
-                                        options = versionNames,
-                                        selectedIndex = if (selectedVersionIndex in versionNames.indices) selectedVersionIndex else 0,
-                                        enabled = versionNames.isNotEmpty(),
-                                        onSelectedIndex = onVersionSelected
+                                }
+                            } else {
+                                if (isLoading && items.isEmpty()) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp).align(Alignment.Center),
+                                        color = MaterialTheme.colorScheme.primary
                                     )
-
-                                    Spacer(modifier = Modifier.height(24.dp))
-
-                                    Button(
-                                        onClick = { onInstallClick(selectedItem) },
-                                        enabled = versionNames.isNotEmpty() && !tasksRunning,
-                                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                                } else if (items.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_px_download),
+                                            Icons.Default.Search,
                                             contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(48.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Install Modpack", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                }
-                            } else {
-                                Text(
-                                    "Unable to load details.",
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
-                        } else {
-                            if (isLoading && items.isEmpty()) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp).align(Alignment.Center),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else if (items.isEmpty()) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "Search for modpacks to see results",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                }
-                            } else {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(bottom = 8.dp)
-                                ) {
-                                    items(items, key = { it.iconCacheTag }) { item ->
-                                        ModItemView(
-                                            item = item,
-                                            onClick = { onItemClick(item) }
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        @Suppress("DEPRECATION")
+                                        Text(
+                                            "Search for modpacks to see results",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                         )
-                                        Spacer(modifier = Modifier.height(6.dp))
                                     }
+                                } else {
+                                    LazyColumn(
+                                        state = listState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 8.dp)
+                                    ) {
+                                        items(items, key = { it.iconCacheTag }) { item ->
+                                            ModItemView(
+                                                item = item,
+                                                onClick = { onItemClick(item) }
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                        }
 
-                                    if (!lastPage && items.isNotEmpty()) {
-                                        item {
-                                            Box(
-                                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        if (!lastPage && items.isNotEmpty()) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                                }
                                             }
                                         }
                                     }
@@ -409,6 +445,7 @@ fun ModItemView(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                @Suppress("DEPRECATION")
                 Text(
                     text = item.title.orEmpty(),
                     fontSize = 15.sp,
@@ -417,6 +454,7 @@ fun ModItemView(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                @Suppress("DEPRECATION")
                 Text(
                     text = item.description.orEmpty(),
                     fontSize = 11.sp,
@@ -515,6 +553,7 @@ private fun VersionDropdown(
             options.forEachIndexed { index, option ->
                 DropdownMenuItem(
                     text = {
+                        @Suppress("DEPRECATION")
                         Text(
                             text = option,
                             maxLines = 1,

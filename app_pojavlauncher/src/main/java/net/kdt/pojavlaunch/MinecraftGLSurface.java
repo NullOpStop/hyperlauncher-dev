@@ -19,6 +19,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
 import net.kdt.pojavlaunch.customcontrols.ControlLayout;
@@ -41,6 +42,8 @@ import fr.spse.gamepad_remapper.RemapperView;
 import git.artdeell.dnbootstrap.glfw.GLFW;
 import git.artdeell.dnbootstrap.glfw.GamepadEnableHandler;
 import git.artdeell.dnbootstrap.glfw.GrabListener;
+
+import java.lang.ref.WeakReference;
 
 /**
  * Class dealing with showing minecraft surface and taking inputs to dispatch them to minecraft
@@ -83,6 +86,8 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     private View mTouchpad;
     private boolean mLastGrabState = false;
 
+    private Thread mMainThread;
+
     public MinecraftGLSurface(Context context) {
         this(context, null);
     }
@@ -123,7 +128,12 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         mSurfaceProvider = useSurfaceView ? new SurfaceViewSurfaceProvider() : new TextureViewSurfaceProvider();
         mSurface = mSurfaceProvider.create(getContext(), this);
 
-        ((ViewGroup) getParent()).addView(mSurface, 0);
+        ViewGroup parent = (ViewGroup) getParent();
+        if (parent != null) {
+            parent.addView(mSurface, 0);
+        } else {
+            Log.e("MGLSurface", "Failed to add surface view: parent is null");
+        }
     }
 
     /**
@@ -133,14 +143,12 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
     @Override
     @SuppressWarnings("accessibility")
     public boolean onTouchEvent(MotionEvent e) {
+        View parent = (View) getParent();
+        if(parent instanceof ControlLayout && ((ControlLayout)parent).getModifiable()) return false;
 
-        if(((ControlLayout)getParent()).getModifiable()) return false;
-
-        boolean isMouse = false;
         for (int i = 0; i < e.getPointerCount(); i++) {
             int toolType = e.getToolType(i);
             if(toolType == MotionEvent.TOOL_TYPE_MOUSE) {
-                isMouse = true;
                 if(Tools.isAndroid8OrHigher() &&
                         LauncherPreferences.PREF_ENABLE_PHYSICAL_MOUSE &&
                         mPointerCapture != null) {
@@ -198,9 +206,13 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_HOVER_MOVE:
-                GLFW.cursorX = (event.getX(mouseCursorIndex) / getWidth());
-                GLFW.cursorY = (event.getY(mouseCursorIndex) / getHeight());
-                GLFW.sendMousePos();
+                int w = getWidth();
+                int h = getHeight();
+                if (w > 0 && h > 0) {
+                    GLFW.cursorX = (event.getX(mouseCursorIndex) / w);
+                    GLFW.cursorY = (event.getY(mouseCursorIndex) / h);
+                    GLFW.sendMousePos();
+                }
                 return true;
             case MotionEvent.ACTION_SCROLL:
                 CallbackBridge.sendScroll(event.getAxisValue(MotionEvent.AXIS_HSCROLL), event.getAxisValue(MotionEvent.AXIS_VSCROLL));
@@ -246,7 +258,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
         if(event.getDevice() != null
                 && ( (event.getSource() & InputDevice.SOURCE_MOUSE_RELATIVE) == InputDevice.SOURCE_MOUSE_RELATIVE
-                ||   (event.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE)  ){
+|   (event.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE)  ){
 
             if(eventKeycode == KeyEvent.KEYCODE_BACK){
                 sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, event.getAction() == KeyEvent.ACTION_DOWN);
@@ -320,8 +332,8 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         }
         windowWidth = newWidth;
         windowHeight = newHeight;
-        if(mSurface == null){
-            Log.w("MGLSurface", "Attempt to refresh size on null surface");
+        if(mSurfaceProvider == null){
+            Log.w("MGLSurface", "Attempt to refresh size on null surface provider");
             return;
         }
         mSurfaceProvider.updateSize();
@@ -335,7 +347,7 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 Display display = getDisplay();
-                if (display != null) {
+                if (display != null && surface != null && surface.isValid()) {
                     float maxHz = 60f;
                     for (Display.Mode mode : display.getSupportedModes()) {
                         if (mode.getRefreshRate() > maxHz) maxHz = mode.getRefreshRate();
@@ -351,18 +363,38 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
         MCOptionUtils.save();
         MCOptionUtils.getMcScale();
 
-        new Thread(() -> {
-            try {
+        mMainThread = new Thread(new MainThreadRunnable(this), "JVM Main thread");
+        mMainThread.start();
+    }
 
-                synchronized(mSurfaceReadyListenerLock) {
-                    if(mSurfaceReadyListener == null) mSurfaceReadyListenerLock.wait();
+    private static class MainThreadRunnable implements Runnable {
+        private final WeakReference<MinecraftGLSurface> mSurfaceRef;
+
+        MainThreadRunnable(MinecraftGLSurface surface) {
+            mSurfaceRef = new WeakReference<>(surface);
+        }
+
+        @Override
+        public void run() {
+            try {
+                MinecraftGLSurface surface = mSurfaceRef.get();
+                if (surface == null) return;
+
+                synchronized(surface.mSurfaceReadyListenerLock) {
+                    if(surface.mSurfaceReadyListener == null) surface.mSurfaceReadyListenerLock.wait();
                 }
 
-                mSurfaceReadyListener.isReady();
+                surface = mSurfaceRef.get();
+                if (surface != null && surface.mSurfaceReadyListener != null) {
+                    surface.mSurfaceReadyListener.isReady();
+                }
             } catch (Throwable e) {
-                Tools.showError(getContext(), e, true);
+                MinecraftGLSurface surface = mSurfaceRef.get();
+                if (surface != null) {
+                    Tools.showError(surface.getContext(), e, true);
+                }
             }
-        }, "JVM Main thread").start();
+        }
     }
 
     @Override
@@ -409,6 +441,34 @@ public class MinecraftGLSurface extends View implements GrabListener, GamepadEna
 
             mGamepadHandler = null;
         });
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (mPointerCapture != null) {
+            if (Tools.isAndroid8OrHigher()) {
+                mPointerCapture.detach();
+            }
+            mPointerCapture = null;
+        }
+        if (mGamepadHandler != null && mGamepadHandler instanceof Gamepad) {
+            ((Gamepad) mGamepadHandler).removeSelf();
+        }
+        mGamepadHandler = null;
+
+        if (mSurface != null) {
+            ViewGroup parent = (ViewGroup) mSurface.getParent();
+            if (parent != null) parent.removeView(mSurface);
+            mSurface = null;
+        }
+        mSurfaceProvider = null;
+        GLFW.setGamepadEnableHandler(null);
+        
+        if (mMainThread != null) {
+            mMainThread.interrupt();
+            mMainThread = null;
+        }
     }
 
     /** A small interface called when the listener is ready for the first time */

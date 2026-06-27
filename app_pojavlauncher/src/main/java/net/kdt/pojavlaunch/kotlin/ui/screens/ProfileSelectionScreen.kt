@@ -2,6 +2,8 @@ package net.kdt.pojavlaunch.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +43,7 @@ import androidx.core.graphics.drawable.toBitmap
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -62,6 +66,7 @@ fun ProfileSelectionScreen(
     val listState = rememberLazyListState()
     var isFiltersExpanded by remember { mutableStateOf(false) }
     var profileToDelete by remember { mutableStateOf<Instance?>(null) }
+    val isPreview = LocalInspectionMode.current
 
     if (profileToDelete != null) {
         AlertDialog(
@@ -82,129 +87,155 @@ fun ProfileSelectionScreen(
                 ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { profileToDelete = null }) { Text("Cancel") }
+                @Suppress("DEPRECATION")
+                TextButton(onClick = { profileToDelete = null }) { Text(stringResource(id = android.R.string.cancel)) }
             }
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(8.dp)
-        ) {
-            Surface(
-                modifier = Modifier.weight(0.9f).fillMaxHeight().padding(end = 8.dp),
-                color = Color.Transparent
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(leftScrollState).padding(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
+    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
+    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
+        when (animPreset) {
+            "fade" -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+            "bounce" -> {
+                slideInVertically(
+                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
+            }
+            else -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+        }
+    }
+
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.weight(0.9f).fillMaxHeight().padding(end = 8.dp),
+                    color = Color.Transparent
+                ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp))
-                            .padding(vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.fillMaxSize().verticalScroll(leftScrollState).padding(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
+
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { isFiltersExpanded = !isFiltersExpanded }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp))
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            @Suppress("DEPRECATION")
-                            Text(
-                                text = "Filters",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                            Icon(
-                                painter = painterResource(id = R.drawable.spinner_arrow),
-                                contentDescription = null,
+                            Row(
                                 modifier = Modifier
-                                    .size(12.dp)
-                                    .rotate(if (isFiltersExpanded) 0f else -90f),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                        }
+                                    .fillMaxWidth()
+                                    .clickable { isFiltersExpanded = !isFiltersExpanded }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                @Suppress("DEPRECATION")
+                                Text(
+                                    text = "Filters",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                                Icon(
+                                    painter = painterResource(id = R.drawable.spinner_arrow),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .rotate(if (isFiltersExpanded) 0f else -90f),
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
 
-                        AnimatedVisibility(
-                            visible = isFiltersExpanded,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                ProfileFilterItem("Releases", showReleases) { onFilterChange(it, showSnapshots, showModded) }
-                                ProfileFilterItem("Snapshots", showSnapshots) { onFilterChange(showReleases, it, showModded) }
-                                ProfileFilterItem("Modded", showModded) { onFilterChange(showReleases, showSnapshots, it) }
+                            AnimatedVisibility(
+                                visible = isFiltersExpanded,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    ProfileFilterItem("Releases", showReleases) { onFilterChange(it, showSnapshots, showModded) }
+                                    ProfileFilterItem("Snapshots", showSnapshots) { onFilterChange(showReleases, it, showModded) }
+                                    ProfileFilterItem("Modded", showModded) { onFilterChange(showReleases, showSnapshots, it) }
+                                }
                             }
                         }
-                    }
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ProfileActionButton(
-                            text = "Search ModPacks",
-                            icon = R.drawable.ic_px_download,
-                            onClick = onSearchModClick
-                        )
-                        ProfileActionButton(
-                            text = stringResource(id = R.string.import_local_modpack),
-                            icon = R.drawable.ic_px_download,
-                            onClick = onImportClick
-                        )
-                        ProfileActionButton(
-                            text = stringResource(id = R.string.create_instance),
-                            icon = R.drawable.ic_add,
-                            onClick = onCreateClick
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ProfileActionButton(
+                                text = "Search ModPacks",
+                                icon = R.drawable.ic_px_download,
+                                onClick = onSearchModClick
+                            )
+                            ProfileActionButton(
+                                text = stringResource(id = R.string.import_local_modpack),
+                                icon = R.drawable.ic_px_download,
+                                onClick = onImportClick
+                            )
+                            ProfileActionButton(
+                                text = stringResource(id = R.string.create_instance),
+                                icon = R.drawable.ic_add,
+                                onClick = onCreateClick
+                            )
+                        }
                     }
                 }
-            }
 
-            Surface(
-                modifier = Modifier.weight(1.1f).fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                AnimatedContent(
-                    targetState = isLoading to profiles,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                         slideInHorizontally(initialOffsetX = { it / 4 }))
-                        .togetherWith(fadeOut(animationSpec = tween(90)) +
-                         slideOutHorizontally(targetOffsetX = { -it / 4 }))
-                    },
-                    label = "listSwitch"
-                ) { (loading, currentProfiles) ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 8.dp)
-                            ) {
-                                items(currentProfiles, key = { it.instanceRoot?.name ?: it.hashCode() }) { profile ->
-                                    ProfileItem(
-                                        instance = profile,
-                                        isSelected = profile.instanceRoot?.name == selectedPathName,
-                                        onClick = { onSelect(profile) },
-                                        onEditClick = { onEditClick(profile) },
-                                        onDeleteClick = { profileToDelete = profile }
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    modifier = Modifier.weight(1.1f).fillMaxHeight(),
+                    color = Color.Transparent
+                ) {
+                    AnimatedContent(
+                        targetState = isLoading to profiles,
+                        transitionSpec = transitionSpec,
+                        label = "listSwitch"
+                    ) { (loading, currentProfiles) ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (loading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.align(Alignment.Center),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 8.dp)
+                                ) {
+                                    items(currentProfiles, key = { it.instanceRoot?.name ?: it.hashCode() }) { profile ->
+                                        ProfileItem(
+                                            instance = profile,
+                                            isSelected = profile.instanceRoot?.name == selectedPathName,
+                                            onClick = { onSelect(profile) },
+                                            onEditClick = { onEditClick(profile) },
+                                            onDeleteClick = { profileToDelete = profile }
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
                                 }
                             }
                         }

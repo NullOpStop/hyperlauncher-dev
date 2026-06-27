@@ -57,11 +57,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.kdt.pojavlaunch.modloaders.FabricVersion
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,8 +91,15 @@ fun FabricInstallScreen(
     onInstall: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val isPreview = LocalInspectionMode.current
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
-    Surface(color = MaterialTheme.colorScheme.background) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -129,6 +138,7 @@ fun FabricInstallScreen(
                 }
             )
 
+            @Suppress("DEPRECATION")
             Text(
                 text = loaderVersionLabel,
                 style = MaterialTheme.typography.labelLarge,

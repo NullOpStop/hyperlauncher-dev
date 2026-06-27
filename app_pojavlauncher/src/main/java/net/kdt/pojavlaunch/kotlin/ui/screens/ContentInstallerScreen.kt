@@ -1,19 +1,19 @@
 package net.kdt.pojavlaunch.ui.screens
 
-import android.graphics.Bitmap
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,20 +22,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +44,7 @@ import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.kotlin.ui.viewmodel.ContentInstallerViewModel
 import net.kdt.pojavlaunch.modrinth.ModrinthProject
 import net.kdt.pojavlaunch.modrinth.ModrinthVersion
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +65,6 @@ fun ContentInstallerScreen(
     onLoaderFilterChange: (String?) -> Unit,
     instanceVersion: String?,
     instanceLoader: String?,
-
     viewingProject: ModrinthProject? = null,
     projectVersions: List<ModrinthVersion> = emptyList(),
     availableProjectMCVersions: List<String> = emptyList(),
@@ -81,334 +75,404 @@ fun ContentInstallerScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ContentInstallerType.MODS) }
 
-    val leftScrollState = rememberScrollState()
+    val filterScrollState = rememberScrollState()
     val isPreview = LocalInspectionMode.current
     val viewModel: ContentInstallerViewModel = viewModel()
 
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
-    val hasBackground = backgroundBitmap != null
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null ||
+            LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-            }
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
+    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
+    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
-            )
-        }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+         Box(modifier = Modifier.fillMaxSize()) {
+             if (isPreview) {
+                 if (backgroundBitmap != null) {
+                     Image(
+                         bitmap = backgroundBitmap.asImageBitmap(),
+                         contentDescription = null,
+                         modifier = Modifier.fillMaxSize(),
+                         contentScale = ContentScale.Crop
+                     )
+                 } else {
+                     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                 }
+                 Box(
+                     modifier = Modifier
+                         .fillMaxSize()
+                         .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
+                 )
+             }
 
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
+             Row(
+                 modifier = Modifier
+                     .fillMaxSize()
+                     .padding(8.dp)
+             ) {
+                 ContentTypeRail(
+                     selectedType = selectedType,
+                     onTypeSelected = { type ->
+                         selectedType = type
+                         onSearch(searchQuery, type, selectedVersion, selectedLoader)
+                     },
+                     modifier = Modifier.fillMaxHeight()
+                 )
 
-            Surface(
-                modifier = Modifier
-                    .weight(0.9f)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
-                color = Color.Transparent
-            ) {
-                if (viewingProject == null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(leftScrollState)
-                            .padding(4.dp)
+                 Spacer(modifier = Modifier.width(8.dp))
+
+                 Box(
+                     modifier = Modifier
+                         .weight(1f)
+                         .fillMaxHeight()
+                 ) {
+                      AnimatedContent(
+                          targetState = viewingProject,
+                          transitionSpec = {
+                              when (animPreset) {
+                                  "fade" -> {
+                                      fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+                                  }
+                                  "bounce" -> {
+                                      slideInVertically(
+                                          initialOffsetY = { -(it / 3) },
+                                          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                                      ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { -(it / 3) }) + fadeOut(animationSpec = tween(animDuration / 2))
+                                  }
+                                  else -> {
+                                      fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+                                  }
+                              }
+                          },
+                          label = "installer_content_anim"
+                      ) { project ->
+                         if (project == null) {
+                             Row(
+                                 modifier = Modifier.fillMaxSize()
+                             ) {
+                                 Surface(
+                                     modifier = Modifier
+                                         .weight(1f)
+                                         .fillMaxHeight(),
+                                     color = Color.Transparent
+                                 ) {
+                                     LazyColumn(
+                                         state = rememberLazyListState(),
+                                         modifier = Modifier.fillMaxSize(),
+                                         contentPadding = PaddingValues(bottom = 8.dp)
+                                     ) {
+                                         items(projects, key = { it.id }) { p ->
+                                             ProjectItemView(
+                                                 project = p,
+                                                 onClick = { onProjectClick(p) },
+                                                 onVisible = { viewModel.requestIcon(p) }
+                                             )
+                                             Spacer(modifier = Modifier.height(6.dp))
+                                         }
+                                     }
+                                 }
+
+                                 Spacer(modifier = Modifier.width(8.dp))
+
+                                 Box(
+                                     modifier = Modifier
+                                         .widthIn(min = 240.dp, max = 300.dp)
+                                         .fillMaxHeight()
+                                 ) {
+                                     Column(
+                                         modifier = Modifier
+                                             .fillMaxSize()
+                                             .verticalScroll(filterScrollState)
+                                             .padding(4.dp)
+                                     ) {
+                                         OutlinedTextField(
+                                             value = searchQuery,
+                                             onValueChange = {
+                                                 searchQuery = it
+                                                 onSearch(it, selectedType, selectedVersion, selectedLoader)
+                                             },
+                                             modifier = Modifier
+                                                 .fillMaxWidth()
+                                                 .height(52.dp),
+                                             placeholder = { Text(stringResource(id = R.string.installer_search_hint), fontSize = 13.sp) },
+                                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                             singleLine = true,
+                                             shape = RoundedCornerShape(14.dp),
+                                             colors = OutlinedTextFieldDefaults.colors(
+                                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                 focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                                             ),
+                                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                             keyboardActions = KeyboardActions(onSearch = {
+                                                 onSearch(searchQuery, selectedType, selectedVersion, selectedLoader)
+                                             })
+                                         )
+
+                                         Spacer(modifier = Modifier.height(12.dp))
+
+                                         VerticalFilterMenu(
+                                             title = "Minecraft Version",
+                                             options = listOf("Any") + (if (instanceVersion != null) listOf(instanceVersion) else emptyList()),
+                                             selectedOption = selectedVersion ?: "Any",
+                                             onOptionSelected = {
+                                                 val newValue = if (it == "Any") null else it
+                                                 onVersionFilterChange(newValue)
+                                                 onSearch(searchQuery, selectedType, newValue, selectedLoader)
+                                             }
+                                         )
+
+                                         if (selectedType == ContentInstallerType.MODS) {
+                                             Spacer(modifier = Modifier.height(12.dp))
+                                             VerticalFilterMenu(
+                                                 title = "Mod Loader",
+                                                 options = listOf("Any", "fabric", "forge", "quilt", "neoforge"),
+                                                 labels = listOf("Any", "Fabric", "Forge", "Quilt", "NeoForge"),
+                                                 selectedOption = selectedLoader ?: "Any",
+                                                 onOptionSelected = {
+                                                     val newValue = if (it == "Any") null else it
+                                                     onLoaderFilterChange(newValue)
+                                                     onSearch(searchQuery, selectedType, selectedVersion, newValue)
+                                                 }
+                                             )
+                                         }
+                                     }
+                                 }
+                             }
+                         } else {
+                             VersionOverlayPanel(
+                                 viewingProject = project,
+                                 projectVersions = projectVersions,
+                                 availableProjectMCVersions = availableProjectMCVersions,
+                                 selectedProjectMCVersion = selectedProjectMCVersion,
+                                 instanceVersion = instanceVersion,
+                                 instanceLoader = instanceLoader,
+                                 isLoading = isLoading,
+                                 animDuration = animDuration,
+                                 onBackToProjects = onBackToProjects,
+                                 onProjectMCVersionClick = onProjectMCVersionClick,
+                                 onVersionClick = onVersionClick
+                             )
+                         }
+                     }
+                 }
+             }
+         }
+    }
+}
+
+@Composable
+private fun VersionOverlayPanel(
+    viewingProject: ModrinthProject,
+    projectVersions: List<ModrinthVersion>,
+    availableProjectMCVersions: List<String>,
+    selectedProjectMCVersion: String?,
+    instanceVersion: String?,
+    instanceLoader: String?,
+    isLoading: Boolean,
+    animDuration: Int,
+    onBackToProjects: () -> Unit,
+    onProjectMCVersionClick: (String) -> Unit,
+    onVersionClick: (ModrinthVersion) -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onBackToProjects,
+                        modifier = Modifier.size(32.dp)
                     ) {
-
-                        val selectedTabIndex = ContentInstallerType.entries.indexOf(selectedType)
-                        TabRow(
-                            selectedTabIndex = selectedTabIndex,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp)),
-                            indicator = { tabPositions ->
-                                if (selectedTabIndex < tabPositions.size) {
-                                    TabRowDefaults.SecondaryIndicator(
-                                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            divider = {}
-                        ) {
-                            ContentInstallerType.entries.forEach { type ->
-                                val isSelected = selectedType == type
-                                Tab(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedType = type
-                                        onSearch(searchQuery, selectedType, selectedVersion, selectedLoader)
-                                    },
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(id = type.iconRes),
-                                            contentDescription = stringResource(id = type.labelRes),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = {
-                                searchQuery = it
-                                onSearch(it, selectedType, selectedVersion, selectedLoader)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            placeholder = { Text(stringResource(id = R.string.installer_search_hint), fontSize = 13.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = {
-                                onSearch(searchQuery, selectedType, selectedVersion, selectedLoader)
-                            })
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    ProjectIcon(viewingProject, size = 28.dp)
+                    Spacer(Modifier.width(8.dp))
+                    @Suppress("DEPRECATION")
+                    Text(
+                        text = viewingProject.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
 
-                        VerticalFilterMenu(
-                            title = "Minecraft Version",
-                            options = listOf("Any") + (if (instanceVersion != null) listOf(instanceVersion) else emptyList()),
-                            selectedOption = selectedVersion ?: "Any",
-                            onOptionSelected = {
-                                val newValue = if (it == "Any") null else it
-                                onVersionFilterChange(newValue)
-                                onSearch(searchQuery, selectedType, newValue, selectedLoader)
-                            }
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = MaterialTheme.colorScheme.primary
                         )
-
-                        if (selectedType == ContentInstallerType.MODS) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            VerticalFilterMenu(
-                                title = "Mod Loader",
-                                options = listOf("Any", "fabric", "forge", "quilt", "neoforge"),
-                                labels = listOf("Any", "Fabric", "Forge", "Quilt", "NeoForge"),
-                                selectedOption = selectedLoader ?: "Any",
-                                onOptionSelected = {
-                                    val newValue = if (it == "Any") null else it
-                                    onLoaderFilterChange(newValue)
-                                    onSearch(searchQuery, selectedType, selectedVersion, newValue)
-                                }
-                            )
-                        }
                     }
                 } else {
-
-                    Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(leftScrollState)
-                                .padding(bottom = 60.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            ProjectIcon(viewingProject, size = 64.dp)
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            @Suppress("DEPRECATION")
-                            Text(
-                                text = viewingProject.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            @Suppress("DEPRECATION")
-                            Text(
-                                text = viewingProject.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-
-                        Button(
-                            onClick = onBackToProjects,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .height(40.dp)
-                                .fillMaxWidth(0.9f),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Back", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
+                    val listState = rememberLazyListState()
+                    val filteredVersions = remember(projectVersions, selectedProjectMCVersion) {
+                        if (selectedProjectMCVersion != null) {
+                            projectVersions.filter { it.gameVersions.contains(selectedProjectMCVersion) }
+                        } else emptyList()
                     }
-                }
-            }
 
-            Surface(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                AnimatedContent(
-                    targetState = viewingProject to selectedProjectMCVersion,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                         slideInHorizontally(initialOffsetX = { it / 4 }))
-                        .togetherWith(fadeOut(animationSpec = tween(90)) +
-                         slideOutHorizontally(targetOffsetX = { -it / 4 }))
-                    },
-                    label = "screenSwitch"
-                ) { (project, mcVersion) ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .align(Alignment.Center),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            val listState = rememberLazyListState()
-                            val filteredVersions = remember(projectVersions, mcVersion) {
-                                if (project != null && mcVersion != null) {
-                                    projectVersions.filter { it.gameVersions.contains(mcVersion) }
-                                } else emptyList()
+                    if (selectedProjectMCVersion == null) {
+                        LaunchedEffect(availableProjectMCVersions) {
+                            val index = availableProjectMCVersions.indexOfFirst { v ->
+                                instanceVersion != null && v.contains(instanceVersion, ignoreCase = true)
                             }
+                            if (index != -1) listState.scrollToItem(index + 1)
+                        }
 
-                            if (project != null) {
-                                if (mcVersion == null) {
-                                    LaunchedEffect(availableProjectMCVersions) {
-                                        val index = availableProjectMCVersions.indexOfFirst { v ->
-                                            instanceVersion != null && v.contains(instanceVersion, ignoreCase = true)
-                                        }
-                                        if (index != -1) {
-                                            listState.scrollToItem(index + 1)
-                                        }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp)
+                        ) {
+                            item {
+                                Text(
+                                    "Select Minecraft Version",
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                )
+                            }
+                            items(availableProjectMCVersions) { v ->
+                                val isCompatible = instanceVersion != null && v.contains(instanceVersion, ignoreCase = true)
+                                SubVersionItemView(
+                                    text = v,
+                                    isCompatible = isCompatible,
+                                    onClick = { onProjectMCVersionClick(v) }
+                                )
+                                Spacer(Modifier.height(6.dp))
+                            }
+                        }
+                    } else {
+                        LaunchedEffect(filteredVersions) {
+                            val index = filteredVersions.indexOfFirst { version ->
+                                instanceVersion != null && version.gameVersions.any { it.contains(instanceVersion, ignoreCase = true) } &&
+                                        (instanceLoader == null || version.loaders.any { it.equals(instanceLoader, ignoreCase = true) })
+                            }
+                            if (index != -1) listState.scrollToItem(index + 1)
+                        }
+
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp)
+                        ) {
+                            item {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                ) {
+                                    @Suppress("DEPRECATION")
+                                    TextButton(onClick = { onProjectMCVersionClick("") }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Change Version", fontSize = 12.sp)
                                     }
-                                } else {
-                                    LaunchedEffect(filteredVersions) {
-                                        val index = filteredVersions.indexOfFirst { version ->
-                                            instanceVersion != null && version.gameVersions.any { it.contains(instanceVersion, ignoreCase = true) } &&
-                                                    (instanceLoader == null || version.loaders.any { it.equals(instanceLoader, ignoreCase = true) })
-                                        }
-                                        if (index != -1) {
-                                            listState.scrollToItem(index + 1)
-                                        }
-                                    }
+                                    Text(
+                                        "Files for $selectedProjectMCVersion",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
-
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 8.dp)
-                            ) {
-                                if (project == null) {
-                                    items(projects, key = { it.id }) { p ->
-                                        ProjectItemView(
-                                            project = p,
-                                            onClick = { onProjectClick(p) },
-                                            onVisible = { viewModel.requestIcon(p) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                    }
-                                } else {
-                                    if (mcVersion == null) {
-
-                                        item {
-                                            Text(
-                                                "Select Minecraft Version",
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
-                                            )
-                                        }
-                                        items(availableProjectMCVersions) { v ->
-                                            val isCompatible = instanceVersion != null && v.contains(instanceVersion, ignoreCase = true)
-                                            SubVersionItemView(
-                                                text = v,
-                                                isCompatible = isCompatible,
-                                                onClick = { onProjectMCVersionClick(v) }
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                        }
-                                    } else {
-
-                                        item {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(bottom = 8.dp)
-                                            ) {
-                                                TextButton(onClick = { onProjectMCVersionClick("") }) {
-                                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                    Spacer(Modifier.width(4.dp))
-                                                    Text("Change Version", fontSize = 12.sp)
-                                                }
-                                                Text(
-                                                    "Files for $mcVersion",
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
-                                        }
-                                        items(filteredVersions) { version ->
-                                            val isCompatible = instanceVersion != null && version.gameVersions.any { it.contains(instanceVersion, ignoreCase = true) } &&
-                                                               (instanceLoader == null || version.loaders.any { it.equals(instanceLoader, ignoreCase = true) })
-
-                                            VersionItemView(
-                                                version = version,
-                                                isCompatible = isCompatible,
-                                                onClick = { onVersionClick(version) }
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                        }
-                                    }
-                                }
+                            items(filteredVersions) { version ->
+                                val isCompatible = instanceVersion != null && version.gameVersions.any { it.contains(instanceVersion, ignoreCase = true) } &&
+                                        (instanceLoader == null || version.loaders.any { it.equals(instanceLoader, ignoreCase = true) })
+                                VersionItemView(
+                                    version = version,
+                                    isCompatible = isCompatible,
+                                    onClick = { onVersionClick(version) }
+                                )
+                                Spacer(Modifier.height(6.dp))
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+
+
+@Composable
+private fun ContentTypeRail(
+    selectedType: ContentInstallerType,
+    onTypeSelected: (ContentInstallerType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = modifier
+            .width(IntrinsicSize.Min)
+            .verticalScroll(scrollState)
+            .padding(start = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ContentInstallerType.entries.forEach { type ->
+            NavigationRailItem(
+                selected = selectedType == type,
+                onClick = {
+                    if (selectedType != type) onTypeSelected(type)
+                },
+                icon = {
+                    Icon(
+                        painter = painterResource(id = type.iconRes),
+                        contentDescription = stringResource(id = type.labelRes),
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                        text = stringResource(id = type.labelRes),
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -429,6 +493,7 @@ fun VerticalFilterMenu(
             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)), RoundedCornerShape(14.dp))
             .padding(vertical = 4.dp)
     ) {
+        @Suppress("DEPRECATION")
         Text(
             text = title,
             fontSize = 11.sp,
@@ -554,7 +619,6 @@ fun ProjectItemView(
     onClick: () -> Unit,
     onVisible: () -> Unit = {}
 ) {
-
     LaunchedEffect(project.id) {
         onVisible()
     }
@@ -575,6 +639,7 @@ fun ProjectItemView(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                @Suppress("DEPRECATION")
                 Text(
                     text = project.title,
                     fontSize = 15.sp,
@@ -583,6 +648,7 @@ fun ProjectItemView(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                @Suppress("DEPRECATION")
                 Text(
                     text = project.description,
                     fontSize = 11.sp,
@@ -610,7 +676,8 @@ fun VersionItemView(
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_px_download),
                 contentDescription = null,
@@ -621,6 +688,7 @@ fun VersionItemView(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                @Suppress("DEPRECATION")
                 Text(
                     text = version.name,
                     fontSize = 14.sp,
@@ -636,6 +704,7 @@ fun VersionItemView(
                     }
                     append(version.gameVersions.joinToString(", "))
                 }
+                @Suppress("DEPRECATION")
                 Text(
                     text = infoText,
                     fontSize = 11.sp,

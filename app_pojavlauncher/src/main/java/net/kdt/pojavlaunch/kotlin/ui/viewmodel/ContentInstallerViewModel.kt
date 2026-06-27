@@ -408,6 +408,7 @@ class ContentInstallerViewModel : ViewModel() {
             ContentInstallerType.MODS -> "mods"
             ContentInstallerType.SHADERS -> "shaderpacks"
             ContentInstallerType.RESOURCES -> "resourcepacks"
+            ContentInstallerType.WORLDS -> "saves"
         }
 
         val target = File(finalBase, subfolder)

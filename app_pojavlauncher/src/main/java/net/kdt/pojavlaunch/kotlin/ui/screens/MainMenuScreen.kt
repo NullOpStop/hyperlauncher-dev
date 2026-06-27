@@ -1,4 +1,4 @@
-package net.kdt.pojavlaunch.kotlin.ui.screens
+package net.kdt.pojavlaunch.ui.screens
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
@@ -56,6 +56,7 @@ import net.kdt.pojavlaunch.extra.ExtraListener
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
 import net.kdt.pojavlaunch.instances.Instances
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper
 import net.kdt.pojavlaunch.progresskeeper.TaskCountListener
 import net.kdt.pojavlaunch.skin.SkinUtils
@@ -104,6 +105,9 @@ fun MainMenuRevamp(
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
+
     var selectedInstance by remember {
         mutableStateOf<Instance?>(
             if (isPreview) null
@@ -135,7 +139,13 @@ fun MainMenuRevamp(
         if (isPreview) return@DisposableEffect onDispose {}
 
         val accountListener = ExtraListener<Boolean> { _, _ ->
-            currentAccount = Accounts.getCurrent()
+            val newAccount = Accounts.getCurrent()
+            // Check if the account has actually changed to avoid unnecessary head refreshes
+            if (newAccount?.profileId != currentAccount?.profileId || 
+                newAccount?.skinPath != currentAccount?.skinPath ||
+                newAccount?.username != currentAccount?.username) {
+                currentAccount = newAccount
+            }
             false
         }
         val launchListener = ExtraListener<Boolean> { _, value ->
@@ -242,258 +252,264 @@ fun MainMenuRevamp(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .background(Color.Transparent)
         ) {
-
-            Column(
+            Row(
                 modifier = Modifier
-                    .weight(0.66f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.mcl_tab_wiki),
-                    icon = Icons.Rounded.Info,
-                    onClick = onWikiClick
-                )
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.mcl_button_social_media),
-                    icon = Icons.Rounded.Share,
-                    onClick = onSocialMediaClick
-                )
 
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.mcl_option_customcontrol),
-                    icon = Icons.Rounded.Build,
-                    onClick = onCustomControlsClick
-                )
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.main_install_jar_file),
-                    icon = Icons.Rounded.Add,
-                    onClick = onInstallJarClick
-                )
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.main_share_logs),
-                    icon = Icons.AutoMirrored.Rounded.Send,
-                    onClick = onShareLogsClick
-                )
-                ActionCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    title = stringResource(id = R.string.mcl_button_open_directory),
-                    icon = Icons.Rounded.Search,
-                    onClick = onOpenFilesClick
-                )
-            }
-
-            Surface(
-                modifier = Modifier
-                    .weight(0.34f)
-                    .fillMaxHeight(),
-                shape = RoundedCornerShape(32.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                tonalElevation = 0.dp,
-            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .weight(0.66f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.mcl_tab_wiki),
+                        icon = Icons.Rounded.Info,
+                        onClick = onWikiClick
+                    )
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.mcl_button_social_media),
+                        icon = Icons.Rounded.Share,
+                        onClick = onSocialMediaClick
+                    )
 
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.mcl_option_customcontrol),
+                        icon = Icons.Rounded.Build,
+                        onClick = onCustomControlsClick
+                    )
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.main_install_jar_file),
+                        icon = Icons.Rounded.Add,
+                        onClick = onInstallJarClick
+                    )
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.main_share_logs),
+                        icon = Icons.AutoMirrored.Rounded.Send,
+                        onClick = onShareLogsClick
+                    )
+                    ActionCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        title = stringResource(id = R.string.mcl_button_open_directory),
+                        icon = Icons.Rounded.Search,
+                        onClick = onOpenFilesClick
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .weight(0.34f)
+                        .fillMaxHeight(),
+                    shape = RoundedCornerShape(32.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                    tonalElevation = 0.dp,
+                ) {
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .scale(headScale)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable(
-                                    interactionSource = headInteractionSource,
-                                    indication = null,
-                                    onClick = {}
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (skinHead != null) {
-                                Image(
-                                    bitmap = skinHead!!.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit,
-                                    filterQuality = FilterQuality.None
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
 
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .clickable(onClick = onInstanceSelect)
-                                .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.Black),
+                                    .size(64.dp)
+                                    .scale(headScale)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable(
+                                        interactionSource = headInteractionSource,
+                                        indication = null,
+                                        onClick = {}
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (instanceIcon != null) {
+                                if (skinHead != null) {
                                     Image(
-                                        painter = rememberDrawablePainter(instanceIcon),
+                                        bitmap = skinHead!!.asImageBitmap(),
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
-                                        contentScale = ContentScale.Fit
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit,
+                                        filterQuality = FilterQuality.None
                                     )
                                 } else {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_px_home),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = Color.White
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(28.dp),
+                                        strokeWidth = 3.dp,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                                     )
                                 }
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                val name = selectedInstance?.name
-                                val instanceDisplayName = if (selectedInstance == null) {
-                                    stringResource(id = R.string.no_instance)
-                                } else if (name.isNullOrBlank()) {
-                                    "UNNAMED"
-                                } else {
-                                    name
-                                }
-
-                                Text(
-                                    text = instanceDisplayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = selectedInstance?.versionId ?: stringResource(id = R.string.version_select_hint),
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            IconButton(
-                                onClick = onEditProfileClick,
-                                modifier = Modifier.size(44.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Edit Profile",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.White
-                                )
                             }
                         }
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth().animateContentSize(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Button(
-                            onClick = onPlayClick,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = CircleShape,
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         ) {
                             Row(
+                                modifier = Modifier
+                                    .clickable(onClick = onInstanceSelect)
+                                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = "Launch",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (instanceIcon != null) {
+                                        Image(
+                                            painter = rememberDrawablePainter(instanceIcon),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    } else {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_px_home),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    val name = selectedInstance?.name
+                                    val instanceDisplayName = if (selectedInstance == null) {
+                                        stringResource(id = R.string.no_instance)
+                                    } else if (name.isNullOrBlank()) {
+                                        "UNNAMED"
+                                    } else {
+                                        name
+                                    }
+
+                                    @Suppress("DEPRECATION")
+                                    Text(
+                                        text = instanceDisplayName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    @Suppress("DEPRECATION")
+                                    Text(
+                                        text = selectedInstance?.versionId ?: stringResource(id = R.string.version_select_hint),
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onEditProfileClick,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Edit Profile",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
 
-                        AnimatedVisibility(
-                            visible = isSomethingRunning,
-                            enter = fadeIn() + scaleIn(initialScale = 0.5f),
-                            exit = fadeOut() + scaleOut(targetScale = 0.5f)
-                        ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
                             Button(
-                                onClick = {
-                                    terminateRotationAngle += 360f
-                                    showTerminateConfirm = true
-                                },
-                                modifier = Modifier.size(48.dp),
+                                onClick = onPlayClick,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
                                 shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                ),
-                                contentPadding = PaddingValues(0.dp),
                                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                             ) {
-                                Icon(
-                                    Icons.Rounded.Clear,
-                                    contentDescription = "Terminate",
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .rotate(animatedTerminateRotation)
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    @Suppress("DEPRECATION")
+                                    Text(
+                                        text = "Launch",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(
+                                visible = isSomethingRunning,
+                                enter = fadeIn() + scaleIn(initialScale = 0.5f),
+                                exit = fadeOut() + scaleOut(targetScale = 0.5f)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        terminateRotationAngle += 360f
+                                        showTerminateConfirm = true
+                                    },
+                                    modifier = Modifier.size(48.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
+                                    contentPadding = PaddingValues(0.dp),
+                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Clear,
+                                        contentDescription = "Terminate",
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .rotate(animatedTerminateRotation)
+                                    )
+                                }
                             }
                         }
                     }
@@ -531,7 +547,7 @@ fun ActionCard(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = Color.White
+                tint = LocalContentColor.current
             )
             @Suppress("DEPRECATION")
             @SuppressLint("LocalContextGetResourceValueCall")

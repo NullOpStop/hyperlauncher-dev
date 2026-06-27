@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.Logger
 import net.kdt.pojavlaunch.Tools
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +35,9 @@ fun LoggerScreen(
     var isAutoScrollEnabled by remember { mutableStateOf(true) }
     val logLines = remember { mutableStateListOf<String>() }
     val listState = rememberLazyListState()
+    val isPreview = LocalInspectionMode.current
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
     DisposableEffect(isLogOutputEnabled) {
         if (isLogOutputEnabled) {
@@ -60,7 +65,8 @@ fun LoggerScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color.Transparent
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -70,7 +76,7 @@ fun LoggerScreen(
                         text = stringResource(R.string.log_view_label_log_output),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 actions = {
@@ -78,7 +84,7 @@ fun LoggerScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },

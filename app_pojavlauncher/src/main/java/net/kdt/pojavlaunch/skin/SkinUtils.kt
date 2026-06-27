@@ -200,7 +200,9 @@ object SkinUtils {
     @Composable
     fun rememberSkinHead(account: MinecraftAccount?): State<Bitmap?> {
         val context = LocalContext.current
-        return produceState<Bitmap?>(initialValue = null, account) {
+        // Use a more stable key to prevent re-rendering when the account object is replaced with the same user
+        val stableKey = "${account?.profileId}_${account?.skinPath}_${account?.username}"
+        return produceState<Bitmap?>(initialValue = null, stableKey) {
             value = renderHead(context, account)
         }
     }
@@ -211,7 +213,9 @@ object SkinUtils {
     @Composable
     fun rememberSkinHead2D(account: MinecraftAccount?): State<Bitmap?> {
         val context = LocalContext.current
-        return produceState<Bitmap?>(initialValue = null, account) {
+        // Use a more stable key to prevent re-rendering when the account object is replaced with the same user
+        val stableKey = "${account?.profileId}_${account?.skinPath}_${account?.username}_2D"
+        return produceState<Bitmap?>(initialValue = null, stableKey) {
             value = renderHead2D(context, account)
         }
     }

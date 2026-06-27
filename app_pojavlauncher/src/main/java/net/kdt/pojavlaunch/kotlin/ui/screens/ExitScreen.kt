@@ -35,6 +35,8 @@ fun ExitScreen(
 ) {
     val isPreview = LocalInspectionMode.current
     val ignoreNotch = if (isPreview) true else LauncherPreferences.PREF_IGNORE_NOTCH
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
     val crashReportPath = remember(logs) {
         val marker = "#@!@# Game crashed! Crash report saved to: #@!@# "
@@ -46,7 +48,8 @@ fun ExitScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
     ) {
         val layoutModifier = if (ignoreNotch) {
             Modifier.fillMaxSize()
@@ -99,7 +102,7 @@ fun ExitScreen(
                     text = if (crashReportPath != null) "Game Crashed" else title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (crashReportPath != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+                    color = if (crashReportPath != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 

@@ -1,7 +1,7 @@
 package net.kdt.pojavlaunch.ui.screens
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
+import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import java.io.File
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -72,8 +73,31 @@ fun DirectoryManagerScreen(
 
     val isPreview = LocalInspectionMode.current
 
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
+                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
-    val hasBackground = backgroundBitmap != null
+
+    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
+    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
+    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
+
+    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
+        when (animPreset) {
+            "fade" -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+            "bounce" -> {
+                slideInVertically(
+                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
+            }
+            else -> {
+                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
+            }
+        }
+    }
+
     val currentFolderName = breadcrumbs.lastOrNull()?.first?.lowercase()
     val canToggleDisabled = currentFolderName in setOf("mods", "shaderpacks", "resourcepacks") &&
         selectedFile != null &&
@@ -84,179 +108,180 @@ fun DirectoryManagerScreen(
         "Disable file"
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        tonalElevation = 3.dp
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-        if (isPreview) {
-            if (backgroundBitmap != null) {
-                Image(
-                    bitmap = backgroundBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            if (isPreview) {
+                if (backgroundBitmap != null) {
+                    Image(
+                        bitmap = backgroundBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                }
+
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (hasBackground) 0.4f else 0f))
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-
-            Surface(
+            Row(
                 modifier = Modifier
-                    .weight(0.9f)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
-                color = Color.Transparent
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(leftScrollState)
-                        .padding(4.dp)
-                ) {
 
-                    Box(
+                Surface(
+                    modifier = Modifier
+                        .weight(0.9f)
+                        .fillMaxHeight()
+                        .padding(end = 8.dp),
+                    color = Color.Transparent
+                ) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
+                            .fillMaxSize()
+                            .verticalScroll(leftScrollState)
+                            .padding(4.dp)
                     ) {
-                        androidx.compose.foundation.layout.FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
                         ) {
-                            breadcrumbs.forEachIndexed { index, (name, file) ->
-                                Text(
-                                    text = name,
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .clickable { onCrumbClick(file) }
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                                if (index < breadcrumbs.size - 1) {
+                            androidx.compose.foundation.layout.FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Start,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                breadcrumbs.forEachIndexed { index, (name, file) ->
                                     Text(
-                                        text = "/",
+                                        text = name,
                                         fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 2.dp)
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { onCrumbClick(file) }
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
                                     )
+                                    if (index < breadcrumbs.size - 1) {
+                                        Text(
+                                            text = "/",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 2.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FileActionButton(
-                            text = "Up",
-                            icon = R.drawable.ic_px_home,
-                            onClick = onUpClick
-                        )
-                        FileActionButton(
-                            text = "Upload",
-                            icon = R.drawable.ic_px_download,
-                            onClick = onUploadClick
-                        )
-                        FileActionButton(
-                            text = "New folder",
-                            icon = R.drawable.ic_add,
-                            onClick = onNewFolderClick
-                        )
-                        FileActionButton(
-                            text = "Rename",
-                            icon = R.drawable.ic_px_edit,
-                            onClick = onRenameClick,
-                            enabled = selectedFile != null
-                        )
-                        if (currentFolderName in setOf("mods", "shaderpacks", "resourcepacks")) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             FileActionButton(
-                                text = toggleDisabledText,
+                                text = "Up",
+                                icon = R.drawable.ic_px_home,
+                                onClick = onUpClick
+                            )
+                            FileActionButton(
+                                text = "Upload",
+                                icon = R.drawable.ic_px_download,
+                                onClick = onUploadClick
+                            )
+                            FileActionButton(
+                                text = "New folder",
+                                icon = R.drawable.ic_add,
+                                onClick = onNewFolderClick
+                            )
+                            FileActionButton(
+                                text = "Rename",
                                 icon = R.drawable.ic_px_edit,
-                                onClick = onToggleDisabledClick,
-                                enabled = canToggleDisabled
+                                onClick = onRenameClick,
+                                enabled = selectedFile != null
+                            )
+                            if (currentFolderName in setOf("mods", "shaderpacks", "resourcepacks")) {
+                                FileActionButton(
+                                    text = toggleDisabledText,
+                                    icon = R.drawable.ic_px_edit,
+                                    onClick = onToggleDisabledClick,
+                                    enabled = canToggleDisabled
+                                )
+                            }
+                            FileActionButton(
+                                text = "Delete",
+                                icon = R.drawable.ic_px_trash,
+                                onClick = onDeleteClick,
+                                enabled = selectedFile != null,
+                                isError = true
                             )
                         }
-                        FileActionButton(
-                            text = "Delete",
-                            icon = R.drawable.ic_px_trash,
-                            onClick = onDeleteClick,
-                            enabled = selectedFile != null,
-                            isError = true
-                        )
-                    }
 
-                    if (statusText.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = statusText,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
+                        if (statusText.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = statusText,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
                     }
                 }
-            }
 
-            Surface(
-                modifier = Modifier
-                    .weight(1.1f)
-                    .fillMaxHeight(),
-                color = Color.Transparent
-            ) {
-                AnimatedContent(
-                    targetState = entries,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                         slideInHorizontally(initialOffsetX = { it / 4 }))
-                        .togetherWith(fadeOut(animationSpec = tween(90)) +
-                         slideOutHorizontally(targetOffsetX = { -it / 4 }))
-                    },
-                    label = "fileSwitch"
-                ) { currentEntries ->
-                    if (currentEntries.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "This folder is empty",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 8.dp)
-                        ) {
-                            items(currentEntries, key = { it.absolutePath }) { entry ->
-                                FileEntryItem(
-                                    file = entry,
-                                    isSelected = selectedFile == entry,
-                                    onClick = { onEntryClick(entry) },
-                                    onLongClick = { onEntryLongClick(entry) }
+                Surface(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .fillMaxHeight(),
+                    color = Color.Transparent
+                ) {
+                    AnimatedContent(
+                        targetState = entries,
+                        transitionSpec = transitionSpec,
+                        label = "fileSwitch"
+                    ) { currentEntries ->
+                        if (currentEntries.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "This folder is empty",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 8.dp)
+                            ) {
+                                items(currentEntries, key = { it.absolutePath }) { entry ->
+                                    FileEntryItem(
+                                        file = entry,
+                                        isSelected = selectedFile == entry,
+                                        onClick = { onEntryClick(entry) },
+                                        onLongClick = { onEntryLongClick(entry) }
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
                             }
                         }
                     }
