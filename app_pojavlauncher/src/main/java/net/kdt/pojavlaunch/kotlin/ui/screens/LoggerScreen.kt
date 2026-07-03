@@ -65,7 +65,7 @@ fun LoggerScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

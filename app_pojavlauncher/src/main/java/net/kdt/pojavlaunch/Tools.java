@@ -708,8 +708,14 @@ public final class Tools {
                                     @Nullable String fragmentTag, @Nullable Bundle bundle) {
 
         fragmentActivity.getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(
+                        androidx.appcompat.R.anim.abc_fade_in,
+                        androidx.appcompat.R.anim.abc_fade_out,
+                        androidx.appcompat.R.anim.abc_fade_in,
+                        androidx.appcompat.R.anim.abc_fade_out
+                )
                 .setReorderingAllowed(true)
-                .addToBackStack(fragmentClass.getName())
+                .addToBackStack(fragmentTag != null ? fragmentTag : fragmentClass.getName())
                 .replace(R.id.container_fragment, fragmentClass, bundle, fragmentTag).commit();
     }
 

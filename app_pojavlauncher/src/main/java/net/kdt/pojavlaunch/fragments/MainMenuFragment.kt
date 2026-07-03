@@ -62,7 +62,10 @@ class MainMenuFragment : Fragment() {
                             Tools.fullyExit()
                         },
                         onInstanceSelect = {
-                            Tools.swapFragment(requireActivity(), ProfileSelectionFragment::class.java, ProfileSelectionFragment.TAG, null)
+                            ExtraCore.setValue(ExtraConstants.OPEN_SCREEN, 5)
+                        },
+                        onAccountManagerClick = {
+                            ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD, true)
                         }
                     )
                 }

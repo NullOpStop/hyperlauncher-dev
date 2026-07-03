@@ -8,7 +8,10 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import net.kdt.pojavlaunch.Tools
+import net.kdt.pojavlaunch.extra.ExtraConstants
+import net.kdt.pojavlaunch.extra.ExtraCore
 import net.kdt.pojavlaunch.instances.Instances
+import net.kdt.pojavlaunch.ui.screens.ContentInstallerType
 import net.kdt.pojavlaunch.ui.screens.ProfileTypeSelectScreen
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import java.io.IOException
@@ -53,7 +56,10 @@ class ProfileTypeSelectFragment : Fragment() {
                              val bundle = Bundle().apply { putString(FabricInstallFragment.ARG_TYPE, "legacy_fabric") }
                              Tools.swapFragment(requireActivity(), FabricInstallFragment::class.java, FabricInstallFragment.TAG, bundle)
                         },
-                        onModpackClick = { Tools.swapFragment(requireActivity(), SearchModFragment::class.java, SearchModFragment.TAG, null) },
+                        onModpackClick = {
+                             ExtraCore.setValue(ExtraConstants.DEFAULT_CONTENT_TYPE, ContentInstallerType.MODPACKS)
+                             ExtraCore.setValue(ExtraConstants.OPEN_SCREEN, 2)
+                        },
                         onBTAClick = { Tools.swapFragment(requireActivity(), BTAInstallFragment::class.java, BTAInstallFragment.TAG, null) }
                     )
                 }

@@ -35,6 +35,7 @@ import androidx.core.graphics.drawable.toBitmap
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.modloaders.ComparableVersionString
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
 import net.kdt.pojavlaunch.multirt.Runtime
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.components.*
@@ -98,22 +99,7 @@ fun InstanceEditorScreen(
     val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
     val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
 
-    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                slideInVertically(
-                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-            }
-            else -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-        }
-    }
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     // Dirty state tracking for the floating save button
     val initialName = remember { name }
@@ -144,7 +130,7 @@ fun InstanceEditorScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -190,7 +176,7 @@ fun InstanceEditorScreen(
                                         },
                                         icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
                                         label = { Text(page.title.substringBefore(" "), fontSize = 10.sp) },
-                                        alwaysShowLabel = false,
+                                        alwaysShowLabel = true,
                                         colors = NavigationRailItemDefaults.colors(
                                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -210,8 +196,8 @@ fun InstanceEditorScreen(
                             floatingActionButton = {
                                 AnimatedVisibility(
                                     visible = isNewInstance || isDirty,
-                                    enter = scaleIn() + fadeIn(),
-                                    exit = scaleOut() + fadeOut()
+                                    enter = fadeIn(),
+                                    exit = fadeOut()
                                 ) {
                                     FloatingActionButton(
                                         onClick = onSave,
@@ -291,8 +277,8 @@ fun InstanceEditorScreen(
                                 floatingActionButton = {
                                     AnimatedVisibility(
                                         visible = isNewInstance || isDirty,
-                                        enter = scaleIn() + fadeIn(),
-                                        exit = scaleOut() + fadeOut()
+                                        enter = fadeIn(),
+                                        exit = fadeOut()
                                     ) {
                                         FloatingActionButton(
                                             onClick = onSave,
@@ -340,8 +326,8 @@ fun InstanceEditorScreen(
                                 floatingActionButton = {
                                     AnimatedVisibility(
                                         visible = isNewInstance || isDirty,
-                                        enter = scaleIn() + fadeIn(),
-                                        exit = scaleOut() + fadeOut()
+                                        enter = fadeIn(),
+                                        exit = fadeOut()
                                     ) {
                                         FloatingActionButton(
                                             onClick = onSave,

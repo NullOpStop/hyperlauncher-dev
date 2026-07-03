@@ -100,13 +100,16 @@ fun MainMenuRevamp(
     onSocialMediaClick: () -> Unit,
     onPlayClick: () -> Unit,
     onTerminateClick: () -> Unit,
-    onInstanceSelect: () -> Unit
+    onInstanceSelect: () -> Unit,
+    onAccountManagerClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
 
     val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
+    val backgroundTransparency = LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value
+    val hideActionButtons = LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value
 
     var selectedInstance by remember {
         mutableStateOf<Instance?>(
@@ -254,7 +257,7 @@ fun MainMenuRevamp(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(
@@ -269,62 +272,66 @@ fun MainMenuRevamp(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
 
-                Column(
-                    modifier = Modifier
-                        .weight(0.66f)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
+                if (!hideActionButtons) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_tab_wiki),
-                        icon = Icons.Rounded.Info,
-                        onClick = onWikiClick
-                    )
-                    ActionCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_button_social_media),
-                        icon = Icons.Rounded.Share,
-                        onClick = onSocialMediaClick
-                    )
+                            .weight(0.66f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.mcl_tab_wiki),
+                            icon = Icons.Rounded.Info,
+                            onClick = onWikiClick
+                        )
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.mcl_button_social_media),
+                            icon = Icons.Rounded.Share,
+                            onClick = onSocialMediaClick
+                        )
 
-                    ActionCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_option_customcontrol),
-                        icon = Icons.Rounded.Build,
-                        onClick = onCustomControlsClick
-                    )
-                    ActionCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.main_install_jar_file),
-                        icon = Icons.Rounded.Add,
-                        onClick = onInstallJarClick
-                    )
-                    ActionCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.main_share_logs),
-                        icon = Icons.AutoMirrored.Rounded.Send,
-                        onClick = onShareLogsClick
-                    )
-                    ActionCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        title = stringResource(id = R.string.mcl_button_open_directory),
-                        icon = Icons.Rounded.Search,
-                        onClick = onOpenFilesClick
-                    )
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.mcl_option_customcontrol),
+                            icon = Icons.Rounded.Build,
+                            onClick = onCustomControlsClick
+                        )
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.main_install_jar_file),
+                            icon = Icons.Rounded.Add,
+                            onClick = onInstallJarClick
+                        )
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.main_share_logs),
+                            icon = Icons.AutoMirrored.Rounded.Send,
+                            onClick = onShareLogsClick
+                        )
+                        ActionCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            title = stringResource(id = R.string.mcl_button_open_directory),
+                            icon = Icons.Rounded.Search,
+                            onClick = onOpenFilesClick
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.weight(0.66f))
                 }
 
                 Surface(
@@ -332,7 +339,8 @@ fun MainMenuRevamp(
                         .weight(0.34f)
                         .fillMaxHeight(),
                     shape = RoundedCornerShape(32.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                    color = if (hasBackground) MaterialTheme.colorScheme.surface.copy(alpha = backgroundTransparency)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
                     tonalElevation = 0.dp,
                 ) {
                     Column(
@@ -356,23 +364,32 @@ fun MainMenuRevamp(
                                     .clickable(
                                         interactionSource = headInteractionSource,
                                         indication = null,
-                                        onClick = {}
+                                        onClick = onAccountManagerClick
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (skinHead != null) {
-                                    Image(
-                                        bitmap = skinHead!!.asImageBitmap(),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit,
-                                        filterQuality = FilterQuality.None
-                                    )
+                                if (currentAccount != null) {
+                                    if (skinHead != null) {
+                                        Image(
+                                            bitmap = skinHead!!.asImageBitmap(),
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit,
+                                            filterQuality = FilterQuality.None
+                                        )
+                                    } else {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(28.dp),
+                                            strokeWidth = 3.dp,
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                        )
+                                    }
                                 } else {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        strokeWidth = 3.dp,
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add Account",
+                                        modifier = Modifier.size(32.dp),
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -381,66 +398,74 @@ fun MainMenuRevamp(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            color = Color.Transparent,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .clickable(onClick = onInstanceSelect)
                                     .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(onClick = onInstanceSelect)
+                                        .padding(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    if (instanceIcon != null) {
-                                        Image(
-                                            painter = rememberDrawablePainter(instanceIcon),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                    } else {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_px_home),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    val name = selectedInstance?.name
-                                    val instanceDisplayName = if (selectedInstance == null) {
-                                        stringResource(id = R.string.no_instance)
-                                    } else if (name.isNullOrBlank()) {
-                                        "UNNAMED"
-                                    } else {
-                                        name
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (instanceIcon != null) {
+                                            Image(
+                                                painter = rememberDrawablePainter(instanceIcon),
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_px_home),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
 
-                                    @Suppress("DEPRECATION")
-                                    Text(
-                                        text = instanceDisplayName,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    @Suppress("DEPRECATION")
-                                    Text(
-                                        text = selectedInstance?.versionId ?: stringResource(id = R.string.version_select_hint),
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        val name = selectedInstance?.name
+                                        val instanceDisplayName = if (selectedInstance == null) {
+                                            stringResource(id = R.string.no_instance)
+                                        } else if (name.isNullOrBlank()) {
+                                            "UNNAMED"
+                                        } else {
+                                            name
+                                        }
+
+                                        @Suppress("DEPRECATION")
+                                        Text(
+                                            text = instanceDisplayName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        @Suppress("DEPRECATION")
+                                        Text(
+                                            text = selectedInstance?.versionId ?: stringResource(id = R.string.version_select_hint),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
 
                                 IconButton(
@@ -485,8 +510,8 @@ fun MainMenuRevamp(
 
                             AnimatedVisibility(
                                 visible = isSomethingRunning,
-                                enter = fadeIn() + scaleIn(initialScale = 0.5f),
-                                exit = fadeOut() + scaleOut(targetScale = 0.5f)
+                                enter = fadeIn(),
+                                exit = fadeOut()
                             ) {
                                 Button(
                                     onClick = {
@@ -576,7 +601,8 @@ fun MainMenuRevampPreview() {
             onSocialMediaClick = {},
             onPlayClick = {},
             onTerminateClick = {},
-            onInstanceSelect = {}
+            onInstanceSelect = {},
+            onAccountManagerClick = {}
         )
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -75,7 +76,7 @@ fun PreferenceItem(
         ListItem(
             headlineContent = { Text(title, fontWeight = FontWeight.Bold, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
             supportingContent = summary?.let { { Text(it, color = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)) } },
-            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
             trailingContent = trailingContent,
             modifier = Modifier.clickable(enabled = enabled) { onClick() }.padding(horizontal = 4.dp, vertical = 2.dp),
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -100,7 +101,7 @@ fun PreferenceSwitch(
         ListItem(
             headlineContent = { Text(title, fontWeight = FontWeight.Bold, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
             supportingContent = summary?.let { { Text(it, color = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)) } },
-            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
             trailingContent = {
                 val thumbRotation by animateFloatAsState(
                     targetValue = if (checked) 360f else 0f,

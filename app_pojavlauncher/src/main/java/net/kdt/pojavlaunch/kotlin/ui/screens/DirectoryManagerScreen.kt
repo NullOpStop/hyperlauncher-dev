@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.BaseActivity
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
 import java.io.File
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -77,26 +78,7 @@ fun DirectoryManagerScreen(
                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
 
-    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
-    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
-
-    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                slideInVertically(
-                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-            }
-            else -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-        }
-    }
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     val currentFolderName = breadcrumbs.lastOrNull()?.first?.lowercase()
     val canToggleDisabled = currentFolderName in setOf("mods", "shaderpacks", "resourcepacks") &&
@@ -110,7 +92,7 @@ fun DirectoryManagerScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -365,7 +347,7 @@ fun FileEntryItem(
             Icon(
                 painter = painterResource(id = if (file.isDirectory) R.drawable.ic_px_folder else R.drawable.ic_px_file),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
             )
 

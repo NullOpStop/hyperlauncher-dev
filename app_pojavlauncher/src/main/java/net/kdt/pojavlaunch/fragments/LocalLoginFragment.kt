@@ -11,7 +11,8 @@ import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.Tools
 import net.kdt.pojavlaunch.extra.ExtraConstants
 import net.kdt.pojavlaunch.extra.ExtraCore
-import net.kdt.pojavlaunch.kotlin.ui.screens.LocalLoginScreen
+import net.kdt.pojavlaunch.ui.screens.LocalLoginScreen
+import net.kdt.pojavlaunch.skin.SkinModelType
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import java.util.regex.Pattern
 

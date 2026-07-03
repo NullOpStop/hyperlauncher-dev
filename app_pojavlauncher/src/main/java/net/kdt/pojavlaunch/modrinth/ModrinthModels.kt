@@ -10,12 +10,14 @@ data class ModrinthProject(
     val description: String = "",
     val author: String = "",
     val iconUrl: String? = null,
+    val gallery: List<String> = emptyList(),
+    val fullDescription: String? = null,
     val iconBitmapState: MutableState<Bitmap?> = mutableStateOf(null),
     val isIconLoadingState: MutableState<Boolean> = mutableStateOf(false)
 ) {
 
     constructor(id: String, title: String, description: String, iconUrl: String?) :
-        this(id, title, description, "", iconUrl, mutableStateOf(null), mutableStateOf(false))
+        this(id, title, description, "", iconUrl, emptyList(), null, mutableStateOf(null), mutableStateOf(false))
 
     val iconBitmap: Bitmap?
         get() = iconBitmapState.value
@@ -29,5 +31,6 @@ data class ModrinthVersion(
     val url: String,
     val filename: String?,
     val gameVersions: List<String>,
-    val loaders: List<String>
+    val loaders: List<String>,
+    val sha1: String? = null
 )

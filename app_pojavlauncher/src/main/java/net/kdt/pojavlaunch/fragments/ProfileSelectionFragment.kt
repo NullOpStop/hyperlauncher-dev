@@ -17,6 +17,8 @@ import com.kdt.mcgui.ProgressLayout
 import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.PojavApplication
 import net.kdt.pojavlaunch.Tools
+import net.kdt.pojavlaunch.extra.ExtraConstants
+import net.kdt.pojavlaunch.extra.ExtraCore
 import net.kdt.pojavlaunch.modloaders.modpacks.api.CommonApi
 import net.kdt.pojavlaunch.ui.screens.ProfileSelectionScreen
 import net.kdt.pojavlaunch.kotlin.ui.viewmodel.ProfileSelectionViewModel
@@ -80,11 +82,11 @@ class ProfileSelectionFragment : Fragment() {
                             importLauncher.launch("*/*")
                         },
                         onCreateClick = {
-                            Tools.swapFragment(requireActivity(), ProfileTypeSelectFragment::class.java, ProfileTypeSelectFragment.TAG, null)
+                            ExtraCore.setValue(ExtraConstants.OPEN_SCREEN, 6)
                         },
                         onEditClick = { instance ->
-
                             viewModel.selectInstance(instance)
+                            // For now, let's keep fragment for editor or add category 7 later
                             Tools.swapFragment(requireActivity(), InstanceEditorFragment::class.java, InstanceEditorFragment.TAG, null)
                         },
                         onDeleteClick = { instance ->
@@ -96,7 +98,7 @@ class ProfileSelectionFragment : Fragment() {
                         },
                         onFilterChange = { r, s, m -> viewModel.updateFilters(r, s, m) },
                         onSearchModClick = {
-                            Tools.swapFragment(requireActivity(), SearchModFragment::class.java, SearchModFragment.TAG, null)
+                            ExtraCore.setValue(ExtraConstants.OPEN_SCREEN, 2)
                         },
                         profiles = viewModel.filteredList,
                         selectedPathName = viewModel.selectedInstancePathName,

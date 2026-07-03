@@ -44,6 +44,7 @@ import net.ashmeet.hyperlauncher.R
 import net.kdt.pojavlaunch.instances.Instance
 import net.kdt.pojavlaunch.instances.InstanceIconProvider
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -93,33 +94,14 @@ fun ProfileSelectionScreen(
         )
     }
 
-    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
-    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
-
-    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                slideInVertically(
-                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-            }
-            else -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-        }
-    }
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -252,16 +234,28 @@ fun ProfileFilterItem(label: String, checked: Boolean, onCheckedChange: (Boolean
         onClick = { onCheckedChange(!checked) },
         modifier = Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 4.dp),
         shape = RoundedCornerShape(10.dp),
-        color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color.Transparent,
-        contentColor = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+        color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color.Transparent,
+        contentColor = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     ) {
-        Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.padding(horizontal = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = label, fontSize = 12.sp, fontWeight = if (checked) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.weight(1f))
-                if (checked) {
-                    Icon(imageVector = Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-            }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        ) {
+            RadioButton(
+                selected = checked,
+                onClick = null,
+                modifier = Modifier.size(14.dp),
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary,
+                    unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                )
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = if (checked) FontWeight.Bold else FontWeight.Medium
+            )
         }
     }
 }
@@ -310,7 +304,7 @@ fun ProfileItem(instance: Instance, isSelected: Boolean, onClick: () -> Unit, on
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = isSelected, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary, unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)))
             Spacer(modifier = Modifier.width(8.dp))
-            Image(painter = iconPainter, contentDescription = null, modifier = Modifier.size(32.dp), contentScale = ContentScale.Fit)
+            Image(painter = iconPainter, contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
             Spacer(modifier = Modifier.width(12.dp))
             @Suppress("DEPRECATION")
             Text(text = displayName, fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

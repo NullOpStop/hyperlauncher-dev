@@ -226,7 +226,7 @@ object LauncherPreferences {
     var PREF_BACKGROUND_VIDEO_VOLUME = 0f
 
     @JvmField
-    var PREF_BACKGROUND_TRANSPARENCY = 0f
+    var PREF_BACKGROUND_TRANSPARENCY = 0.7f
 
     @JvmField
     var PREF_BACKGROUND_BLUR = 0f
@@ -242,6 +242,9 @@ object LauncherPreferences {
 
     @JvmField
     var PREF_TRANSITION_INTENSITY = 1f
+
+    @JvmField
+    var PREF_HIDE_MAIN_ACTION_BUTTONS = false
 
     @JvmField
     var PREF_DELETE_OLD_LOGS = false
@@ -264,16 +267,18 @@ object LauncherPreferences {
     val PREF_MOUSE_ICON_PATH_STATE: MutableState<String?> = mutableStateOf(null)
 
     val PREF_BACKGROUND_PATH_STATE: MutableState<String?> = mutableStateOf(null)
+    val PREF_BACKGROUND_REVISION_STATE: MutableIntState = mutableIntStateOf(0)
     val PREF_BACKGROUND_VIDEO_PATH_STATE: MutableState<String?> = mutableStateOf(null)
     val PREF_BACKGROUND_VIDEO_LOOP_STATE: MutableState<Boolean> = mutableStateOf(true)
     val PREF_BACKGROUND_VIDEO_VOLUME_STATE: MutableState<Float> = mutableStateOf(0f)
-    val PREF_BACKGROUND_TRANSPARENCY_STATE: MutableState<Float> = mutableStateOf(0f)
+    val PREF_BACKGROUND_TRANSPARENCY_STATE: MutableState<Float> = mutableStateOf(0.7f)
     val PREF_BACKGROUND_BLUR_STATE: MutableState<Float> = mutableStateOf(0f)
     val PREF_BACKGROUND_BLUR_ENABLED_STATE: MutableState<Boolean> = mutableStateOf(false)
 
     val PREF_TRANSITION_ANIMATION_STATE: MutableState<String> = mutableStateOf("default")
     val PREF_TRANSITION_DURATION_STATE: MutableIntState = mutableIntStateOf(300)
     val PREF_TRANSITION_INTENSITY_STATE: MutableState<Float> = mutableStateOf(1f)
+    val PREF_HIDE_MAIN_ACTION_BUTTONS_STATE: MutableState<Boolean> = mutableStateOf(false)
 
     @JvmStatic
     fun applyTheme() {
@@ -361,7 +366,7 @@ object LauncherPreferences {
         PREF_BACKGROUND_VIDEO_LOOP_STATE.value = PREF_BACKGROUND_VIDEO_LOOP
         PREF_BACKGROUND_VIDEO_VOLUME = prefs.getFloat("backgroundVideoVolume", 0f)
         PREF_BACKGROUND_VIDEO_VOLUME_STATE.value = PREF_BACKGROUND_VIDEO_VOLUME
-        PREF_BACKGROUND_TRANSPARENCY = prefs.getFloat("backgroundTransparency", 0f)
+        PREF_BACKGROUND_TRANSPARENCY = prefs.getFloat("backgroundTransparency", 0.7f)
         PREF_BACKGROUND_TRANSPARENCY_STATE.value = PREF_BACKGROUND_TRANSPARENCY
         PREF_BACKGROUND_BLUR = prefs.getFloat("backgroundBlur", 0f)
         PREF_BACKGROUND_BLUR_STATE.value = PREF_BACKGROUND_BLUR
@@ -374,6 +379,9 @@ object LauncherPreferences {
         PREF_TRANSITION_DURATION_STATE.intValue = PREF_TRANSITION_DURATION
         PREF_TRANSITION_INTENSITY = prefs.getFloat("transitionIntensity", 1f)
         PREF_TRANSITION_INTENSITY_STATE.value = PREF_TRANSITION_INTENSITY
+
+        PREF_HIDE_MAIN_ACTION_BUTTONS = prefs.getBoolean("hideMainActionButtons", false)
+        PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value = PREF_HIDE_MAIN_ACTION_BUTTONS
 
         PREF_DELETE_OLD_LOGS = prefs.getBoolean(PREF_KEY_DELETE_OLD_LOGS, false)
         PREF_LOG_MAX_DAYS = prefs.getInt(PREF_KEY_LOG_MAX_DAYS, 5)

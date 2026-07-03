@@ -25,4 +25,8 @@ public class ExtraConstants {
     public static final String REFRESH_ACCOUNT_SPINNER = "refresh_account_spinner";
     /* ExtraCore constant: Notify the launcher background to refresh from preferences. */
     public static final String REFRESH_BACKGROUND = "refresh_background";
+    /* ExtraCore constant: Open a screen by its category index. */
+    public static final String OPEN_SCREEN = "open_screen";
+    /* ExtraCore constant: The default content type to show in the content installer. */
+    public static final String DEFAULT_CONTENT_TYPE = "default_content_type";
 }

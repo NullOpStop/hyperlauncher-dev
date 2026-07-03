@@ -76,6 +76,99 @@ private fun colorSchemeFromSeed(seed: Int, darkTheme: Boolean): ColorScheme {
     }
 }
 
+private fun getPresetColor(theme: ColorTheme, preset: String): Color {
+    return when (preset) {
+        ColorThemeType.EMBERMIRE -> theme.embermire
+        ColorThemeType.VELVET_ROSE -> theme.velvetRose
+        ColorThemeType.MISTWAVE -> theme.mistwave
+        ColorThemeType.GLACIER -> theme.glacier
+        ColorThemeType.VERDANTFIELD -> theme.verdantField
+        ColorThemeType.URBAN_ASH -> theme.urbanAsh
+        ColorThemeType.VERDANT_DAWN -> theme.verdantDawn
+        else -> theme.embermire
+    }
+}
+
+private fun getPresetColorScheme(preset: String, darkTheme: Boolean): ColorScheme {
+    return if (darkTheme) {
+        darkColorScheme(
+            primary = getPresetColor(primaryDark, preset),
+            onPrimary = getPresetColor(onPrimaryDark, preset),
+            primaryContainer = getPresetColor(primaryContainerDark, preset),
+            onPrimaryContainer = getPresetColor(onPrimaryContainerDark, preset),
+            secondary = getPresetColor(secondaryDark, preset),
+            onSecondary = getPresetColor(onSecondaryDark, preset),
+            secondaryContainer = getPresetColor(secondaryContainerDark, preset),
+            onSecondaryContainer = getPresetColor(onSecondaryContainerDark, preset),
+            tertiary = getPresetColor(tertiaryDark, preset),
+            onTertiary = getPresetColor(onTertiaryDark, preset),
+            tertiaryContainer = getPresetColor(tertiaryContainerDark, preset),
+            onTertiaryContainer = getPresetColor(onTertiaryContainerDark, preset),
+            error = getPresetColor(errorDark, preset),
+            onError = getPresetColor(onErrorDark, preset),
+            errorContainer = getPresetColor(errorContainerDark, preset),
+            onErrorContainer = getPresetColor(onErrorContainerDark, preset),
+            background = getPresetColor(backgroundDark, preset),
+            onBackground = getPresetColor(onBackgroundDark, preset),
+            surface = getPresetColor(surfaceDark, preset),
+            onSurface = getPresetColor(onSurfaceDark, preset),
+            surfaceVariant = getPresetColor(surfaceVariantDark, preset),
+            onSurfaceVariant = getPresetColor(onSurfaceVariantDark, preset),
+            outline = getPresetColor(outlineDark, preset),
+            outlineVariant = getPresetColor(outlineVariantDark, preset),
+            scrim = getPresetColor(scrimDark, preset),
+            inverseSurface = getPresetColor(inverseSurfaceDark, preset),
+            inverseOnSurface = getPresetColor(inverseOnSurfaceDark, preset),
+            inversePrimary = getPresetColor(inversePrimaryDark, preset),
+            surfaceDim = getPresetColor(surfaceDimDark, preset),
+            surfaceBright = getPresetColor(surfaceBrightDark, preset),
+            surfaceContainerLowest = getPresetColor(surfaceContainerLowestDark, preset),
+            surfaceContainerLow = getPresetColor(surfaceContainerLowDark, preset),
+            surfaceContainer = getPresetColor(surfaceContainerDark, preset),
+            surfaceContainerHigh = getPresetColor(surfaceContainerHighDark, preset),
+            surfaceContainerHighest = getPresetColor(surfaceContainerHighestDark, preset),
+        )
+    } else {
+        lightColorScheme(
+            primary = getPresetColor(primaryLight, preset),
+            onPrimary = getPresetColor(onPrimaryLight, preset),
+            primaryContainer = getPresetColor(primaryContainerLight, preset),
+            onPrimaryContainer = getPresetColor(onPrimaryContainerLight, preset),
+            secondary = getPresetColor(secondaryLight, preset),
+            onSecondary = getPresetColor(onSecondaryLight, preset),
+            secondaryContainer = getPresetColor(secondaryContainerLight, preset),
+            onSecondaryContainer = getPresetColor(onSecondaryContainerLight, preset),
+            tertiary = getPresetColor(tertiaryLight, preset),
+            onTertiary = getPresetColor(onTertiaryLight, preset),
+            tertiaryContainer = getPresetColor(tertiaryContainerLight, preset),
+            onTertiaryContainer = getPresetColor(onTertiaryContainerLight, preset),
+            error = getPresetColor(errorLight, preset),
+            onError = getPresetColor(onErrorLight, preset),
+            errorContainer = getPresetColor(errorContainerLight, preset),
+            onErrorContainer = getPresetColor(onErrorContainerLight, preset),
+            background = getPresetColor(backgroundLight, preset),
+            onBackground = getPresetColor(onBackgroundLight, preset),
+            surface = getPresetColor(surfaceLight, preset),
+            onSurface = getPresetColor(onSurfaceLight, preset),
+            surfaceVariant = getPresetColor(surfaceVariantLight, preset),
+            onSurfaceVariant = getPresetColor(onSurfaceVariantLight, preset),
+            outline = getPresetColor(outlineLight, preset),
+            outlineVariant = getPresetColor(outlineVariantLight, preset),
+            scrim = getPresetColor(scrimLight, preset),
+            inverseSurface = getPresetColor(inverseSurfaceLight, preset),
+            inverseOnSurface = getPresetColor(inverseOnSurfaceLight, preset),
+            inversePrimary = getPresetColor(inversePrimaryLight, preset),
+            surfaceDim = getPresetColor(surfaceDimLight, preset),
+            surfaceBright = getPresetColor(surfaceBrightLight, preset),
+            surfaceContainerLowest = getPresetColor(surfaceContainerLowestLight, preset),
+            surfaceContainerLow = getPresetColor(surfaceContainerLowLight, preset),
+            surfaceContainer = getPresetColor(surfaceContainerLight, preset),
+            surfaceContainerHigh = getPresetColor(surfaceContainerHighLight, preset),
+            surfaceContainerHighest = getPresetColor(surfaceContainerHighestLight, preset),
+        )
+    }
+}
+
 @Composable
 fun PojavTheme(
     darkTheme: Boolean = when(LauncherPreferences.prefAppThemeState.value) {
@@ -87,20 +180,25 @@ fun PojavTheme(
     content: @Composable () -> Unit
 ) {
     val isThemeTypeEnabled = LauncherPreferences.PREF_THEME_TYPE_ENABLED_STATE.value
+    val themeTypeMode = LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value
 
     val colorScheme = when {
         isThemeTypeEnabled -> {
-            darkColorScheme(
-                primary = Color.White,
-                onPrimary = Color.Black,
-                primaryContainer = Color.DarkGray,
-                onPrimaryContainer = Color.White,
-                background = Color.Black,
-                surface = Color.Black,
-                onSurface = Color.White,
-                surfaceVariant = Color(0xFF1A1A1A),
-                onSurfaceVariant = Color.LightGray
-            )
+            if (themeTypeMode == ColorThemeType.MONOCHROME) {
+                darkColorScheme(
+                    primary = Color.White,
+                    onPrimary = Color.Black,
+                    primaryContainer = Color.DarkGray,
+                    onPrimaryContainer = Color.White,
+                    background = Color.Black,
+                    surface = Color.Black,
+                    onSurface = Color.White,
+                    surfaceVariant = Color(0xFF1A1A1A),
+                    onSurfaceVariant = Color.LightGray
+                )
+            } else {
+                getPresetColorScheme(themeTypeMode, darkTheme)
+            }
         }
         LauncherPreferences.PREF_THEME_COLOR_ENABLED_STATE.value -> {
             colorSchemeFromSeed(LauncherPreferences.PREF_THEME_SEED_COLOR_STATE.intValue, darkTheme)

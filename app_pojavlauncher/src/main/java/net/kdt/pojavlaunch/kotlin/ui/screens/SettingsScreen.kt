@@ -31,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -59,6 +60,8 @@ import net.kdt.pojavlaunch.multirt.MultiRTConfigDialog
 import net.kdt.pojavlaunch.plugins.LibraryPlugin
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
+import net.kdt.pojavlaunch.ui.theme.ColorThemeType
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
 import net.kdt.pojavlaunch.utils.RendererCompatUtil
 import net.kdt.pojavlaunch.ui.components.*
 import net.kdt.pojavlaunch.utils.CropperUtils
@@ -88,33 +91,14 @@ fun SettingsScreen(
     val railScrollState = rememberScrollState()
     val isPreview = LocalInspectionMode.current
 
-    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
-    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
-
-    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                slideInVertically(
-                    initialOffsetY = { -(it * 0.12f * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { (it * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-            }
-            else -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-        }
-    }
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null || 
                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -145,9 +129,15 @@ fun SettingsScreen(
                                             currentPage = page
                                             isMainPage = false
                                         },
-                                        icon = { Icon(painterResource(page.iconRes), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                                        icon = { 
+                                            Icon(
+                                                painterResource(page.iconRes), 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp))
+                                            ) 
+                                        },
                                         label = { Text(stringResource(page.titleRes).substringBefore(" "), fontSize = 10.sp) },
-                                        alwaysShowLabel = false,
+                                        alwaysShowLabel = true,
                                         colors = NavigationRailItemDefaults.colors(
                                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -447,6 +437,7 @@ fun AppearanceSettings() {
     fun resetBackground() {
         LauncherPreferences.PREF_BACKGROUND_PATH = null
         LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
+        LauncherPreferences.PREF_BACKGROUND_REVISION_STATE.intValue++
         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = null
         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
         LauncherPreferences.PREF_BACKGROUND_VIDEO_LOOP = true
@@ -510,8 +501,18 @@ fun AppearanceSettings() {
                     var themeTypeMode by remember { mutableStateOf(LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value) }
                     PreferenceList(
                         title = "Theme Selection",
-                        entries = arrayOf("Hyper Launcher"),
-                        entryValues = arrayOf("monochrome"),
+                        summary = "Select a handcrafted color palette",
+                        entries = arrayOf("Hyper Launcher", "Embermire", "Velvet Rose", "Mistwave", "Glacier", "Verdant Field", "Urban Ash", "Verdant Dawn"),
+                        entryValues = arrayOf(
+                            ColorThemeType.MONOCHROME,
+                            ColorThemeType.EMBERMIRE,
+                            ColorThemeType.VELVET_ROSE,
+                            ColorThemeType.MISTWAVE,
+                            ColorThemeType.GLACIER,
+                            ColorThemeType.VERDANTFIELD,
+                            ColorThemeType.URBAN_ASH,
+                            ColorThemeType.VERDANT_DAWN
+                        ),
                         selectedValue = themeTypeMode,
                         onValueChange = {
                             themeTypeMode = it
@@ -643,7 +644,7 @@ fun AppearanceSettings() {
                             }
                             val path = file.absolutePath
                             LauncherPreferences.PREF_BACKGROUND_PATH = path
-                            LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
+                            LauncherPreferences.PREF_BACKGROUND_REVISION_STATE.intValue++
                             LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = path
                             LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = null
                             LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
@@ -681,7 +682,7 @@ fun AppearanceSettings() {
                                         }
                                         val path = file.absolutePath
                                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH = path
-                                        LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = null
+                                        LauncherPreferences.PREF_BACKGROUND_REVISION_STATE.intValue++
                                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value = path
                                         LauncherPreferences.PREF_BACKGROUND_PATH = null
                                         LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value = null
@@ -935,6 +936,23 @@ fun AppearanceSettings() {
                 )
             }
         }
+
+        item {
+            PreferenceGroup(title = "Main Menu") {
+                var hideActionButtons by remember { mutableStateOf(LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value) }
+                PreferenceSwitch(
+                    title = "Hide Sidebar Action Buttons",
+                    summary = "Hide the quick access buttons on the left side of the main menu",
+                    checked = hideActionButtons,
+                    onCheckedChange = {
+                        hideActionButtons = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("hideMainActionButtons", it) }
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -1064,6 +1082,23 @@ fun VideoSettings() {
                         vsinkInZink = it
                         LauncherPreferences.PREF_VSYNC_IN_ZINK = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("vsync_in_zink", it) }
+                    }
+                )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Main Menu") {
+                var hideActionButtons by remember { mutableStateOf(LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value) }
+                PreferenceSwitch(
+                    title = "Hide Sidebar Action Buttons",
+                    summary = "Hide the quick access buttons on the left side of the main menu",
+                    checked = hideActionButtons,
+                    onCheckedChange = {
+                        hideActionButtons = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("hideMainActionButtons", it) }
                     }
                 )
             }
@@ -1662,6 +1697,23 @@ fun JavaSettings() {
                 )
             }
         }
+
+        item {
+            PreferenceGroup(title = "Main Menu") {
+                var hideActionButtons by remember { mutableStateOf(LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value) }
+                PreferenceSwitch(
+                    title = "Hide Sidebar Action Buttons",
+                    summary = "Hide the quick access buttons on the left side of the main menu",
+                    checked = hideActionButtons,
+                    onCheckedChange = {
+                        hideActionButtons = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("hideMainActionButtons", it) }
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -1963,6 +2015,23 @@ fun ExperimentalSettings() {
                         freedrenoSysmem = it
                         LauncherPreferences.PREF_FREEDRENO_SYSMEM = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("freedrenoSysmem", it) }
+                    }
+                )
+            }
+        }
+
+        item {
+            PreferenceGroup(title = "Main Menu") {
+                var hideActionButtons by remember { mutableStateOf(LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value) }
+                PreferenceSwitch(
+                    title = "Hide Sidebar Action Buttons",
+                    summary = "Hide the quick access buttons on the left side of the main menu",
+                    checked = hideActionButtons,
+                    onCheckedChange = {
+                        hideActionButtons = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS = it
+                        LauncherPreferences.PREF_HIDE_MAIN_ACTION_BUTTONS_STATE.value = it
+                        LauncherPreferences.DEFAULT_PREF?.edit { putBoolean("hideMainActionButtons", it) }
                     }
                 )
             }

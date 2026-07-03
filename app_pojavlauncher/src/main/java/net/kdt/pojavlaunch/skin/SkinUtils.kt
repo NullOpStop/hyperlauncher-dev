@@ -122,13 +122,19 @@ object SkinUtils {
         if (skinBitmap == null) return@withContext null
 
         val ratio = skinBitmap.width / 64
-        val result = Bitmap.createBitmap(8 * ratio, 8 * ratio, Bitmap.Config.ARGB_8888)
+        val size = 128 // Target size for UI usage to avoid blurring
+        val result = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
+        val paint = Paint().apply { isFilterBitmap = false } // Sharp scaling
 
-        // Draw base head (8, 8, 8x8)
-        canvas.drawBitmap(skinBitmap, Rect(8 * ratio, 8 * ratio, 16 * ratio, 16 * ratio), Rect(0, 0, 8 * ratio, 8 * ratio), null)
-        // Draw overlay (40, 8, 8x8)
-        canvas.drawBitmap(skinBitmap, Rect(40 * ratio, 8 * ratio, 48 * ratio, 16 * ratio), Rect(0, 0, 8 * ratio, 8 * ratio), null)
+        val srcBase = Rect(8 * ratio, 8 * ratio, 16 * ratio, 16 * ratio)
+        val srcOverlay = Rect(40 * ratio, 8 * ratio, 48 * ratio, 16 * ratio)
+        val dst = Rect(0, 0, size, size)
+
+        // Draw base head
+        canvas.drawBitmap(skinBitmap, srcBase, dst, paint)
+        // Draw overlay
+        canvas.drawBitmap(skinBitmap, srcOverlay, dst, paint)
 
         if (skinBitmap.width != 64 || skinBitmap.height != 64) {
              // If we downloaded from minotar or something that might return a head instead of a full skin

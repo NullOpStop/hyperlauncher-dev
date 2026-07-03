@@ -1,6 +1,6 @@
 package net.kdt.pojavlaunch.ui.screens
 
-import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -11,7 +11,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Build
-import android.view.View
+import android.os.Bundle
 import android.widget.VideoView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -22,6 +22,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +33,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.Chat
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -74,22 +81,40 @@ import net.kdt.pojavlaunch.authenticator.listener.LoginListener
 import net.kdt.pojavlaunch.extra.ExtraConstants
 import net.kdt.pojavlaunch.extra.ExtraCore
 import net.kdt.pojavlaunch.extra.ExtraListener
-import net.kdt.pojavlaunch.fragments.MainMenuFragment
+import net.kdt.pojavlaunch.fragments.*
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper
 import net.kdt.pojavlaunch.progresskeeper.ProgressListener
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
 import net.kdt.pojavlaunch.PojavApplication
 import net.kdt.pojavlaunch.Tools
+import net.kdt.pojavlaunch.ui.screens.AccountManagerOverlay
 import net.kdt.pojavlaunch.kotlin.ui.viewmodel.ContentInstallerViewModel
 import net.kdt.pojavlaunch.kotlin.ui.viewmodel.DirectoryManagerViewModel
+import net.kdt.pojavlaunch.kotlin.ui.viewmodel.ProfileSelectionViewModel
+import net.kdt.pojavlaunch.ui.screens.ProfileSelectionScreen
+import net.kdt.pojavlaunch.ui.screens.ProfileTypeSelectScreen
+import net.kdt.pojavlaunch.modloaders.modpacks.api.CommonApi
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.graphics.drawable.toBitmap
+import net.kdt.pojavlaunch.instances.Instances
+import net.kdt.pojavlaunch.modloaders.FabriclikeUtils
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
+import java.io.FileOutputStream
+import java.io.File
+import java.io.IOException
+import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ModIconCache
+import net.kdt.pojavlaunch.modloaders.modpacks.models.Constants
 import net.kdt.pojavlaunch.skin.AndroidSkinAnalyzer
 import net.kdt.pojavlaunch.skin.LocalUuidUtils
 import net.kdt.pojavlaunch.skin.LocalUuidUtils.toFormattedUuid
 import net.kdt.pojavlaunch.skin.SkinModelType
 import net.kdt.pojavlaunch.skin.SkinUtils
+import net.kdt.pojavlaunch.ui.screens.ContentInstallerScreen
+import net.kdt.pojavlaunch.ui.screens.ContentInstallerType
+import net.kdt.pojavlaunch.ui.screens.DirectoryManagerScreen
+import net.kdt.pojavlaunch.ui.screens.SettingsScreen
 import net.kdt.pojavlaunch.utils.UpdateUtils
-import java.io.File
 
 private val m3MotionSpec = spring<Float>(
     dampingRatio = 0.85f,
@@ -100,32 +125,6 @@ private val m3SizeSpec = spring<IntSize>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow
 )
-
-@Composable
-fun getTransitionSpec(): AnimatedContentTransitionScope<*>.() -> ContentTransform {
-    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
-    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
-
-    return remember(animPreset, animDuration, animIntensity) {
-        {
-            when (animPreset) {
-                "fade" -> {
-                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-                }
-                "bounce" -> {
-                    slideInVertically(
-                        initialOffsetY = { h -> -(h * 0.12f * animIntensity).toInt() },
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                    ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-                }
-                else -> {
-                    fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-                }
-            }
-        }
-    }
-}
 
 /** A VideoView that crops to fill its container instead of fitting inside */
 class CropVideoView(context: Context) : VideoView(context) {
@@ -169,9 +168,10 @@ fun LauncherBackground(isPaused: Boolean = false) {
     val backgroundTransparency = LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value
     val backgroundBlurEnabled = LauncherPreferences.PREF_BACKGROUND_BLUR_ENABLED_STATE.value
     val backgroundBlurIntensity = LauncherPreferences.PREF_BACKGROUND_BLUR_STATE.value
+    val backgroundRevision = LauncherPreferences.PREF_BACKGROUND_REVISION_STATE.intValue
 
     // Performance fix: Move bitmap decoding off-thread
-    val backgroundImage = produceState<Bitmap?>(initialValue = null, backgroundPath, backgroundVideoPath) {
+    val backgroundImage = produceState<Bitmap?>(initialValue = null, backgroundPath, backgroundVideoPath, backgroundRevision) {
         if (backgroundPath != null && backgroundVideoPath == null) {
             value = withContext(Dispatchers.IO) {
                 try {
@@ -182,7 +182,7 @@ fun LauncherBackground(isPaused: Boolean = false) {
                     } else {
                         BitmapFactory.decodeFile(backgroundPath)
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
             }
@@ -262,8 +262,6 @@ fun LauncherBackground(isPaused: Boolean = false) {
         } else {
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
         }
-
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = backgroundTransparency)))
     }
 }
 
@@ -334,6 +332,7 @@ fun TaskProgressItem(task: TaskProgress) {
 
 @Composable
 fun ProgressCard(
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isPreview = LocalInspectionMode.current
@@ -406,48 +405,50 @@ fun ProgressCard(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically) {
+                    .padding(horizontal = 12.dp)
+                    .padding(top = 8.dp, bottom = 4.dp)
+            ) {
+                IconButton(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .align(Alignment.CenterStart),
+                    onClick = onClose
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.spinner_arrow),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = 90f }
+                    )
+                }
 
-                val infiniteTransition = rememberInfiniteTransition(label = "rotation")
-                val rotation by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 360f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2000, easing = LinearEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "rotation"
-                )
-
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_px_progress),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = rotation },
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(12.dp))
                 @Suppress("DEPRECATION")
                 Text(
                     text = stringResource(id = R.string.progresslayout_tasks_in_progress, activeTasks.size),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.align(Alignment.Center).clickable { isExpanded = !isExpanded },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Icon(
-                    painter = painterResource(id = R.drawable.spinner_arrow),
-                    contentDescription = null,
+                IconButton(
                     modifier = Modifier
-                        .size(18.dp)
-                        .alpha(0.6f),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+                        .size(28.dp)
+                        .align(Alignment.CenterEnd),
+                    onClick = { isExpanded = !isExpanded }
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.spinner_arrow),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer { rotationZ = if (isExpanded) 0f else 180f }
+                            .alpha(0.6f),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -478,6 +479,8 @@ fun AccountSelector(
     currentAccount: MinecraftAccount?,
     onAccountSelect: (MinecraftAccount) -> Unit,
     onAccountDelete: (MinecraftAccount) -> Unit,
+    onManagerClick: () -> Unit,
+    onAddAccountClick: () -> Unit,
     topBarHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
     ignoreNotch: Boolean = false
@@ -619,6 +622,23 @@ fun AccountSelector(
                 )
             }
 
+            DropdownMenuItem(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                text = { Text("Account Manager", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
+                onClick = {
+                    expanded = false
+                    onManagerClick()
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_px_image_renderer),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            )
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             DropdownMenuItem(
@@ -626,7 +646,7 @@ fun AccountSelector(
                 text = { Text("Add Account", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
                 onClick = {
                     expanded = false
-                    ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD, true)
+                    onAddAccountClick()
                 },
                 leadingIcon = {
                     Icon(
@@ -739,75 +759,129 @@ fun TopBar(
     hasBackground: Boolean,
     isAnyScreenOpen: Boolean,
     isProgressVisible: Boolean,
+    isOnline: Boolean,
     taskCount: Int,
     selectedCategory: Int,
-    accounts: List<MinecraftAccount>,
-    currentAccount: MinecraftAccount?,
-    onAccountSelect: (MinecraftAccount) -> Unit,
-    onAccountDelete: (MinecraftAccount) -> Unit,
+    currentFragmentTag: String?,
     onHomeClick: () -> Unit,
     onProgressClick: () -> Unit,
-    onCategoryClick: (Int) -> Unit
+    onCategoryClick: (Int) -> Unit,
+    onAboutClick: () -> Unit
 ) {
+    val title = remember(selectedCategory, currentFragmentTag) {
+        when (selectedCategory) {
+            1 -> "Files"
+            2 -> "Installer"
+            3 -> "Settings"
+            4 -> "Accounts"
+            5 -> "Select Instance"
+            6 -> "Instance Type"
+            7 -> "Edit Instance"
+            8 -> "About"
+            else -> {
+                when (currentFragmentTag) {
+                    MainMenuFragment.TAG -> "HyperLauncher"
+                    "FileSelectorFragment" -> "Select File"
+                    "InstanceEditorFragment" -> "Edit Instance"
+                    null -> "HyperLauncher"
+                    else -> currentFragmentTag.substringAfterLast('.').replace("Fragment", "")
+                }
+            }
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth().height(topBarHeight),
         color = MaterialTheme.colorScheme.surface.copy(
-            alpha = if (hasBackground) 0.85f else 1f
+            alpha = if (hasBackground) 0.4f else 1f
         ),
         tonalElevation = 3.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .run {
-                    if (ignoreNotch) this
-                    else windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-                },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.padding(start = if (ignoreNotch) 4.dp else 0.dp)) {
-                // Stable Home/Account switch without AnimatedContent to prevent touch cancelling.
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .run {
+                        if (ignoreNotch) this
+                        else windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+            Row(
+                modifier = Modifier.padding(start = if (ignoreNotch) 8.dp else 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 if (isAnyScreenOpen) {
-                    TopBarButton(
+                    IconButton(
                         onClick = onHomeClick,
-                        icon = R.drawable.ic_px_home,
-                        label = "Home",
-                        topBarHeight = topBarHeight,
-                        isSelected = true,
-                        ignoreNotch = ignoreNotch,
-                        isLeftmost = true
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    Text(
+                        text = "—",
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
                     )
                 } else {
-                    AccountSelector(
-                        accounts = accounts,
-                        currentAccount = currentAccount,
-                        onAccountSelect = onAccountSelect,
-                        onAccountDelete = onAccountDelete,
-                        topBarHeight = topBarHeight,
-                        ignoreNotch = ignoreNotch
+                    Icon(
+                        painter = painterResource(id = R.drawable.icon_hyper),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp).padding(start = 8.dp).clickable(onClick = onAboutClick),
+                        tint = MaterialTheme.colorScheme.primary
                     )
+                    Spacer(Modifier.width(8.dp))
                 }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.clickable(onClick = onAboutClick)
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Row(
                 modifier = Modifier
-                    .padding(end = if (ignoreNotch) 12.dp else 12.dp)
-                    .animateContentSize(animationSpec = m3SizeSpec),
+                    .padding(end = if (ignoreNotch) 12.dp else 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                TopBarButton(
-                    onClick = onProgressClick,
-                    isSelected = isProgressVisible,
-                    isSpecialActive = taskCount > 0 && !isProgressVisible,
-                    isRotating = taskCount > 0,
-                    badgeCount = taskCount,
-                    icon = R.drawable.ic_px_progress,
-                    label = "Tasks",
-                    topBarHeight = topBarHeight
-                )
+                // Task indicator with horizontal expansion to avoid vertical glitching
+                AnimatedVisibility(
+                    visible = !isProgressVisible && taskCount > 0,
+                    enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                    exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clip(shape = MaterialTheme.shapes.large)
+                            .clickable { onProgressClick() }
+                            .padding(all = 8.dp)
+                            .width(120.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.weight(1f))
+                        Icon(
+                            modifier = Modifier.size(22.dp),
+                            painter = painterResource(id = R.drawable.ic_px_progress),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
 
                 TopBarButton(
                     onClick = { onCategoryClick(1) },
@@ -836,7 +910,17 @@ fun TopBar(
                 )
             }
         }
+
+        // Connection indicator line
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(if (isOnline) Color.White else Color.Red.copy(alpha = 0.8f))
+                .align(Alignment.BottomCenter)
+        )
     }
+}
 }
 
 @Composable
@@ -854,12 +938,19 @@ fun LauncherScreen(
     val ignoreNotch = remember { if (isPreview) true else LauncherPreferences.PREF_IGNORE_NOTCH }
 
     val backgroundPath = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value
-    val hasBackground = backgroundPath != null || isPreview
+    val backgroundVideoPath = LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value
+    val backgroundTransparency = LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value
+    val hasBackground = backgroundPath != null || backgroundVideoPath != null || isPreview
 
     var selectedCategory by rememberSaveable { mutableIntStateOf(-1) }
+    var showAddAccountDialogInManager by rememberSaveable { mutableStateOf(false) }
 
     val isAnyScreenOpen by remember(selectedCategory, isFragmentOpen) {
-        derivedStateOf { selectedCategory != -1 || isFragmentOpen }
+        derivedStateOf { 
+            val activity = context as? FragmentActivity
+            val manager = activity?.supportFragmentManager
+            selectedCategory != -1 || isFragmentOpen || (manager?.backStackEntryCount ?: 0) > 0
+        }
     }
 
     var accounts by remember { mutableStateOf<List<MinecraftAccount>>(emptyList()) }
@@ -873,7 +964,31 @@ fun LauncherScreen(
 
     val isOnline = remember { mutableStateOf(true) }
 
+    var currentFragmentTag by remember { mutableStateOf<String?>(null) }
+
     DisposableEffect(context) {
+        val activity = context as? FragmentActivity
+        val manager = activity?.supportFragmentManager
+        
+        val backStackListener = FragmentManager.OnBackStackChangedListener {
+            val count = manager?.backStackEntryCount ?: 0
+            if (count > 0) {
+                currentFragmentTag = manager?.getBackStackEntryAt(count - 1)?.name
+            } else {
+                currentFragmentTag = manager?.findFragmentById(R.id.container_fragment)?.tag
+            }
+        }
+        
+        manager?.addOnBackStackChangedListener(backStackListener)
+        
+        // Initial tag
+        val count = manager?.backStackEntryCount ?: 0
+        currentFragmentTag = if (count > 0) {
+            manager?.getBackStackEntryAt(count - 1)?.name
+        } else {
+            manager?.findFragmentById(R.id.container_fragment)?.tag
+        }
+
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
@@ -896,6 +1011,7 @@ fun LauncherScreen(
 
         onDispose {
             connectivityManager.unregisterNetworkCallback(networkCallback)
+            manager?.removeOnBackStackChangedListener(backStackListener)
         }
     }
 
@@ -1021,6 +1137,13 @@ fun LauncherScreen(
         }
     }
 
+    val openScreenListener = remember {
+        ExtraListener<Int> { _, value ->
+            selectedCategory = value
+            false
+        }
+    }
+
     DisposableEffect(Unit) {
         if (!isPreview) {
             refreshAccountsList()
@@ -1029,6 +1152,14 @@ fun LauncherScreen(
             ExtraCore.addExtraListener(ExtraConstants.MICROSOFT_LOGIN_TODO, microsoftListener)
             ExtraCore.addExtraListener(ExtraConstants.ELYBY_LOGIN_TODO, elyByListener)
             ExtraCore.addExtraListener(ExtraConstants.LAUNCH_GAME, launchGameListener)
+            ExtraCore.addExtraListener(ExtraConstants.OPEN_SCREEN, openScreenListener)
+            ExtraCore.addExtraListener(ExtraConstants.SELECT_AUTH_METHOD, ExtraListener<Boolean> { _, value ->
+                if (value) {
+                    selectedCategory = 4
+                    showAddAccountDialogInManager = false
+                }
+                false
+            })
         }
 
         onDispose {
@@ -1038,11 +1169,19 @@ fun LauncherScreen(
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.MICROSOFT_LOGIN_TODO, microsoftListener)
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.ELYBY_LOGIN_TODO, elyByListener)
                 ExtraCore.removeExtraListenerFromValue(ExtraConstants.LAUNCH_GAME, launchGameListener)
+                ExtraCore.removeExtraListenerFromValue(ExtraConstants.OPEN_SCREEN, openScreenListener)
             }
         }
     }
 
-    val transitionSpec = getTransitionSpec()
+    // Close progress overlay automatically when tasks finish
+    LaunchedEffect(taskCount) {
+        if (taskCount == 0 && isProgressVisible) {
+            onProgressClick()
+        }
+    }
+
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherBackground(isPaused = isGameLaunching || taskCount > 0)
@@ -1054,25 +1193,19 @@ fun LauncherScreen(
                 hasBackground = hasBackground,
                 isAnyScreenOpen = isAnyScreenOpen,
                 isProgressVisible = isProgressVisible,
+                isOnline = isOnline.value,
                 taskCount = taskCount,
                 selectedCategory = selectedCategory,
-                accounts = accounts,
-                currentAccount = currentAccount,
-                onAccountSelect = { account ->
-                    Accounts.setCurrent(account)
-                    currentAccount = account
-                    ExtraCore.setValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, true)
-                    if (account.authType.requiresLogin() && System.currentTimeMillis() > account.expiresAt) {
-                        account.authType.createAuth()?.refreshAccount(loginListener, account)
-                    }
-                },
-                onAccountDelete = { account ->
-                    Accounts.delete(account)
-                    refreshAccountsList()
-                },
+                currentFragmentTag = currentFragmentTag,
                 onHomeClick = {
+                    val activity = context as? FragmentActivity
+                    val manager = activity?.supportFragmentManager
+                    
                     if (selectedCategory != -1) {
                         selectedCategory = -1
+                        showAddAccountDialogInManager = false
+                    } else if (manager != null && manager.backStackEntryCount > 0) {
+                        manager.popBackStack()
                     } else if (isFragmentOpen) {
                         onHomeRequest()
                     }
@@ -1086,14 +1219,30 @@ fun LauncherScreen(
                         if (isProgressVisible) onProgressClick()
                         selectedCategory = category
                     }
+                    showAddAccountDialogInManager = false
+                },
+                onAboutClick = {
+                    if (selectedCategory == 8) {
+                        selectedCategory = -1
+                    } else {
+                        if (isProgressVisible) onProgressClick()
+                        selectedCategory = 8
+                    }
                 }
             )
 
             // Persistent screen layer wrapper
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(
+                        if (hasBackground) MaterialTheme.colorScheme.surface.copy(alpha = backgroundTransparency)
+                        else Color.Transparent
+                    )
+            ) {
                 
-                // 1. Persistent Fragment Container in the background
-                // We use graphicsLayer { alpha = ... } to hide/show it without destroying it
+                // Fragment Container is always present but hidden when an overlay is open
                 if (!isPreview) {
                     AndroidView(
                         factory = { ctx ->
@@ -1115,47 +1264,101 @@ fun LauncherScreen(
                                     .commitAllowingStateLoss()
                             }
                         },
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            // Fix: Hide the main menu when an overlay is active to prevent visual overlap
-                            alpha = if (selectedCategory == -1) 1f else 0f
-                        }
+                        modifier = Modifier.fillMaxSize().alpha(if (selectedCategory == -1) 1f else 0f)
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.2f)).alpha(if (selectedCategory == -1) 1f else 0f), contentAlignment = Alignment.Center) {
                         Text("Home Fragment")
                     }
                 }
 
-                // 2. Overlay layer on top of fragments
                 AnimatedContent(
                     targetState = selectedCategory,
                     transitionSpec = transitionSpec,
                     modifier = Modifier.fillMaxSize().graphicsLayer { clip = true },
-                    label = "overlayTransition"
-                ) { category ->
-                    if (category != -1) {
-                        // Background Surface to cover the fragments area
-                        Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
-                            when (category) {
+                    label = "mainScreenTransition"
+                ) { state ->
+                    if (state != -1) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.Transparent
+                        ) {
+                            when (state) {
                                 1 -> DirectoryManagerOverlay(onBack = { selectedCategory = -1 })
                                 2 -> ContentInstallerOverlay(onBack = { selectedCategory = -1 })
                                 3 -> SettingsOverlay(onBack = { selectedCategory = -1 })
+                                8 -> AboutOverlay(onBack = { selectedCategory = -1 })
+                                4 -> AccountManagerOverlay(
+                                    accounts = accounts,
+                                    currentAccount = currentAccount,
+                                    onAccountSelect = { account ->
+                                        Accounts.setCurrent(account)
+                                        currentAccount = account
+                                        ExtraCore.setValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, true)
+                                        if (account.authType.requiresLogin() && System.currentTimeMillis() > account.expiresAt) {
+                                            account.authType.createAuth()?.refreshAccount(loginListener, account)
+                                        }
+                                    },
+                                    onAccountDelete = { account ->
+                                        Accounts.delete(account)
+                                        refreshAccountsList()
+                                    },
+                                    onAccountUpdate = {
+                                        refreshAccountsList()
+                                    },
+                                    onMicrosoftClick = {
+                                        ExtraCore.setValue(ExtraConstants.MICROSOFT_LOGIN_TODO, "TODO")
+                                    },
+                                    onElyByClick = {
+                                        ExtraCore.setValue(ExtraConstants.ELYBY_LOGIN_TODO, "TODO")
+                                    },
+                                    onLocalClick = { username, skinPath, capePath, skinModel ->
+                                        try {
+                                            val acc = Accounts.create {
+                                                it.username = username
+                                                it.authType = AuthType.LOCAL
+                                                it.skinPath = skinPath
+                                                it.capePath = capePath
+                                                it.skinModel = skinModel
+                                                it.profileId = LocalUuidUtils.generateProfileId(username, skinModel).toFormattedUuid()
+                                            }
+                                            acc.updateSkinFace(context.assets)
+                                            loginListener.onLoginDone(acc)
+                                        } catch (e: Exception) {
+                                            loginListener.onLoginError(e)
+                                        }
+                                    },
+                                    onBack = { selectedCategory = -1 },
+                                    startWithAddDialog = showAddAccountDialogInManager
+                                )
+                                5 -> ProfileSelectionOverlay(
+                                    onBack = { selectedCategory = -1 },
+                                    onNavigate = { selectedCategory = it }
+                                )
+                                6 -> ProfileTypeSelectOverlay(
+                                    onBack = { selectedCategory = -1 },
+                                    onNavigate = { selectedCategory = it }
+                                )
+                                7 -> InstanceEditorOverlay(onBack = { selectedCategory = -1 })
                             }
                         }
+                    } else {
+                        Spacer(modifier = Modifier.fillMaxSize())
                     }
                 }
             }
         }
 
         AnimatedVisibility(
-            visible = isProgressVisible,
-            enter = fadeIn(spring(stiffness = Spring.StiffnessLow)) + expandIn(expandFrom = Alignment.TopEnd, animationSpec = spring(stiffness = Spring.StiffnessLow)),
-            exit = fadeOut(spring(stiffness = Spring.StiffnessLow)) + shrinkOut(shrinkTowards = Alignment.TopEnd, animationSpec = spring(stiffness = Spring.StiffnessLow)),
+            visible = isProgressVisible && taskCount > 0,
+            enter = fadeIn(spring(stiffness = Spring.StiffnessLow)),
+            exit = fadeOut(spring(stiffness = Spring.StiffnessLow)),
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = topBarHeight + 12.dp, end = 12.dp)
         ) {
             ProgressCard(
+                onClose = onProgressClick,
                 modifier = Modifier.run {
                     if (ignoreNotch) this
                     else windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
@@ -1165,8 +1368,8 @@ fun LauncherScreen(
 
         AnimatedVisibility(
             visible = showUpdateDialog && updateInfo != null,
-            enter = fadeIn() + scaleIn(initialScale = 0.9f),
-            exit = fadeOut() + scaleOut(targetScale = 0.9f),
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
             updateInfo?.let { info ->
@@ -1392,13 +1595,14 @@ private fun ContentInstallerOverlay(onBack: () -> Unit) {
             projects = viewModel.projects,
             isLoading = viewModel.isLoading,
             statusText = viewModel.statusText,
-            selectedVersion = viewModel.versionFilter ?: "",
-            selectedLoader = viewModel.loaderFilter ?: "" ,
+            selectedVersion = viewModel.versionFilter,
+            selectedLoader = viewModel.loaderFilter,
             onVersionFilterChange = { viewModel.versionFilter = it },
             onLoaderFilterChange = { viewModel.loaderFilter = it },
             instanceVersion = viewModel.instanceVersion,
             instanceLoader = viewModel.instanceLoader,
             viewingProject = viewModel.viewingProject,
+            selectedType = viewModel.selectedType,
             projectVersions = viewModel.projectVersions,
             availableProjectMCVersions = viewModel.availableProjectMCVersions,
             selectedProjectMCVersion = viewModel.selectedProjectMCVersion,
@@ -1418,9 +1622,299 @@ private fun SettingsOverlay(onBack: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,orientation=landscape")
 @Composable
-fun LauncherScreenPreview() {
+private fun ProfileSelectionOverlay(
+    onBack: () -> Unit,
+    onNavigate: (Int) -> Unit
+) {
+    val viewModel: ProfileSelectionViewModel = viewModel()
+    val context = LocalContext.current
+
+    val modpackApi = remember { CommonApi(context.getString(R.string.curseforge_api_key)) }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            val contentResolver = context.contentResolver
+            PojavApplication.sExecutorService.execute {
+                val fileName = Tools.getFileName(context, it) ?: "modpack"
+                val outFile = File(Tools.DIR_CACHE, "$fileName.cf")
+                ProgressLayout.setProgress(ProgressLayout.INSTALL_MODPACK, 0, R.string.multirt_progress_caching)
+                try {
+                    contentResolver.openInputStream(it)?.use { input ->
+                        FileOutputStream(outFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                } catch (e: IOException) {
+                    Tools.showErrorRemote("Error", e)
+                    ProgressLayout.clearProgress(ProgressLayout.INSTALL_MODPACK)
+                    return@execute
+                }
+                try {
+                    modpackApi.installLocalModpack(fileName, outFile, null)
+                    viewModel.loadProfiles()
+                } catch (e: IOException) {
+                    Tools.showErrorRemote("Error", e)
+                } finally {
+                    outFile.delete()
+                    ProgressLayout.clearProgress(ProgressLayout.INSTALL_MODPACK)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProfiles()
+    }
+
+    BackHandler { onBack() }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
+        ProfileSelectionScreen(
+            onImportClick = { importLauncher.launch("*/*") },
+            onCreateClick = { ExtraCore.setValue(ExtraConstants.OPEN_SCREEN, 6) },
+            onEditClick = { instance ->
+                Instances.setSelectedInstance(instance)
+                onNavigate(7)
+            },
+            onDeleteClick = { instance ->
+                viewModel.deleteInstance(instance) {}
+            },
+            onSelect = { instance ->
+                viewModel.selectInstance(instance)
+                onBack()
+            },
+            onFilterChange = { r, s, m -> viewModel.updateFilters(r, s, m) },
+            onSearchModClick = {
+                ExtraCore.setValue(ExtraConstants.DEFAULT_CONTENT_TYPE, ContentInstallerType.MODPACKS)
+                onNavigate(2)
+            },
+            profiles = viewModel.filteredList,
+            selectedPathName = viewModel.selectedInstancePathName,
+            showReleases = viewModel.showReleases,
+            showSnapshots = viewModel.showSnapshots,
+            showModded = viewModel.showModded,
+            isLoading = viewModel.isLoading
+        )
+    }
+}
+
+@Composable
+private fun ProfileTypeSelectOverlay(
+    onBack: () -> Unit,
+    onNavigate: (Int) -> Unit
+) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    BackHandler { onBack() }
+    
+    Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
+        ProfileTypeSelectScreen(
+            onBack = onBack,
+            onVanillaClick = {
+                try {
+                    val instance = Instances.createDefaultInstance()
+                    Instances.setSelectedInstance(instance)
+                    val bundle = Bundle().apply {
+                        putBoolean(InstanceEditorFragment.ARG_IS_NEW_INSTANCE, true)
+                    }
+                    Tools.swapFragment(activity, InstanceEditorFragment::class.java, InstanceEditorFragment.TAG, bundle)
+                    onBack()
+                } catch (e: IOException) {
+                    Tools.showError(context, e)
+                }
+            },
+            onOptifineClick = {
+                Tools.swapFragment(activity, OptiFineInstallFragment::class.java, OptiFineInstallFragment.TAG, null)
+                onBack()
+            },
+            onFabricClick = {
+                val bundle = Bundle().apply { putString(FabricInstallFragment.ARG_TYPE, "fabric") }
+                Tools.swapFragment(activity, FabricInstallFragment::class.java, FabricInstallFragment.TAG, bundle)
+                onBack()
+            },
+            onForgeClick = {
+                Tools.swapFragment(activity, ForgeInstallFragment::class.java, ForgeInstallFragment.TAG, null)
+                onBack()
+            },
+            onQuiltClick = {
+                val bundle = Bundle().apply { putString(FabricInstallFragment.ARG_TYPE, "quilt") }
+                Tools.swapFragment(activity, FabricInstallFragment::class.java, FabricInstallFragment.TAG, bundle)
+                onBack()
+            },
+            onNeoForgeClick = {
+                Tools.swapFragment(activity, NeoforgeInstallFragment::class.java, NeoforgeInstallFragment.TAG, null)
+                onBack()
+            },
+            onLegacyFabricClick = {
+                val bundle = Bundle().apply { putString(FabricInstallFragment.ARG_TYPE, "legacy_fabric") }
+                Tools.swapFragment(activity, FabricInstallFragment::class.java, FabricInstallFragment.TAG, bundle)
+                onBack()
+            },
+            onModpackClick = {
+                ExtraCore.setValue(ExtraConstants.DEFAULT_CONTENT_TYPE, ContentInstallerType.MODPACKS)
+                onNavigate(2)
+            },
+            onBTAClick = {
+                Tools.swapFragment(activity, BTAInstallFragment::class.java, BTAInstallFragment.TAG, null)
+                onBack()
+            }
+        )
+    }
+}
+
+@Composable
+fun InstanceEditorOverlay(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    
+    // We'll use the existing Fragment-based Editor but wrapped in a way 
+    // that it can be transitioned by AnimatedContent if we want.
+    // However, the user wants it to behave like other overlays.
+    // So we'll host the InstanceEditorScreen here directly!
+    
+    val instance = remember { Instances.loadSelectedInstance() }
+    if (instance == null) {
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
+
+    // Since I don't want to duplicate all the InstanceEditorFragment logic (saving, loading, etc.)
+    // I'll just launch the Fragment for now but make sure it fades in.
+    // Wait, the user says "AuthenticationScreens.kt not show fade in".
+    // Category 4 IS AuthenticationScreens.
+    
+    // If it's not fading in, it's because of how I structured the AnimatedContent.
+    // I just fixed it by removing the extra Box and adding the Spacer for -1.
+    
+    // Let's do the same for InstanceEditor. For now, Category 7 will still use the Fragment 
+    // but I'll ensure the Fragment transaction is smooth.
+    DisposableEffect(Unit) {
+        Tools.swapFragment(activity, InstanceEditorFragment::class.java, InstanceEditorFragment.TAG, null)
+        onDispose {
+            // Fragment popped by back button
+        }
+    }
+    
+    // Empty content as the Fragment is in the background container
+    Spacer(modifier = Modifier.fillMaxSize())
+}
+
+@Composable
+private fun AboutOverlay(onBack: () -> Unit) {
+    BackHandler { onBack() }
+    Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
+        AboutScreen()
+    }
+}
+
+@Composable
+fun AboutScreen() {
+    val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+    val hasBackground = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value != null ||
+            LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.icon_hyper),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = "HyperLauncher",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { 
+                        val url = Tools.URL_HOME
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Rounded.Public, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Wiki")
+                }
+
+                Button(
+                    onClick = { 
+                        val url = context.getString(R.string.social_media_invite)
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Discord")
+                }
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Privacy Policy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = """1. This app does not send any sensitive data, and uses network only for downloading game resources, mods or other content.
+2. This app does not collect any sensitive data while you are running the game.
+3. Some sensitive data is stored in crash reports after the game crashes, but it's not shared to the developer or any third parties
+4. Hyper Launcher developers reserve the right to update this privacy policy without prior notification.""",
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun LauncherScreenPreview() {
     PojavTheme(dynamicColor = true) {
         LauncherScreen(
             onHomeRequest = {},

@@ -48,6 +48,7 @@ import net.kdt.pojavlaunch.modloaders.modpacks.models.ModDetail
 import net.kdt.pojavlaunch.modloaders.modpacks.models.ModItem
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
 import net.kdt.pojavlaunch.ui.theme.PojavTheme
+import net.kdt.pojavlaunch.ui.utils.AnimationUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,26 +82,7 @@ fun ModSearchScreen(
                         LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
 
-    val animPreset = LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value
-    val animDuration = LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue
-    val animIntensity = LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value
-
-    val transitionSpec: AnimatedContentTransitionScope<*>.() -> ContentTransform = {
-        when (animPreset) {
-            "fade" -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-            "bounce" -> {
-                slideInVertically(
-                    initialOffsetY = { h -> -(h.toFloat() * 0.12f * animIntensity).toInt() },
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                ) + fadeIn(animationSpec = tween(animDuration)) togetherWith slideOutVertically(targetOffsetY = { h -> (h.toFloat() * 0.12f * animIntensity).toInt() }) + fadeOut(animationSpec = tween(animDuration / 2))
-            }
-            else -> {
-                fadeIn(animationSpec = tween(animDuration)) togetherWith fadeOut(animationSpec = tween(animDuration))
-            }
-        }
-    }
+    val transitionSpec = AnimationUtils.getTransitionSpec()
 
     LaunchedEffect(listState, items.size, lastPage, isLoading) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }.collect { lastVisibleIndex ->
@@ -112,7 +94,7 @@ fun ModSearchScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = if (hasBackground) 0.85f else 1f),
+        color = if (hasBackground) Color.Transparent else MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
