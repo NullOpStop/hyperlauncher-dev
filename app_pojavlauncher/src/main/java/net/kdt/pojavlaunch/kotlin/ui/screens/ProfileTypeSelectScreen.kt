@@ -68,7 +68,7 @@ fun ProfileTypeSelectScreen(
                 )
                 Box(modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
+                    .background(Color.Black.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value))
                 )
             }
 
@@ -207,7 +207,7 @@ fun ProfileTypeItem(
         modifier = Modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
@@ -217,7 +217,7 @@ fun ProfileTypeItem(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 1.25f),
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {

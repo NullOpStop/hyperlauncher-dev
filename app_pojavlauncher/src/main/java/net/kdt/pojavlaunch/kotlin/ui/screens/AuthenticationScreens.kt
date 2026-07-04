@@ -102,6 +102,7 @@ fun AccountManagerOverlay(
     val backgroundPath = LauncherPreferences.PREF_BACKGROUND_PATH_STATE.value
     val backgroundVideoPath = LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value
     val hasBackground = backgroundPath != null || backgroundVideoPath != null || LocalInspectionMode.current
+    val contentAlpha by LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -172,6 +173,7 @@ fun AccountManagerOverlay(
                             .weight(1f)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha))
                             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(20.dp)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -197,7 +199,7 @@ fun AccountManagerOverlay(
                                 Text(
                                     "Select an account", 
                                     style = MaterialTheme.typography.bodySmall, 
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
                                 )
                             }
                         }
@@ -784,8 +786,8 @@ private fun AccountItemZalith(
         onClick = onSelect,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f),
+        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier.padding(10.dp),

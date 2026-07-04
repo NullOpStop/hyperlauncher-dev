@@ -26,7 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -71,13 +74,13 @@ import java.io.FileOutputStream
 import kotlin.math.roundToInt
 
 @Suppress("unused")
-enum class SettingsPage(val titleRes: Int, val iconRes: Int) {
-    APPEARANCE(R.string.preference_appearance_title, R.drawable.ic_px_theme),
-    VIDEO(R.string.preference_video_title, R.drawable.ic_px_image),
-    CONTROL(R.string.preference_control_title, R.drawable.ic_px_gamepad),
-    JAVA(R.string.preference_java_title, R.drawable.ic_px_java),
-    MISC(R.string.preference_misc_title, R.drawable.ic_px_alt_sliders),
-    EXPERIMENTAL(R.string.preference_experimental_title, R.drawable.ic_px_experiment)
+enum class SettingsPage(val titleRes: Int, val imageVector: ImageVector) {
+    APPEARANCE(R.string.preference_appearance_title, Icons.Default.Palette),
+    VIDEO(R.string.preference_video_title, Icons.Default.Image),
+    CONTROL(R.string.preference_control_title, Icons.Default.Gamepad),
+    JAVA(R.string.preference_java_title, Icons.Default.Code),
+    MISC(R.string.preference_misc_title, Icons.Default.Tune),
+    EXPERIMENTAL(R.string.preference_experimental_title, Icons.Default.Science)
 }
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -131,7 +134,7 @@ fun SettingsScreen(
                                         },
                                         icon = { 
                                             Icon(
-                                                painterResource(page.iconRes), 
+                                                page.imageVector, 
                                                 contentDescription = null, 
                                                 modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp))
                                             ) 
@@ -275,37 +278,37 @@ fun MainSettings(onNavigate: (SettingsPage) -> Unit) {
                 PreferenceItem(
                     title = stringResource(R.string.preference_appearance_title),
                     summary = stringResource(R.string.preference_appearance_description),
-                    icon = painterResource(R.drawable.ic_px_theme),
+                    imageVector = Icons.Default.Palette,
                     onClick = { onNavigate(SettingsPage.APPEARANCE) }
                 )
                 PreferenceItem(
                     title = stringResource(R.string.preference_video_title),
                     summary = stringResource(R.string.preference_video_description),
-                    icon = painterResource(R.drawable.ic_px_image),
+                    imageVector = Icons.Default.Image,
                     onClick = { onNavigate(SettingsPage.VIDEO) }
                 )
                 PreferenceItem(
                     title = stringResource(R.string.preference_control_title),
                     summary = stringResource(R.string.preference_control_description),
-                    icon = painterResource(R.drawable.ic_px_gamepad),
+                    imageVector = Icons.Default.Gamepad,
                     onClick = { onNavigate(SettingsPage.CONTROL) }
                 )
                 PreferenceItem(
                     title = stringResource(R.string.preference_java_title),
                     summary = stringResource(R.string.preference_java_description),
-                    icon = painterResource(R.drawable.ic_px_java),
+                    imageVector = Icons.Default.Code,
                     onClick = { onNavigate(SettingsPage.JAVA) }
                 )
                 PreferenceItem(
                     title = stringResource(R.string.preference_misc_title),
                     summary = stringResource(R.string.preference_misc_description),
-                    icon = painterResource(R.drawable.ic_px_alt_sliders),
+                    imageVector = Icons.Default.Tune,
                     onClick = { onNavigate(SettingsPage.MISC) }
                 )
                 PreferenceItem(
                     title = stringResource(R.string.preference_experimental_title),
                     summary = stringResource(R.string.preference_experimental_description),
-                    icon = painterResource(R.drawable.ic_px_experiment),
+                    imageVector = Icons.Default.Science,
                     onClick = { onNavigate(SettingsPage.EXPERIMENTAL) }
                 )
             }
@@ -317,7 +320,7 @@ fun MainSettings(onNavigate: (SettingsPage) -> Unit) {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_force_english_title),
                     summary = stringResource(R.string.preference_force_english_description),
-                    icon = painterResource(R.drawable.ic_px_translate),
+                    imageVector = Icons.Default.Translate,
                     checked = forceEnglish,
                     onCheckedChange = {
                         forceEnglish = it
@@ -330,7 +333,7 @@ fun MainSettings(onNavigate: (SettingsPage) -> Unit) {
                     PreferenceItem(
                         title = stringResource(R.string.preference_ask_for_notification_title),
                         summary = stringResource(R.string.preference_ask_for_notification_description),
-                        icon = painterResource(R.drawable.ic_px_bell),
+                        imageVector = Icons.Default.Notifications,
                         onClick = {
                             notificationLauncher.launch(notificationPermission)
                         }
@@ -488,6 +491,7 @@ fun AppearanceSettings() {
                 PreferenceSwitch(
                     title = "Preset Theme Mode",
                     summary = "Override individual colors with high-curated presets",
+                    imageVector = Icons.Default.Style,
                     checked = themeTypeEnabled,
                     onCheckedChange = {
                         themeTypeEnabled = it
@@ -519,7 +523,8 @@ fun AppearanceSettings() {
                             LauncherPreferences.PREF_THEME_TYPE_MODE = it
                             LauncherPreferences.PREF_THEME_TYPE_MODE_STATE.value = it
                             LauncherPreferences.DEFAULT_PREF?.edit { putString(LauncherPreferences.PREF_KEY_THEME_TYPE_MODE, it) }
-                        }
+                        },
+                        imageVector = Icons.Default.ColorLens
                     )
                 }
             }
@@ -540,7 +545,7 @@ fun AppearanceSettings() {
                         LauncherPreferences.prefAppThemeState.value = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putString("appTheme", it) }
                     },
-                    icon = painterResource(R.drawable.ic_px_theme),
+                    imageVector = Icons.Default.Palette,
                     enabled = !themeTypeEnabled
                 )
 
@@ -548,6 +553,7 @@ fun AppearanceSettings() {
                 PreferenceSwitch(
                     title = "Custom Theme Color",
                     summary = "Override launcher colors with a custom seed",
+                    imageVector = Icons.Default.Colorize,
                     checked = themeColorEnabled,
                     onCheckedChange = {
                         themeColorEnabled = it
@@ -562,6 +568,7 @@ fun AppearanceSettings() {
                     PreferenceItem(
                         title = "Pick Seed Color",
                         summary = "Current: #${Integer.toHexString(currentSeedColor).uppercase()}",
+                        imageVector = Icons.Default.Palette,
                         onClick = { @Suppress("DEPRECATION") showThemeColorDialog = true }
                     )
                 }
@@ -581,7 +588,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_TRANSITION_ANIMATION = it
                         LauncherPreferences.PREF_TRANSITION_ANIMATION_STATE.value = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putString("transitionAnimation", it) }
-                    }
+                    },
+                    imageVector = Icons.Default.Animation
                 )
 
                 var duration by remember { mutableFloatStateOf(LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue.toFloat()) }
@@ -595,7 +603,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_TRANSITION_DURATION_STATE.intValue = d
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("transitionDuration", d) }
                     },
-                    valueRange = 100f..1000f
+                    valueRange = 100f..1000f,
+                    imageVector = Icons.Default.Timer
                 )
 
                 var intensity by remember { mutableFloatStateOf(LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value * 100f) }
@@ -609,7 +618,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_TRANSITION_INTENSITY_STATE.value = i
                         LauncherPreferences.DEFAULT_PREF?.edit { putFloat("transitionIntensity", i) }
                     },
-                    valueRange = 50f..200f
+                    valueRange = 50f..200f,
+                    imageVector = Icons.Default.Speed
                 )
             }
         }
@@ -711,14 +721,14 @@ fun AppearanceSettings() {
                 PreferenceItem(
                     title = "Change Background Image",
                     summary = "Select an image for the launcher background",
-                    icon = painterResource(R.drawable.ic_px_image),
+                    imageVector = Icons.Default.Image,
                     onClick = { pickBackgroundLauncher.launch("image/*") }
                 )
 
                 PreferenceItem(
                     title = "Add Video Background",
                     summary = "Select a video for the launcher background",
-                    icon = painterResource(R.drawable.ic_px_image),
+                    imageVector = Icons.Default.Image,
                     onClick = { pickBackgroundVideoLauncher.launch("video/*") }
                 )
 
@@ -726,6 +736,7 @@ fun AppearanceSettings() {
                     title = "Loop Background Video",
                     summary = "Restart the background video when it reaches the end",
                     enabled = hasVideoBackground,
+                    imageVector = Icons.Default.Repeat,
                     checked = videoLoop,
                     onCheckedChange = {
                         videoLoop = it
@@ -753,7 +764,7 @@ fun AppearanceSettings() {
                 PreferenceItem(
                     title = "Reset Background",
                     summary = "Restore default background",
-                    icon = painterResource(R.drawable.ic_px_trash),
+                    imageVector = Icons.Default.Delete,
                     onClick = {
                         @Suppress("DEPRECATION") showResetBackgroundDialog = true
                     }
@@ -770,13 +781,31 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_BACKGROUND_TRANSPARENCY_STATE.value = alpha
                         LauncherPreferences.DEFAULT_PREF?.edit { putFloat("backgroundTransparency", alpha) }
                     },
-                    valueRange = 0f..100f
+                    valueRange = 0f..100f,
+                    imageVector = Icons.Default.Opacity
+                )
+
+                var contentTransparency by remember { mutableFloatStateOf(LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 100f) }
+                PreferenceSlider(
+                    title = "UI Content Transparency",
+                    summary = "Adjust the transparency of lists, overlays and sidebar components",
+                    value = contentTransparency,
+                    onValueChange = {
+                        contentTransparency = it
+                        val alpha = it / 100f
+                        LauncherPreferences.PREF_CONTENT_TRANSPARENCY = alpha
+                        LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value = alpha
+                        LauncherPreferences.DEFAULT_PREF?.edit { putFloat("contentTransparency", alpha) }
+                    },
+                    valueRange = 0f..100f,
+                    imageVector = Icons.Default.Opacity
                 )
 
                 PreferenceSwitch(
                     title = "Blur Effect",
                     summary = "Apply blur to the background image",
                     enabled = hasImageBackground,
+                    imageVector = Icons.Default.BlurOn,
                     checked = blurEnabled,
                     onCheckedChange = {
                         blurEnabled = it
@@ -799,7 +828,8 @@ fun AppearanceSettings() {
                             LauncherPreferences.PREF_BACKGROUND_BLUR_STATE.value = intensity
                             LauncherPreferences.DEFAULT_PREF?.edit { putFloat("backgroundBlur", intensity) }
                         },
-                        valueRange = 0f..100f
+                        valueRange = 0f..100f,
+                        imageVector = Icons.Default.BlurLinear
                     )
                 }
             }
@@ -810,14 +840,14 @@ fun AppearanceSettings() {
                 PreferenceItem(
                     title = "Change Button Logo",
                     summary = "Pick a custom image for the pull button",
-                    icon = painterResource(R.drawable.ic_px_image),
+                    imageVector = Icons.Default.Image,
                     onClick = { pickIconLauncher.launch("image/*") }
                 )
 
                 PreferenceItem(
                     title = "Reset Button Logo",
                     summary = "Restore the default settings icon",
-                    icon = painterResource(R.drawable.ic_px_trash),
+                    imageVector = Icons.Default.Delete,
                     onClick = { @Suppress("DEPRECATION") showResetDialog = true }
                 )
 
@@ -849,7 +879,8 @@ fun AppearanceSettings() {
                                 putString("drawerButtonPreset", newValue)
                             }
                         }
-                    }
+                    },
+                    imageVector = Icons.Default.Place
                 )
 
                 if (preset == "custom") {
@@ -861,7 +892,8 @@ fun AppearanceSettings() {
                             LauncherPreferences.PREF_DRAWER_BUTTON_X = it
                             LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonX", it.toInt()) }
                         },
-                        valueRange = 0f..100f
+                        valueRange = 0f..100f,
+                        imageVector = Icons.Default.SettingsEthernet
                     )
                     PreferenceSlider(
                         title = "Vertical Position (%)",
@@ -871,7 +903,8 @@ fun AppearanceSettings() {
                             LauncherPreferences.PREF_DRAWER_BUTTON_Y = it
                             LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonY", it.toInt()) }
                         },
-                        valueRange = 0f..100f
+                        valueRange = 0f..100f,
+                        imageVector = Icons.Default.Height
                     )
                 }
 
@@ -884,7 +917,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_DRAWER_BUTTON_BG_OPACITY = it / 100f
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonBgOpacity", it.toInt()) }
                     },
-                    valueRange = 0f..100f
+                    valueRange = 0f..100f,
+                    imageVector = Icons.Default.Layers
                 )
 
                 var iconOpacity by remember { mutableFloatStateOf(LauncherPreferences.PREF_DRAWER_BUTTON_ICON_OPACITY * 100f) }
@@ -896,7 +930,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_DRAWER_BUTTON_ICON_OPACITY = it / 100f
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonIconOpacity", it.toInt()) }
                     },
-                    valueRange = 0f..100f
+                    valueRange = 0f..100f,
+                    imageVector = Icons.Default.BrightnessMedium
                 )
 
                 var size by remember { mutableFloatStateOf(LauncherPreferences.PREF_DRAWER_BUTTON_SIZE.toFloat()) }
@@ -908,7 +943,8 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_DRAWER_BUTTON_SIZE = it.toInt()
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonSize", it.toInt()) }
                     },
-                    valueRange = 20f..100f
+                    valueRange = 20f..100f,
+                    imageVector = Icons.Default.Straighten
                 )
 
                 var cornerRadius by remember { mutableFloatStateOf(LauncherPreferences.PREF_DRAWER_BUTTON_CORNER_RADIUS.toFloat()) }
@@ -920,13 +956,15 @@ fun AppearanceSettings() {
                         LauncherPreferences.PREF_DRAWER_BUTTON_CORNER_RADIUS = it.toInt()
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("drawerButtonCornerRadius", it.toInt()) }
                     },
-                    valueRange = 0f..50f
+                    valueRange = 0f..50f,
+                    imageVector = Icons.Default.RoundedCorner
                 )
 
                 var movable by remember { mutableStateOf(LauncherPreferences.PREF_DRAWER_BUTTON_MOVABLE) }
                 PreferenceSwitch(
                     title = "Hold to Move",
                     summary = "Allow moving the button by dragging it",
+                    imageVector = Icons.Default.OpenWith,
                     checked = movable,
                     onCheckedChange = {
                         movable = it
@@ -943,6 +981,7 @@ fun AppearanceSettings() {
                 PreferenceSwitch(
                     title = "Hide Sidebar Action Buttons",
                     summary = "Hide the quick access buttons on the left side of the main menu",
+                    imageVector = Icons.Default.VisibilityOff,
                     checked = hideActionButtons,
                     onCheckedChange = {
                         hideActionButtons = it
@@ -977,7 +1016,7 @@ fun VideoSettings() {
                         LauncherPreferences.PREF_RENDERER = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putString("renderer", it) }
                     },
-                    icon = painterResource(R.drawable.ic_px_image_renderer)
+                    imageVector = Icons.Default.Image
                 )
 
                 var preferredBackend by remember { mutableStateOf(LauncherPreferences.PREF_PREFERRED_GRAPHICS_BACKEND) }
@@ -992,14 +1031,14 @@ fun VideoSettings() {
                         LauncherPreferences.PREF_PREFERRED_GRAPHICS_BACKEND = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putString("preferredGraphicsBackend", it) }
                     },
-                    icon = painterResource(R.drawable.ic_px_image_renderer)
+                    imageVector = Icons.Default.Image
                 )
 
                 var ignoreNotch by remember { mutableStateOf(LauncherPreferences.PREF_IGNORE_NOTCH) }
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_setting_title_ignore_notch),
                     summary = stringResource(R.string.mcl_setting_subtitle_ignore_notch),
-                    icon = painterResource(R.drawable.ic_px_viewport_expand),
+                    imageVector = Icons.Default.Fullscreen,
                     checked = ignoreNotch,
                     onCheckedChange = {
                         ignoreNotch = it
@@ -1019,13 +1058,14 @@ fun VideoSettings() {
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("resolutionRatio", it.toInt()) }
                     },
                     valueRange = 25f..100f,
-                    icon = painterResource(R.drawable.ic_px_resolution)
+                    imageVector = Icons.Default.AspectRatio
                 )
 
                 var sustainedPerf by remember { mutableStateOf(LauncherPreferences.PREF_SUSTAINED_PERFORMANCE) }
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_sustained_performance_title),
                     summary = stringResource(R.string.preference_sustained_performance_description),
+                    imageVector = Icons.Default.BatteryChargingFull,
                     checked = sustainedPerf,
                     onCheckedChange = {
                         sustainedPerf = it
@@ -1038,6 +1078,7 @@ fun VideoSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_setting_title_use_surface_view),
                     summary = stringResource(R.string.mcl_setting_subtitle_use_surface_view),
+                    imageVector = Icons.Default.Layers,
                     checked = altSurface,
                     onCheckedChange = {
                         altSurface = it
@@ -1050,6 +1091,7 @@ fun VideoSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_force_vsync_title),
                     summary = stringResource(R.string.preference_force_vsync_description),
+                    imageVector = Icons.Default.Sync,
                     checked = forceVsync,
                     onCheckedChange = {
                         forceVsync = it
@@ -1064,6 +1106,7 @@ fun VideoSettings() {
                     PreferenceSwitch(
                         title = stringResource(R.string.preference_use_angle_title),
                         summary = stringResource(R.string.preference_use_angle_description),
+                        imageVector = Icons.Default.GraphicEq,
                         checked = useAngle,
                         onCheckedChange = {
                             useAngle = it
@@ -1077,6 +1120,7 @@ fun VideoSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_vsync_in_zink_title),
                     summary = stringResource(R.string.preference_vsync_in_zink_description),
+                    imageVector = Icons.Default.Sync,
                     checked = vsinkInZink,
                     onCheckedChange = {
                         vsinkInZink = it
@@ -1093,6 +1137,7 @@ fun VideoSettings() {
                 PreferenceSwitch(
                     title = "Hide Sidebar Action Buttons",
                     summary = "Hide the quick access buttons on the left side of the main menu",
+                    imageVector = Icons.Default.VisibilityOff,
                     checked = hideActionButtons,
                     onCheckedChange = {
                         hideActionButtons = it
@@ -1171,7 +1216,7 @@ fun ControlSettings() {
                 PreferenceItem(
                     title = stringResource(R.string.preference_edit_controls_title),
                     summary = stringResource(R.string.preference_edit_controls_summary),
-                    icon = painterResource(R.drawable.ic_px_gamepad),
+                    imageVector = Icons.Default.Gamepad,
                     onClick = {
                         context.startActivity(Intent(context, CustomControlsActivity::class.java))
                     }
@@ -1199,7 +1244,7 @@ fun ControlSettings() {
                         LauncherPreferences.PREF_VOLUME_UP_KEYBIND = newValue
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("volumeUpKeybind", newValue) }
                     },
-                    icon = painterResource(R.drawable.ic_px_gamepad)
+                    imageVector = Icons.Default.Gamepad
                 )
 
                 var volumeDownBind by remember { mutableIntStateOf(LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND) }
@@ -1215,7 +1260,7 @@ fun ControlSettings() {
                         LauncherPreferences.PREF_VOLUME_DOWN_KEYBIND = newValue
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("volumeDownKeybind", newValue) }
                     },
-                    icon = painterResource(R.drawable.ic_px_gamepad)
+                    imageVector = Icons.Default.Gamepad
                 )
             }
         }
@@ -1226,7 +1271,7 @@ fun ControlSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_disable_gestures),
                     summary = stringResource(R.string.mcl_disable_gestures_subtitle),
-                    icon = painterResource(R.drawable.ic_px_nogestures),
+                    imageVector = Icons.Default.TouchApp,
                     checked = disableGestures,
                     onCheckedChange = {
                         disableGestures = it
@@ -1239,7 +1284,7 @@ fun ControlSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_disable_swap_hand),
                     summary = stringResource(R.string.mcl_disable_swap_hand_subtitle),
-                    icon = painterResource(R.drawable.ic_px_switch_arrows_x),
+                    imageVector = Icons.Default.SwapHoriz,
                     checked = disableDoubleTap,
                     onCheckedChange = {
                         disableDoubleTap = it
@@ -1252,7 +1297,7 @@ fun ControlSettings() {
                 PreferenceSlider(
                     title = stringResource(R.string.mcl_setting_title_longpresstrigger),
                     summary = stringResource(R.string.mcl_setting_subtitle_longpresstrigger),
-                    icon = painterResource(R.drawable.ic_px_gestures),
+                    imageVector = Icons.Default.History,
                     value = longPressTrigger,
                     onValueChange = {
                         longPressTrigger = it
@@ -1270,7 +1315,7 @@ fun ControlSettings() {
                 PreferenceSlider(
                     title = stringResource(R.string.mcl_setting_title_buttonscale),
                     summary = stringResource(R.string.mcl_setting_subtitle_buttonscale),
-                    icon = painterResource(R.drawable.ic_px_control_size),
+                    imageVector = Icons.Default.PhotoSizeSelectSmall,
                     value = buttonScale,
                     onValueChange = {
                         buttonScale = it
@@ -1284,7 +1329,7 @@ fun ControlSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_setting_title_buttonallcaps),
                     summary = stringResource(R.string.mcl_setting_subtitle_buttonallcaps),
-                    icon = painterResource(R.drawable.ic_px_letters),
+                    imageVector = Icons.Default.TextFields,
                     checked = buttonAllCaps,
                     onCheckedChange = {
                         buttonAllCaps = it
@@ -1297,7 +1342,7 @@ fun ControlSettings() {
                 PreferenceSlider(
                     title = stringResource(R.string.mcl_setting_title_mousescale),
                     summary = stringResource(R.string.mcl_setting_subtitle_mousescale),
-                    icon = painterResource(R.drawable.ic_px_pointer_size),
+                    imageVector = Icons.Default.OpenWith,
                     value = mouseScale,
                     onValueChange = {
                         mouseScale = it
@@ -1314,21 +1359,21 @@ fun ControlSettings() {
                 PreferenceItem(
                     title = "Change Mouse Cursor",
                     summary = "Select an image for the mouse cursor",
-                    icon = painterResource(R.drawable.ic_px_mouse),
+                    imageVector = Icons.Default.Mouse,
                     onClick = { pickMouseIconLauncher.launch("image/*") }
                 )
 
                 PreferenceItem(
                     title = "Set Mouse Hotspot",
                     summary = "Adjust the point where the mouse clicks",
-                    icon = painterResource(R.drawable.ic_px_virtual_mouse),
+                    imageVector = Icons.Default.FilterCenterFocus,
                     onClick = { @Suppress("DEPRECATION") showHotspotDialog = true }
                 )
 
                 PreferenceItem(
                     title = "Reset Mouse Cursor",
                     summary = "Restore default mouse cursor",
-                    icon = painterResource(R.drawable.ic_px_trash),
+                    imageVector = Icons.Default.Delete,
                     onClick = { @Suppress("DEPRECATION") showResetMouseDialog = true }
                 )
             }
@@ -1340,7 +1385,7 @@ fun ControlSettings() {
                 PreferenceSlider(
                     title = stringResource(R.string.mcl_setting_title_mousespeed),
                     summary = stringResource(R.string.mcl_setting_subtitle_mousespeed),
-                    icon = painterResource(R.drawable.ic_px_speed),
+                    imageVector = Icons.Default.Speed,
                     value = mouseSpeed,
                     onValueChange = {
                         mouseSpeed = it
@@ -1354,7 +1399,7 @@ fun ControlSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_mouse_start_title),
                     summary = stringResource(R.string.preference_mouse_start_description),
-                    icon = painterResource(R.drawable.ic_px_virtual_mouse),
+                    imageVector = Icons.Default.AdsClick,
                     checked = mouseStart,
                     onCheckedChange = {
                         mouseStart = it
@@ -1367,7 +1412,7 @@ fun ControlSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_physical_mouse_title),
                     summary = stringResource(R.string.preference_physical_mouse_description),
-                    icon = painterResource(R.drawable.ic_px_mouse),
+                    imageVector = Icons.Default.Mouse,
                     checked = physicalMouse,
                     onCheckedChange = {
                         physicalMouse = it
@@ -1385,6 +1430,7 @@ fun ControlSettings() {
                     PreferenceSwitch(
                         title = stringResource(R.string.preference_enable_gyro_title),
                         summary = stringResource(R.string.preference_enable_gyro_description),
+                        imageVector = Icons.Default.ScreenRotation,
                         checked = enableGyro,
                         onCheckedChange = {
                             enableGyro = it
@@ -1404,7 +1450,8 @@ fun ControlSettings() {
                                 LauncherPreferences.PREF_GYRO_SENSITIVITY = it / 100f
                                 LauncherPreferences.DEFAULT_PREF?.edit { putInt("gyroSensitivity", it.toInt()) }
                             },
-                            valueRange = 25f..300f
+                            valueRange = 25f..300f,
+                            imageVector = Icons.Default.Speed
                         )
 
                         var gyroRate by remember { mutableFloatStateOf(LauncherPreferences.PREF_GYRO_SAMPLE_RATE.toFloat()) }
@@ -1417,13 +1464,15 @@ fun ControlSettings() {
                                 LauncherPreferences.PREF_GYRO_SAMPLE_RATE = it.toInt()
                                 LauncherPreferences.DEFAULT_PREF?.edit { putInt("gyroSampleRate", it.toInt()) }
                             },
-                            valueRange = 5f..50f
+                            valueRange = 5f..50f,
+                            imageVector = Icons.Default.Timer
                         )
 
                         var gyroSmoothing by remember { mutableStateOf(LauncherPreferences.PREF_GYRO_SMOOTHING) }
                         PreferenceSwitch(
                             title = stringResource(R.string.preference_gyro_smoothing_title),
                             summary = stringResource(R.string.preference_gyro_smoothing_description),
+                            imageVector = Icons.Default.FilterList,
                             checked = gyroSmoothing,
                             onCheckedChange = {
                                 gyroSmoothing = it
@@ -1436,6 +1485,7 @@ fun ControlSettings() {
                         PreferenceSwitch(
                             title = stringResource(R.string.preference_gyro_invert_x_axis),
                             summary = stringResource(R.string.preference_gyro_invert_x_axis_description),
+                            imageVector = Icons.Default.Flip,
                             checked = gyroInvertX,
                             onCheckedChange = {
                                 gyroInvertX = it
@@ -1448,6 +1498,7 @@ fun ControlSettings() {
                         PreferenceSwitch(
                             title = stringResource(R.string.preference_gyro_invert_y_axis),
                             summary = stringResource(R.string.preference_gyro_invert_y_axis_description),
+                            imageVector = Icons.Default.Flip,
                             checked = gyroInvertY,
                             onCheckedChange = {
                                 gyroInvertY = it
@@ -1462,8 +1513,8 @@ fun ControlSettings() {
 
         item {
             PreferenceGroup(title = stringResource(R.string.preference_category_controller_settings)) {
-                PreferenceItem(title = stringResource(R.string.preference_remap_controller_title), summary = stringResource(R.string.preference_remap_controller_description))
-                PreferenceItem(title = stringResource(R.string.preference_wipe_controller_title), summary = stringResource(R.string.preference_wipe_controller_description))
+                PreferenceItem(title = stringResource(R.string.preference_remap_controller_title), summary = stringResource(R.string.preference_remap_controller_description), imageVector = Icons.Default.SettingsInputComponent)
+                PreferenceItem(title = stringResource(R.string.preference_wipe_controller_title), summary = stringResource(R.string.preference_wipe_controller_description), imageVector = Icons.Default.LayersClear)
 
                 var deadzone by remember { mutableFloatStateOf(LauncherPreferences.PREF_DEADZONE_SCALE * 100f) }
                 PreferenceSlider(
@@ -1475,7 +1526,8 @@ fun ControlSettings() {
                         LauncherPreferences.PREF_DEADZONE_SCALE = it / 100f
                         LauncherPreferences.DEFAULT_PREF?.edit { putInt("gamepad_deadzone_scale", it.toInt()) }
                     },
-                    valueRange = 50f..200f
+                    valueRange = 50f..200f,
+                    imageVector = Icons.Default.Adjust
                 )
             }
         }
@@ -1652,7 +1704,7 @@ fun JavaSettings() {
                 PreferenceItem(
                     title = stringResource(R.string.multirt_title),
                     summary = stringResource(R.string.multirt_subtitle),
-                    icon = painterResource(R.drawable.ic_px_runtime_mgr),
+                    imageVector = Icons.Default.Layers,
                     onClick = {
                         mDialogTaskShow(mDialogScreen)
                     }
@@ -1661,7 +1713,7 @@ fun JavaSettings() {
                 PreferenceItem(
                     title = stringResource(R.string.mcl_setting_title_javaargs),
                     summary = LauncherPreferences.PREF_CUSTOM_JAVA_ARGS?.ifEmpty { null } ?: stringResource(R.string.mcl_setting_subtitle_javaargs),
-                    icon = painterResource(R.drawable.ic_px_console),
+                    imageVector = Icons.Filled.Terminal,
                     onClick = {
                         showJvmArgsDialog = true
                     }
@@ -1673,7 +1725,7 @@ fun JavaSettings() {
                 PreferenceSlider(
                     title = stringResource(R.string.mcl_memory_allocation),
                     summary = stringResource(R.string.mcl_memory_allocation_subtitle),
-                    icon = painterResource(R.drawable.ic_px_ram),
+                    imageVector = Icons.Default.Memory,
                     value = ram,
                     onValueChange = {
                         ram = it
@@ -1687,7 +1739,7 @@ fun JavaSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.mcl_setting_java_sandbox),
                     summary = stringResource(R.string.mcl_setting_java_sandbox_subtitle),
-                    icon = painterResource(R.drawable.ic_px_java_run),
+                    imageVector = Icons.Default.Security,
                     checked = javaSandbox,
                     onCheckedChange = {
                         javaSandbox = it
@@ -1704,6 +1756,7 @@ fun JavaSettings() {
                 PreferenceSwitch(
                     title = "Hide Sidebar Action Buttons",
                     summary = "Hide the quick access buttons on the left side of the main menu",
+                    imageVector = Icons.Default.VisibilityOff,
                     checked = hideActionButtons,
                     onCheckedChange = {
                         hideActionButtons = it
@@ -1801,7 +1854,7 @@ fun MiscSettings() {
                 PreferenceItem(
                     title = "Check for Updates",
                     summary = "Manually check if a newer version of Hyper Launcher is available",
-                    icon = painterResource(R.drawable.ic_px_zap),
+                    imageVector = Icons.Default.Bolt,
                     onClick = {
                         coroutineScope.launch {
                             Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
@@ -1849,7 +1902,7 @@ fun MiscSettings() {
                 PreferenceSwitch(
                     title = "Automatic Update Check",
                     summary = "Check for updates when opening the launcher",
-                    icon = painterResource(R.drawable.ic_px_bell),
+                    imageVector = Icons.Default.Notifications,
                     checked = !skipUpdateCheck,
                     onCheckedChange = {
                         val newValue = !it
@@ -1867,7 +1920,7 @@ fun MiscSettings() {
                 PreferenceSwitch(
                     title = "Auto-delete Old Logs",
                     summary = "Automatically clean up old log files to save space",
-                    icon = painterResource(R.drawable.ic_px_trash),
+                    imageVector = Icons.Default.Delete,
                     checked = deleteOldLogs,
                     onCheckedChange = {
                         deleteOldLogs = it
@@ -1888,7 +1941,7 @@ fun MiscSettings() {
                             LauncherPreferences.DEFAULT_PREF?.edit { putInt(LauncherPreferences.PREF_KEY_LOG_MAX_DAYS, it.toInt()) }
                         },
                         valueRange = 1f..30f,
-                        icon = painterResource(R.drawable.ic_px_alt_sliders)
+                        imageVector = Icons.Default.Tune
                     )
                 }
             }
@@ -1900,7 +1953,7 @@ fun MiscSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_verify_game_files_title),
                     summary = stringResource(R.string.preference_verify_game_files_description),
-                    icon = painterResource(R.drawable.ic_px_hash),
+                    imageVector = Icons.Default.Fingerprint,
                     checked = checkFiles,
                     onCheckedChange = {
                         checkFiles = it
@@ -1913,7 +1966,7 @@ fun MiscSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_go_vroom_title),
                     summary = stringResource(R.string.preference_go_vroom_description),
-                    icon = painterResource(R.drawable.ic_px_zap),
+                    imageVector = Icons.Default.Bolt,
                     checked = fastStart,
                     onCheckedChange = {
                         fastStart = it
@@ -1933,14 +1986,14 @@ fun MiscSettings() {
                         LauncherPreferences.PREF_DOWNLOAD_SOURCE = it
                         LauncherPreferences.DEFAULT_PREF?.edit { putString("downloadSource", it) }
                     },
-                    icon = painterResource(R.drawable.ic_px_file_dl)
+                    imageVector = Icons.Default.CloudDownload
                 )
 
                 var verifyManifest by remember { mutableStateOf(LauncherPreferences.PREF_VERIFY_MANIFEST) }
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_verify_manifest_title),
                     summary = stringResource(R.string.preference_verify_manifest_description),
-                    icon = painterResource(R.drawable.ic_px_verify_hash),
+                    imageVector = Icons.Default.FactCheck,
                     checked = verifyManifest,
                     onCheckedChange = {
                         verifyManifest = it
@@ -1953,7 +2006,7 @@ fun MiscSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_vulkan_driver_system_title),
                     summary = stringResource(R.string.preference_vulkan_driver_system_description),
-                    icon = painterResource(R.drawable.ic_px_volcano),
+                    imageVector = Icons.Default.SettingsInputComponent,
                     checked = zinkPreferSystem,
                     onCheckedChange = {
                         zinkPreferSystem = it
@@ -1966,7 +2019,7 @@ fun MiscSettings() {
                     PreferenceItem(
                         title = stringResource(R.string.preference_microphone_access_title),
                         summary = stringResource(R.string.preference_microphone_access_description),
-                        icon = painterResource(R.drawable.ic_microphone),
+                        imageVector = Icons.Default.Mic,
                         onClick = {
                              notificationLauncher.launch(notificationPermission)
                         }
@@ -1986,6 +2039,7 @@ fun ExperimentalSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_shader_dump_title),
                     summary = stringResource(R.string.preference_shader_dump_description),
+                    imageVector = Icons.Default.BugReport,
                     checked = dumpShaders,
                     onCheckedChange = {
                         dumpShaders = it
@@ -1998,6 +2052,7 @@ fun ExperimentalSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_force_big_core_title),
                     summary = stringResource(R.string.preference_force_big_core_desc),
+                    imageVector = Icons.Default.Memory,
                     checked = bigCore,
                     onCheckedChange = {
                         bigCore = it
@@ -2010,6 +2065,7 @@ fun ExperimentalSettings() {
                 PreferenceSwitch(
                     title = stringResource(R.string.preference_sysmem_title),
                     summary = stringResource(R.string.preference_sysmem_summary),
+                    imageVector = Icons.Default.Storage,
                     checked = freedrenoSysmem,
                     onCheckedChange = {
                         freedrenoSysmem = it
@@ -2026,6 +2082,7 @@ fun ExperimentalSettings() {
                 PreferenceSwitch(
                     title = "Hide Sidebar Action Buttons",
                     summary = "Hide the quick access buttons on the left side of the main menu",
+                    imageVector = Icons.Default.VisibilityOff,
                     checked = hideActionButtons,
                     onCheckedChange = {
                         hideActionButtons = it

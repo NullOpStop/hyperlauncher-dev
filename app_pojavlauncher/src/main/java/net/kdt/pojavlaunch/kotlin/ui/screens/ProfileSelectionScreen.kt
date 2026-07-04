@@ -121,7 +121,7 @@ fun ProfileSelectionScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f))
                                 .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)), RoundedCornerShape(14.dp))
                                 .padding(vertical = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -234,7 +234,7 @@ fun ProfileFilterItem(label: String, checked: Boolean, onCheckedChange: (Boolean
         onClick = { onCheckedChange(!checked) },
         modifier = Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 4.dp),
         shape = RoundedCornerShape(10.dp),
-        color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color.Transparent,
+        color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f) else Color.Transparent,
         contentColor = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     ) {
         Row(
@@ -298,7 +298,7 @@ fun ProfileItem(instance: Instance, isSelected: Boolean, onClick: () -> Unit, on
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {

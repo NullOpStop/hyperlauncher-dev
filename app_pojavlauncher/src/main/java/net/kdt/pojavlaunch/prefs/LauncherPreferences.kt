@@ -235,6 +235,9 @@ object LauncherPreferences {
     var PREF_BACKGROUND_BLUR_ENABLED = false
 
     @JvmField
+    var PREF_CONTENT_TRANSPARENCY = 0.4f
+
+    @JvmField
     var PREF_TRANSITION_ANIMATION = "default"
 
     @JvmField
@@ -274,6 +277,8 @@ object LauncherPreferences {
     val PREF_BACKGROUND_TRANSPARENCY_STATE: MutableState<Float> = mutableStateOf(0.7f)
     val PREF_BACKGROUND_BLUR_STATE: MutableState<Float> = mutableStateOf(0f)
     val PREF_BACKGROUND_BLUR_ENABLED_STATE: MutableState<Boolean> = mutableStateOf(false)
+
+    val PREF_CONTENT_TRANSPARENCY_STATE: MutableState<Float> = mutableStateOf(0.4f)
 
     val PREF_TRANSITION_ANIMATION_STATE: MutableState<String> = mutableStateOf("default")
     val PREF_TRANSITION_DURATION_STATE: MutableIntState = mutableIntStateOf(300)
@@ -372,6 +377,9 @@ object LauncherPreferences {
         PREF_BACKGROUND_BLUR_STATE.value = PREF_BACKGROUND_BLUR
         PREF_BACKGROUND_BLUR_ENABLED = prefs.getBoolean("backgroundBlurEnabled", false)
         PREF_BACKGROUND_BLUR_ENABLED_STATE.value = PREF_BACKGROUND_BLUR_ENABLED
+
+        PREF_CONTENT_TRANSPARENCY = prefs.getFloat("contentTransparency", 0.4f)
+        PREF_CONTENT_TRANSPARENCY_STATE.value = PREF_CONTENT_TRANSPARENCY
 
         PREF_TRANSITION_ANIMATION = prefs.getString("transitionAnimation", "default") ?: "default"
         PREF_TRANSITION_ANIMATION_STATE.value = PREF_TRANSITION_ANIMATION

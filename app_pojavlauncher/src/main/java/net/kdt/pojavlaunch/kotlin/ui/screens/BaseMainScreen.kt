@@ -199,7 +199,7 @@ fun BaseMainScreen(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(railWidth),
-                containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.94f),
+                containerColor = MaterialTheme.colorScheme.background.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
                 header = {
                     IconButton(onClick = { isRailExpanded = !isRailExpanded }) {
                         Icon(

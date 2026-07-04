@@ -83,6 +83,7 @@ fun ModSearchScreen(
     val backgroundBitmap = if (isPreview) BaseActivity.getBackgroundBitmap() else null
 
     val transitionSpec = AnimationUtils.getTransitionSpec()
+    val contentAlpha by LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE
 
     LaunchedEffect(listState, items.size, lastPage, isLoading) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }.collect { lastVisibleIndex ->
@@ -157,8 +158,8 @@ fun ModSearchScreen(
                                 singleLine = true,
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha),
                                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -361,14 +362,14 @@ fun ModSearchScreen(
                                             Icons.Default.Search,
                                             contentDescription = null,
                                             modifier = Modifier.size(48.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
                                         )
                                         Spacer(modifier = Modifier.height(16.dp))
                                         @Suppress("DEPRECATION")
                                         Text(
                                             "Search for modpacks to see results",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha * 1.5f)
                                         )
                                     }
                                 } else {
@@ -415,7 +416,7 @@ fun ModItemView(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
@@ -462,7 +463,7 @@ private fun ModIcon(item: ModItem, size: androidx.compose.ui.unit.Dp = 44.dp) {
 
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.75f),
         modifier = Modifier.size(size)
     ) {
         Box(contentAlignment = Alignment.Center) {

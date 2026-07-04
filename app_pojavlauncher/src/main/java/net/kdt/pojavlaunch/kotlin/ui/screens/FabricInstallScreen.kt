@@ -183,7 +183,7 @@ fun FabricInstallScreen(
             ) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.85f),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Column(
@@ -237,9 +237,9 @@ private fun FabricVersionDropdown(
             },
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f)
             ),
             placeholder = { Text("Select version") }
         )

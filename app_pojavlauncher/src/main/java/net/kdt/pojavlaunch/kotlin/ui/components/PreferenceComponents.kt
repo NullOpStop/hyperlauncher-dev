@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +65,7 @@ fun PreferenceItem(
     title: String,
     summary: String? = null,
     icon: Painter? = null,
+    imageVector: ImageVector? = null,
     enabled: Boolean = true,
     onClick: () -> Unit = {},
     trailingContent: @Composable (() -> Unit)? = null
@@ -76,7 +78,13 @@ fun PreferenceItem(
         ListItem(
             headlineContent = { Text(title, fontWeight = FontWeight.Bold, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
             supportingContent = summary?.let { { Text(it, color = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)) } },
-            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+            leadingContent = {
+                if (imageVector != null) {
+                    Icon(imageVector, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                } else if (icon != null) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
+            },
             trailingContent = trailingContent,
             modifier = Modifier.clickable(enabled = enabled) { onClick() }.padding(horizontal = 4.dp, vertical = 2.dp),
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -89,6 +97,7 @@ fun PreferenceSwitch(
     title: String,
     summary: String? = null,
     icon: Painter? = null,
+    imageVector: ImageVector? = null,
     enabled: Boolean = true,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
@@ -101,7 +110,13 @@ fun PreferenceSwitch(
         ListItem(
             headlineContent = { Text(title, fontWeight = FontWeight.Bold, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
             supportingContent = summary?.let { { Text(it, color = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)) } },
-            leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+            leadingContent = {
+                if (imageVector != null) {
+                    Icon(imageVector, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                } else if (icon != null) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
+            },
             trailingContent = {
                 val thumbRotation by animateFloatAsState(
                     targetValue = if (checked) 360f else 0f,
@@ -144,6 +159,7 @@ fun PreferenceSlider(
     title: String,
     summary: String? = null,
     icon: Painter? = null,
+    imageVector: ImageVector? = null,
     enabled: Boolean = true,
     value: Float,
     onValueChange: (Float) -> Unit,
@@ -156,8 +172,12 @@ fun PreferenceSlider(
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp).alpha(if (enabled) 1f else 0.38f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (icon != null) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp).padding(end = 16.dp), tint = MaterialTheme.colorScheme.onSurface)
+                if (imageVector != null) {
+                    Icon(imageVector, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.width(16.dp))
+                } else if (icon != null) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     @Suppress("DEPRECATION")
@@ -196,6 +216,7 @@ fun PreferenceList(
     title: String,
     summary: String? = null,
     icon: Painter? = null,
+    imageVector: ImageVector? = null,
     enabled: Boolean = true,
     entries: Array<String>,
     entryValues: Array<String>,
@@ -211,6 +232,7 @@ fun PreferenceList(
         title = title,
         summary = summary ?: displayValue,
         icon = icon,
+        imageVector = imageVector,
         enabled = enabled,
         onClick = { showDialog = true }
     )

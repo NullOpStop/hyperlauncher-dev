@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.ui.screens
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -32,10 +33,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.rounded.Chat
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.*
@@ -50,7 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -400,7 +400,7 @@ fun ProgressCard(
             .animateContentSize(animationSpec = m3SizeSpec),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value.coerceAtLeast(0.6f))
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
@@ -418,9 +418,9 @@ fun ProgressCard(
                     onClick = onClose
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.spinner_arrow),
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = 90f }
+                        modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = 180f }
                     )
                 }
 
@@ -440,11 +440,11 @@ fun ProgressCard(
                     onClick = { isExpanded = !isExpanded }
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.spinner_arrow),
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         modifier = Modifier
                             .size(18.dp)
-                            .graphicsLayer { rotationZ = if (isExpanded) 0f else 180f }
+                            .graphicsLayer { rotationZ = if (isExpanded) 90f else 270f }
                             .alpha(0.6f),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -474,200 +474,13 @@ fun ProgressCard(
 }
 
 @Composable
-fun AccountSelector(
-    accounts: List<MinecraftAccount>,
-    currentAccount: MinecraftAccount?,
-    onAccountSelect: (MinecraftAccount) -> Unit,
-    onAccountDelete: (MinecraftAccount) -> Unit,
-    onManagerClick: () -> Unit,
-    onAddAccountClick: () -> Unit,
-    topBarHeight: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier,
-    ignoreNotch: Boolean = false
-) {
-    var expanded by remember { mutableStateOf(false) }
-    var accountToDelete by remember { mutableStateOf<MinecraftAccount?>(null) }
-
-    if (accountToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { accountToDelete = null },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        accountToDelete?.let { onAccountDelete(it) }
-                        accountToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text(stringResource(id = R.string.global_delete))
-                }
-            },
-            dismissButton = {
-                @Suppress("DEPRECATION")
-                TextButton(onClick = { accountToDelete = null }) {
-                    Text(stringResource(id = android.R.string.cancel))
-                }
-            },
-            title = { Text(stringResource(id = R.string.global_error)) },
-            text = { Text(stringResource(id = R.string.warning_remove_account)) }
-        )
-    }
-
-    Box(modifier = modifier) {
-        val currentHead by SkinUtils.rememberSkinHead(currentAccount)
-
-        Surface(
-            onClick = { expanded = true },
-            modifier = Modifier
-                .height(topBarHeight - 8.dp)
-                .wrapContentWidth()
-                .padding(start = if (ignoreNotch) 12.dp else 8.dp, end = 4.dp),
-            color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.65f),
-            shape = CircleShape,
-            tonalElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (currentHead != null) {
-                    Image(
-                        bitmap = currentHead!!.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp).clip(RoundedCornerShape(4.dp))
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_px_home),
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                Spacer(Modifier.width(10.dp))
-
-                @Suppress("HardcodedText")
-                Text(
-                    text = currentAccount?.username ?: "Steve",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .width(280.dp)
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            accounts.forEach { account ->
-                DropdownMenuItem(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    text = {
-                        Text(
-                            account.username,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
-                    onClick = {
-                        onAccountSelect(account)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        val head by SkinUtils.rememberSkinHead(account)
-                        if (head != null) {
-                            Image(
-                                bitmap = head!!.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp))
-                            )
-                        } else {
-                            Icon(painterResource(id = R.drawable.ic_px_home), null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                    },
-                    trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val authIcon = account.authType.iconResource
-                            if (authIcon != 0) {
-                                Icon(painterResource(id = authIcon), null, Modifier.size(20.dp), tint = Color.Unspecified)
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            IconButton(
-                                onClick = {
-                                    accountToDelete = account
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_px_trash),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                )
-            }
-
-            DropdownMenuItem(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                text = { Text("Account Manager", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
-                onClick = {
-                    expanded = false
-                    onManagerClick()
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_px_image_renderer),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            DropdownMenuItem(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                text = { Text("Add Account", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
-                onClick = {
-                    expanded = false
-                    onAddAccountClick()
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_add),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            )
-        }
-    }
-}
-
-@Composable
 fun TopBarButton(
     onClick: () -> Unit,
-    icon: Int,
     label: String,
     topBarHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    icon: Int? = null,
+    imageVector: ImageVector? = null,
     isSelected: Boolean = false,
     isSpecialActive: Boolean = false,
     isRotating: Boolean = false,
@@ -676,7 +489,7 @@ fun TopBarButton(
     isLeftmost: Boolean = false,
     isRightmost: Boolean = false
 ) {
-    val activeColor = MaterialTheme.colorScheme.primaryContainer
+    val activeColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value.coerceAtLeast(0.6f))
     val contentColor = if (isSelected || isSpecialActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     val infiniteTransition = rememberInfiniteTransition(label = "rotation")
@@ -708,14 +521,25 @@ fun TopBarButton(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    painter = painterResource(id = icon),
-                    contentDescription = label,
-                    modifier = Modifier.size(20.dp).graphicsLayer {
-                        if (isRotating) rotationZ = rotation
-                    },
-                    tint = contentColor
-                )
+                if (imageVector != null) {
+                    Icon(
+                        imageVector = imageVector,
+                        contentDescription = label,
+                        modifier = Modifier.size(20.dp).graphicsLayer {
+                            if (isRotating) rotationZ = rotation
+                        },
+                        tint = contentColor
+                    )
+                } else if (icon != null) {
+                    Icon(
+                        painter = painterResource(id = icon),
+                        contentDescription = label,
+                        modifier = Modifier.size(20.dp).graphicsLayer {
+                            if (isRotating) rotationZ = rotation
+                        },
+                        tint = contentColor
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = isSelected,
@@ -793,7 +617,7 @@ fun TopBar(
     Surface(
         modifier = Modifier.fillMaxWidth().height(topBarHeight),
         color = MaterialTheme.colorScheme.surface.copy(
-            alpha = if (hasBackground) 0.4f else 1f
+            alpha = if (hasBackground) LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value else 1f
         ),
         tonalElevation = 3.dp
     ) {
@@ -807,120 +631,129 @@ fun TopBar(
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-            Row(
-                modifier = Modifier.padding(start = if (ignoreNotch) 8.dp else 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isAnyScreenOpen) {
-                    IconButton(
-                        onClick = onHomeClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    
-                    Text(
-                        text = "—",
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(id = R.drawable.icon_hyper),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp).padding(start = 8.dp).clickable(onClick = onAboutClick),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.clickable(onClick = onAboutClick)
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier
-                    .padding(end = if (ignoreNotch) 12.dp else 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Task indicator with horizontal expansion to avoid vertical glitching
-                AnimatedVisibility(
-                    visible = !isProgressVisible && taskCount > 0,
-                    enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                    exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                Row(
+                    modifier = Modifier.padding(start = if (ignoreNotch) 8.dp else 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(shape = MaterialTheme.shapes.large)
-                            .clickable { onProgressClick() }
-                            .padding(all = 8.dp)
-                            .width(120.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LinearProgressIndicator(modifier = Modifier.weight(1f))
+                    if (isAnyScreenOpen) {
+                        IconButton(
+                            onClick = onHomeClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    } else {
                         Icon(
-                            modifier = Modifier.size(22.dp),
-                            painter = painterResource(id = R.drawable.ic_px_progress),
+                            painter = painterResource(id = R.drawable.icon_hyper),
                             contentDescription = null,
+                            modifier = Modifier.size(24.dp).padding(start = 8.dp).clickable(onClick = onAboutClick),
                             tint = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(Modifier.width(8.dp))
+                    }
+
+                    Text(
+                        text = "HyperLauncher",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.clickable(onClick = onAboutClick)
+                    )
+
+                    if (isAnyScreenOpen && title != "HyperLauncher") {
+                        Text(
+                            text = " — ",
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 
-                TopBarButton(
-                    onClick = { onCategoryClick(1) },
-                    isSelected = selectedCategory == 1,
-                    icon = R.drawable.ic_px_folder,
-                    label = "Files",
-                    topBarHeight = topBarHeight
-                )
+                Spacer(modifier = Modifier.weight(1f))
 
-                TopBarButton(
-                    onClick = { onCategoryClick(2) },
-                    isSelected = selectedCategory == 2,
-                    icon = R.drawable.ic_px_download,
-                    label = "Installer",
-                    topBarHeight = topBarHeight
-                )
+                Row(
+                    modifier = Modifier
+                        .padding(end = if (ignoreNotch) 12.dp else 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Task indicator with horizontal expansion to avoid vertical glitching
+                    AnimatedVisibility(
+                        visible = !isProgressVisible && taskCount > 0,
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(shape = MaterialTheme.shapes.large)
+                                .clickable { onProgressClick() }
+                                .padding(all = 8.dp)
+                                .width(120.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LinearProgressIndicator(modifier = Modifier.weight(1f))
+                            Icon(
+                                modifier = Modifier.size(22.dp),
+                                imageVector = Icons.Default.HourglassEmpty,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
 
-                TopBarButton(
-                    onClick = { onCategoryClick(3) },
-                    isSelected = selectedCategory == 3,
-                    icon = R.drawable.ic_px_alt_sliders,
-                    label = "Settings",
-                    topBarHeight = topBarHeight,
-                    ignoreNotch = ignoreNotch,
-                    isRightmost = true
-                )
+                    TopBarButton(
+                        onClick = { onCategoryClick(1) },
+                        isSelected = selectedCategory == 1,
+                        imageVector = Icons.Default.Folder,
+                        label = "Files",
+                        topBarHeight = topBarHeight
+                    )
+
+                    TopBarButton(
+                        onClick = { onCategoryClick(2) },
+                        isSelected = selectedCategory == 2,
+                        imageVector = Icons.Default.Download,
+                        label = "Installer",
+                        topBarHeight = topBarHeight
+                    )
+
+                    TopBarButton(
+                        onClick = { onCategoryClick(3) },
+                        isSelected = selectedCategory == 3,
+                        imageVector = Icons.Default.Settings,
+                        label = "Settings",
+                        topBarHeight = topBarHeight,
+                        ignoreNotch = ignoreNotch,
+                        isRightmost = true
+                    )
+                }
             }
-        }
 
-        // Connection indicator line
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(if (isOnline) Color.White else Color.Red.copy(alpha = 0.8f))
-                .align(Alignment.BottomCenter)
-        )
+            // Connection indicator line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(if (isOnline) Color.White else Color.Red.copy(alpha = 0.8f))
+                    .align(Alignment.BottomCenter)
+            )
+        }
     }
-}
 }
 
 @Composable
@@ -1852,6 +1685,8 @@ fun AboutScreen() {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
                         }
@@ -1861,6 +1696,7 @@ fun AboutScreen() {
                 ) {
                     Icon(Icons.Rounded.Public, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
+                    @Suppress("HardcodedText")
                     Text("Wiki")
                 }
 
@@ -1871,6 +1707,8 @@ fun AboutScreen() {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
                         }
@@ -1880,6 +1718,7 @@ fun AboutScreen() {
                 ) {
                     Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
+                    @Suppress("HardcodedText")
                     Text("Discord")
                 }
             }
@@ -1887,7 +1726,7 @@ fun AboutScreen() {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -1904,6 +1743,7 @@ fun AboutScreen() {
 3. Some sensitive data is stored in crash reports after the game crashes, but it's not shared to the developer or any third parties
 4. Hyper Launcher developers reserve the right to update this privacy policy without prior notification.""",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 20.sp
                     )
                 }

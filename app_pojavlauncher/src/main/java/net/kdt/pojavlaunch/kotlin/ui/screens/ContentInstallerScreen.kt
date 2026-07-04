@@ -96,6 +96,7 @@ fun ContentInstallerScreen(
             LauncherPreferences.PREF_BACKGROUND_VIDEO_PATH_STATE.value != null || isPreview
 
     val transitionSpec = AnimationUtils.getTransitionSpec()
+    val contentAlpha by LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -220,8 +221,8 @@ fun ContentInstallerScreen(
                                              singleLine = true,
                                              shape = RoundedCornerShape(14.dp),
                                              colors = OutlinedTextFieldDefaults.colors(
-                                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha),
+                                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha),
                                                  focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                                  unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                                                  focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -300,6 +301,7 @@ private fun VersionOverlayPanel(
     onVersionClick: (ModrinthVersion) -> Unit
 ) {
     val viewModel: ContentInstallerViewModel = viewModel()
+    val contentAlpha by LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE
     Row(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -515,7 +517,7 @@ fun VerticalFilterMenu(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f))
             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)), RoundedCornerShape(14.dp))
             .padding(vertical = 4.dp)
     ) {
@@ -600,8 +602,8 @@ fun SubVersionItemView(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = if (isCompatible) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        border = BorderStroke(1.dp, if (isCompatible) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
+        color = if (isCompatible) MaterialTheme.colorScheme.primaryContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
+        border = BorderStroke(1.dp, if (isCompatible) MaterialTheme.colorScheme.primary.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
         Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.padding(16.dp)) {
             @Suppress("DEPRECATION")
@@ -626,7 +628,7 @@ fun InstallerImageButton(
         onClick = onClick,
         modifier = modifier.height(44.dp),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -690,7 +692,7 @@ fun ProjectItemView(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
@@ -735,8 +737,8 @@ fun VersionItemView(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = if (isCompatible) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        border = BorderStroke(1.dp, if (isCompatible) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        color = if (isCompatible) MaterialTheme.colorScheme.primaryContainer.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value),
+        border = BorderStroke(1.dp, if (isCompatible) MaterialTheme.colorScheme.primary.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -791,7 +793,7 @@ fun ProjectInfoPanel(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LauncherPreferences.PREF_CONTENT_TRANSPARENCY_STATE.value * 0.5f))
             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)), RoundedCornerShape(14.dp))
             .verticalScroll(scrollState)
             .padding(12.dp),
