@@ -387,11 +387,9 @@ public class Gamepad implements GrabListener, GamepadHandler {
                 break;
 
             case AXIS_RTRIGGER:
-            case AXIS_GAS:
                 getCurrentMap().TRIGGER_RIGHT.update(value > 0.5);
                 break;
             case AXIS_LTRIGGER:
-            case AXIS_BRAKE:
                 getCurrentMap().TRIGGER_LEFT.update(value > 0.5);
                 break;
 
