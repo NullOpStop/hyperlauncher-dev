@@ -44,23 +44,23 @@ jobs:
         if: github.repository_owner == 'MojoLauncher' && github.ref_name == 'v3_openjdk'
         run: |
           gradle :hyperX_launcher:bundleFullGplay
-          mv app_pojavlauncher/build/outputs/bundle/fullGplay/hyperX_launcher-full-gplay.aab out/app-gplay.aab
+          mv app_pojavlauncher/build/outputs/bundle/fullGplay/*.aab out/app-gplay.aab
 
       - name: Build Debug .apk
         run: |
           # Build the launcher
           gradle :hyperX_launcher:assembleFullDebug
-          mv app_pojavlauncher/build/outputs/apk/full/debug/hyperX_launcher-full-debug.apk out/app-debug-full.apk
+          mv app_pojavlauncher/build/outputs/apk/full/debug/*.apk out/app-debug-full.apk
 
       - name: Build Debug .apk (No runtime)
         run: |
           gradle :hyperX_launcher:assembleNoruntimeDebug
-          mv app_pojavlauncher/build/outputs/apk/noruntime/debug/hyperX_launcher-noruntime-debug.apk out/app-debug-noruntime.apk
+          mv app_pojavlauncher/build/outputs/apk/noruntime/debug/*.apk out/app-debug-noruntime.apk
       - name: Build Nightly Release .apk
         if: github.repository_owner == 'MojoLauncher' && github.ref_name == 'v3_openjdk'
         run: |
           gradle :hyperX_launcher:assembleFullPubRelease
-          mv app_pojavlauncher/build/outputs/apk/full/pubRelease/hyperX_launcher-full-pubRelease.apk out/MojoLauncher-release.apk
+          mv app_pojavlauncher/build/outputs/apk/full/pubRelease/*.apk out/MojoLauncher-release.apk
       - name: Gen md5sums
         run: |
           md5sum out/app-debug-full.apk > out/app-debug-full.md5
