@@ -58,7 +58,7 @@ object LauncherPreferences {
     const val PREF_VERSION_REPOS = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
     @JvmField
-    var PREF_DISABLE_GESTURES = false
+    var PREF_DISABLE_GESTURES = true
 
     @JvmField
     var PREF_DISABLE_SWAP_HAND = false
@@ -304,7 +304,7 @@ object LauncherPreferences {
         PREF_LONGPRESS_TRIGGER = prefs.getInt("timeLongPressTrigger", 300)
         PREF_DEFAULTCTRL_PATH = prefs.getString("defaultCtrl", Tools.CTRLDEF_FILE) ?: Tools.CTRLDEF_FILE
         PREF_FORCE_ENGLISH = prefs.getBoolean("force_english", false)
-        PREF_DISABLE_GESTURES = prefs.getBoolean("disableGestures", false)
+        PREF_DISABLE_GESTURES = prefs.getBoolean("disableGestures", true)
         PREF_DISABLE_SWAP_HAND = prefs.getBoolean("disableDoubleTap", false)
         PREF_RAM_ALLOCATION = prefs.getInt("allocation", findBestRAMAllocation(ctx))
         PREF_CUSTOM_JAVA_ARGS = prefs.getString("javaArgs", "")
