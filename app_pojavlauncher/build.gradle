@@ -89,7 +89,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release
             resValue 'string', 'application_package', 'net.ashmeet.hyperlauncher.debug'
             resValue 'string', 'storageProviderAuthorities', 'net.ashmeet.hyperlauncher.scoped.gamefolder.debug'
         }
