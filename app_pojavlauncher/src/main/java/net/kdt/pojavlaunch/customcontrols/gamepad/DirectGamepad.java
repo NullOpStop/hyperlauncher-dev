@@ -21,11 +21,13 @@ public class DirectGamepad implements GamepadHandler {
             case KeyEvent.KEYCODE_BUTTON_R1: gKeycode = GamepadKeycodes.BUTTON_RIGHT_BUMPER; break;
             case KeyEvent.KEYCODE_BUTTON_L2:
             case MotionEvent.AXIS_LTRIGGER:
+            case MotionEvent.AXIS_BRAKE:
                 gAxis = GamepadKeycodes.AXIS_LEFT_TRIGGER;
                 normalize = true;
                 break;
             case KeyEvent.KEYCODE_BUTTON_R2:
             case MotionEvent.AXIS_RTRIGGER:
+            case MotionEvent.AXIS_GAS:
                 gAxis = GamepadKeycodes.AXIS_RIGHT_TRIGGER;
                 normalize = true;
                 break;
@@ -46,8 +48,10 @@ public class DirectGamepad implements GamepadHandler {
                 return;
             case MotionEvent.AXIS_X: gAxis = GamepadKeycodes.AXIS_LEFT_X; break;
             case MotionEvent.AXIS_Y: gAxis = GamepadKeycodes.AXIS_LEFT_Y; break;
-            case MotionEvent.AXIS_Z: gAxis = GamepadKeycodes.AXIS_RIGHT_X; break;
-            case MotionEvent.AXIS_RZ: gAxis = GamepadKeycodes.AXIS_RIGHT_Y; break;
+            case MotionEvent.AXIS_Z:
+            case MotionEvent.AXIS_RX: gAxis = GamepadKeycodes.AXIS_RIGHT_X; break;
+            case MotionEvent.AXIS_RZ:
+            case MotionEvent.AXIS_RY: gAxis = GamepadKeycodes.AXIS_RIGHT_Y; break;
             case MotionEvent.AXIS_HAT_X:
                 GLFW.gamepadButtonBuffer.put(
                         GamepadKeycodes.BUTTON_DPAD_LEFT,

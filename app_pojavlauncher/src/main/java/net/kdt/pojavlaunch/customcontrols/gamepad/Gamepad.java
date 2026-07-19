@@ -8,6 +8,11 @@ import static android.view.MotionEvent.AXIS_RZ;
 import static android.view.MotionEvent.AXIS_X;
 import static android.view.MotionEvent.AXIS_Y;
 import static android.view.MotionEvent.AXIS_Z;
+import static android.view.MotionEvent.AXIS_RX;
+import static android.view.MotionEvent.AXIS_RY;
+import static android.view.MotionEvent.AXIS_GAS;
+import static android.view.MotionEvent.AXIS_BRAKE;
+
 
 import android.view.Choreographer;
 import android.view.InputDevice;
@@ -371,18 +376,22 @@ public class Gamepad implements GrabListener, GamepadHandler {
                 break;
 
             case AXIS_Z:
+            case AXIS_RX:
                 mRightJoystick.setXAxisValue(value);
                 updateJoysticks();
                 break;
             case AXIS_RZ:
+            case AXIS_RY:
                 mRightJoystick.setYAxisValue(value);
                 updateJoysticks();
                 break;
 
             case AXIS_RTRIGGER:
+            case AXIS_GAS:
                 getCurrentMap().TRIGGER_RIGHT.update(value > 0.5);
                 break;
             case AXIS_LTRIGGER:
+            case AXIS_BRAKE:
                 getCurrentMap().TRIGGER_LEFT.update(value > 0.5);
                 break;
 
