@@ -63,7 +63,8 @@ public class AsyncAssetManager {
         ProgressLayout.setProgress(ProgressLayout.EXTRACT_SINGLE_FILES, 0);
         sExecutorService.execute(() -> {
             try {
-                Tools.copyAssetFile(ctx, "default.json", Tools.CTRLMAP_PATH, false);
+                // Overwrite so layout changes shipped in app updates actually reach the device
+                Tools.copyAssetFile(ctx, "default.json", Tools.CTRLMAP_PATH, true);
                 Tools.copyAssetFile(ctx, "launcher_profiles.json", Tools.DIR_GAME_NEW, false);
                 Tools.copyAssetFile(ctx,"resolv.conf",Tools.DIR_DATA, false);
             } catch (IOException e) {
